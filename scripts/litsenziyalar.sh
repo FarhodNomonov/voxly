@@ -1,23 +1,28 @@
 #!/usr/bin/env bash
 #
-# Ilova bilan tarqatiladigan `Litsenziyalar.txt` ni yasaydi: Kotib litsenziyasi,
+# Ilova bilan tarqatiladigan `Litsenziyalar.txt` ni yasaydi: Voxly litsenziyasi,
 # `THIRD_PARTY_NOTICES.md` (jadval) va har bir statik ulangan / birga
 # tarqatiladigan komponentning TOʻLIQ litsenziya matni — pinlangan manbalarning
 # oʻz LICENSE fayllaridan. Matnlar qoʻlda koʻchirilmaydi: bogʻliqlik yangilansa,
 # fayl ham oʻzi yangilanadi.
 #
-#   ./scripts/litsenziyalar.sh <chiqish-fayli>
+#   ./scripts/litsenziyalar.sh <chiqish-fayli>        # macOS: whisper.cpp + modellar
+#   ./scripts/litsenziyalar.sh <chiqish-fayli> win    # Windows: + CTranslate2, SentencePiece …
 #
 # `src/build.sh` (→ Contents/Resources) va `win/build-mac.sh` (→ exe yonida)
-# chaqiradi. Manba yetishmasa — xato: litsenziyasiz binar tarqatilmasin.
+# chaqiradi. macOS ilovasida tarjimon yoʻq — uning bogʻliqliklari ham sanalmaydi. Manba yetishmasa — xato: litsenziyasiz binar tarqatilmasin.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CHIQISH="${1:?Ishlatish: $0 <chiqish-fayli>}"
+CHIQISH="${1:?Ishlatish: $0 <chiqish-fayli> [win]}"
+WIN=0
+[ "${2:-}" = "win" ] && WIN=1
 
 # Sarlavha va fayl — tartib bilan. Yoʻl ROOT ga nisbatan.
 BOLIMLAR=(
-    "Kotib|LICENSE"
+    "Voxly|LICENSE"
     "whisper.cpp / ggml|whisper.cpp/LICENSE"
+)
+[ "$WIN" = 1 ] && BOLIMLAR+=(
     "CTranslate2|ctranslate2/LICENSE"
     "ruy|ctranslate2/third_party/ruy/LICENSE"
     "cpuinfo|ctranslate2/third_party/ruy/third_party/cpuinfo/LICENSE"
@@ -37,7 +42,7 @@ for b in "${BOLIMLAR[@]}"; do
 done
 
 {
-    echo "KOTIB — LITSENZIYALAR / LICENSES"
+    echo "VOXLY — LITSENZIYALAR / LICENSES"
     echo "================================"
     echo
     cat "$ROOT/THIRD_PARTY_NOTICES.md"
@@ -50,27 +55,30 @@ done
         echo
         cat "$ROOT/${b#*|}"
     done
-    # Litsenziyasi alohida faylda emas, manba sarlavhasida turganlar.
-    echo
-    echo
-    echo "────────────────────────────────────────────────────────────────"
-    echo "BS::thread_pool (CTranslate2 ichida)"
-    echo "────────────────────────────────────────────────────────────────"
-    echo
-    grep -m1 -i "@copyright" "$ROOT/ctranslate2/third_party/BS_thread_pool.hpp" | sed 's/^[ *]*//'
-    echo
-    echo "────────────────────────────────────────────────────────────────"
-    echo "avx_mathfun / neon_mathfun (CTranslate2 ichida)"
-    echo "────────────────────────────────────────────────────────────────"
-    echo
-    sed -n '1,/\*\//p' "$ROOT/ctranslate2/third_party/avx_mathfun.h"
-    echo
-    echo "────────────────────────────────────────────────────────────────"
-    echo "LLVM libc++ / libunwind / OpenMP, mingw-w64 (faqat Windows)"
-    echo "────────────────────────────────────────────────────────────────"
-    echo
-    echo "Apache License v2.0 with LLVM Exceptions — https://llvm.org/LICENSE.txt"
-    echo "mingw-w64 runtime — https://sourceforge.net/p/mingw-w64/mingw-w64/ci/master/tree/COPYING"
+    # Litsenziyasi alohida faylda emas, manba sarlavhasida turganlar (faqat Windows).
+    if [ "$WIN" = 1 ]; then
+        echo
+        echo
+        echo "────────────────────────────────────────────────────────────────"
+        echo "BS::thread_pool (CTranslate2 ichida)"
+        echo "────────────────────────────────────────────────────────────────"
+        echo
+        grep -m1 -i "@copyright" "$ROOT/ctranslate2/third_party/BS_thread_pool.hpp" | sed 's/^[ *]*//'
+        echo
+        echo "────────────────────────────────────────────────────────────────"
+        echo "avx_mathfun / neon_mathfun (CTranslate2 ichida)"
+        echo "────────────────────────────────────────────────────────────────"
+        echo
+        sed -n '1,/\*\//p' "$ROOT/ctranslate2/third_party/avx_mathfun.h"
+        echo
+        echo "────────────────────────────────────────────────────────────────"
+        echo "LLVM libc++ / libunwind / OpenMP, mingw-w64 (faqat Windows)"
+        echo "────────────────────────────────────────────────────────────────"
+        echo
+        echo "Apache License v2.0 with LLVM Exceptions — https://llvm.org/LICENSE.txt"
+        echo "mingw-w64 runtime — https://sourceforge.net/p/mingw-w64/mingw-w64/ci/master/tree/COPYING"
+        echo
+    fi
     echo
     echo "────────────────────────────────────────────────────────────────"
     echo "Modellar / Models"
@@ -79,10 +87,13 @@ done
     echo "rubaiSTT v2 medium — islomov — Apache License 2.0"
     echo "  https://huggingface.co/islomov/rubaistt_v2_medium"
     echo "  https://www.apache.org/licenses/LICENSE-2.0"
-    echo "OpenAI Whisper — MIT — https://github.com/openai/whisper/blob/main/LICENSE"
-    echo "NLLB-200 — Meta AI — Creative Commons Attribution-NonCommercial 4.0"
-    echo "  https://huggingface.co/facebook/nllb-200-3.3B"
-    echo "  https://creativecommons.org/licenses/by-nc/4.0/legalcode"
+    echo "OpenAI Whisper (large-v3-turbo, medium) — MIT — https://github.com/openai/whisper/blob/main/LICENSE"
+    echo "  ggml nusxasi: https://huggingface.co/ggerganov/whisper.cpp"
+    if [ "$WIN" = 1 ]; then
+        echo "NLLB-200 — Meta AI — Creative Commons Attribution-NonCommercial 4.0"
+        echo "  https://huggingface.co/facebook/nllb-200-3.3B"
+        echo "  https://creativecommons.org/licenses/by-nc/4.0/legalcode"
+    fi
     echo
     echo "────────────────────────────────────────────────────────────────"
     echo "Silero VAD (ggml-silero-v6.2.0.bin, ilova bilan birga)"

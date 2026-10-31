@@ -5,6 +5,17 @@ Format — [Keep a Changelog](https://keepachangelog.com/), versiyalar —
 
 ## [Keyingi]
 
+### Voxly (форк Kotib)
+- Новое имя **Voxly**, bundle id `app.voxly.mac`. Данные переносятся из
+  `Application Support/Kotib` автоматически.
+- Интерфейс на русском и английском (Настройки → «Язык интерфейса»).
+- Языки речи: русский (кириллица), английский, узбекский.
+- Убраны офлайн-переводчик (NLLB, лицензия только для некоммерческого
+  использования), автообновление, телеметрия и окно пожертвований.
+- Скорость на Intel: Accelerate (BLAS), окно кодировщика по длине фразы с
+  выравниванием на 256, остановка зацикливания прямо во время декодирования.
+  i7-9750H: 1,5 с речи → 3,0 с, 10 с → 3,5 с, 20 с → 7,3 с (было 17–84 с).
+
 ### Qoʻshildi
 - **Rus tili (kirill).** Sozlamalarda «Nutq tili»: rus yoki oʻzbek. Rus tili
   oddiy Whisper large-v3-turbo (q5_0, 548 MB) bilan ishlaydi — rubaiSTT rus

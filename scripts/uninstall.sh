@@ -1,5 +1,5 @@
 #!/bin/bash
-# Kotib — Mac'dan to'liq o'chirish.
+# Voxly — Mac'dan to'liq o'chirish (eski Kotib qoldiqlari bilan birga).
 #
 # Ilovani, sozlamalarni, ruxsatlarni va o'rnatuvchi qoldiqlarini olib tashlaydi.
 # Shundan keyin tizim ilovani hech qachon ko'rmagan holatga qaytadi — "toza
@@ -7,7 +7,7 @@
 #
 # Ishlatish:
 #   sudo ./scripts/uninstall.sh                 # hammasini o'chiradi
-#   sudo ./scripts/uninstall.sh --keep-model    # til modelini saqlab qoladi (785 MB)
+#   sudo ./scripts/uninstall.sh --keep-model    # nutq modellarini saqlab qoladi
 
 set -uo pipefail
 
@@ -35,6 +35,7 @@ ok()   { echo "✓ $1"; }
 
 # ─── 1. Ishlab turgan nusxalarni to'xtatish
 step "Ishlayotgan nusxalar to'xtatilmoqda"
+pkill -f "Voxly.app/Contents/MacOS/Voxly" 2>/dev/null
 pkill -f "Kotib.app/Contents/MacOS/Kotib" 2>/dev/null
 pkill -f "Audio-Matnga.app/Contents/MacOS/AudioMatnga" 2>/dev/null
 pkill -f "RubaiSTT Dictation.app/Contents/MacOS/RubaiSTTDictation" 2>/dev/null
@@ -44,7 +45,9 @@ ok ""
 # ─── 2. Ilova bundle'lari (yangi va eski nom, tizim va foydalanuvchi papkalari)
 step "Ilova papkalari"
 removed=0
-for p in "/Applications/Kotib.app" \
+for p in "/Applications/Voxly.app" \
+         "$REAL_HOME/Applications/Voxly.app" \
+         "/Applications/Kotib.app" \
          "/Applications/Audio-Matnga.app" \
          "/Applications/RubaiSTT Dictation.app" \
          "$REAL_HOME/Applications/Kotib.app" \
@@ -83,7 +86,7 @@ n=0
 # --keep-model: Application Support/Kotib dagi hamma narsa ketadi, faqat
 # models/ qoladi. Ilgari papka butunligicha oʻchirilardi — bayroq modelni
 # saqlamas edi (barqarorlik spec'i, I4).
-KOTIB_DATA="$REAL_HOME/Library/Application Support/Kotib"
+KOTIB_DATA="$REAL_HOME/Library/Application Support/Voxly"
 if [ "$KEEP_MODEL" = "1" ] && [ -d "$KOTIB_DATA" ]; then
     for q in "$KOTIB_DATA"/* "$KOTIB_DATA"/.[!.]*; do
         [ -e "$q" ] || continue
@@ -92,7 +95,15 @@ if [ "$KEEP_MODEL" = "1" ] && [ -d "$KOTIB_DATA" ]; then
     done
     KOTIB_DATA=""
 fi
-for p in "$REAL_HOME/Library/Preferences/com.rubaistt.dictation.plist" \
+for p in "$REAL_HOME/Library/Preferences/app.voxly.mac.plist" \
+         "$REAL_HOME/Library/Application Support/Kotib" \
+         "$REAL_HOME/Library/Logs/Voxly.log" \
+         "$REAL_HOME/Library/Logs/Voxly.1.log" \
+         "$REAL_HOME/Library/Logs/Voxly.2.log" \
+         "$REAL_HOME/Library/Caches/app.voxly.mac" \
+         "$REAL_HOME/Library/HTTPStorages/app.voxly.mac" \
+         "$REAL_HOME/Library/Saved Application State/app.voxly.mac.savedState" \
+         "$REAL_HOME/Library/Preferences/com.rubaistt.dictation.plist" \
          ${KOTIB_DATA:+"$KOTIB_DATA"} \
          "$REAL_HOME/Library/Application Support/Audio-Matnga" \
          "$REAL_HOME/Library/Logs/Kotib.log" \
@@ -104,27 +115,32 @@ for p in "$REAL_HOME/Library/Preferences/com.rubaistt.dictation.plist" \
     [ -e "$p" ] && { rm -rf "$p"; n=$((n+1)); }
 done
 # UserDefaults keshda ham turadi — cfprefsd'ni yangilatamiz
+sudo -u "$REAL_USER" defaults delete app.voxly.mac >/dev/null 2>&1
 sudo -u "$REAL_USER" defaults delete com.rubaistt.dictation >/dev/null 2>&1
 ok "$n ta"
 
 # ─── 5b. Keychain — foydalanuvchining LLM API kalitlari (`llm_providers.swift`,
-# servis `com.rubaistt.dictation.llm`, har provayder bitta yozuv). Ilgari ular
+# servis `app.voxly.mac.llm`, eski Kotib'da `com.rubaistt.dictation.llm`). Ilgari ular
 # ilova oʻchirilgandan keyin ham qolardi (I4). `security` bir chaqiruvda
 # bittasini oʻchiradi — topilmay qolguncha takrorlanadi (chegara bilan).
 step "Keychain (AI kalitlari)"
 KEYCHAIN="$REAL_HOME/Library/Keychains/login.keychain-db"
 n=0
 if [ -f "$KEYCHAIN" ]; then
-    for _ in $(seq 1 50); do
-        sudo -u "$REAL_USER" security delete-generic-password \
-            -s com.rubaistt.dictation.llm "$KEYCHAIN" >/dev/null 2>&1 || break
-        n=$((n+1))
+    for servis in app.voxly.mac.llm com.rubaistt.dictation.llm; do
+        for _ in $(seq 1 50); do
+            sudo -u "$REAL_USER" security delete-generic-password \
+                -s "$servis" "$KEYCHAIN" >/dev/null 2>&1 || break
+            n=$((n+1))
+        done
     done
 fi
 ok "$n ta"
 
 # ─── 6. Ruxsatlar (System Settings ro'yxatidagi yozuvlar shu bilan tozalanadi)
 step "Accessibility va Mikrofon ruxsatlari"
+sudo -u "$REAL_USER" tccutil reset Accessibility app.voxly.mac >/dev/null 2>&1
+sudo -u "$REAL_USER" tccutil reset Microphone    app.voxly.mac >/dev/null 2>&1
 sudo -u "$REAL_USER" tccutil reset Accessibility com.rubaistt.dictation >/dev/null 2>&1
 sudo -u "$REAL_USER" tccutil reset Microphone    com.rubaistt.dictation >/dev/null 2>&1
 ok "qaytarildi"
@@ -155,7 +171,8 @@ if [ -f "$ESKI/dictation.log" ]; then
     rm -f "$ESKI/dictation.log"; n=$((n+1))
 fi
 if [ "$KEEP_MODEL" != "1" ]; then
-    for f in "$ESKI/models/ggml-rubaistt.bin" "$ESKI/models/ggml-rubaistt.bin.part" \
+    for f in "$ESKI/models/ggml-large-v3-turbo-q5_0.bin" "$ESKI/models/ggml-large-v3-turbo-q5_0.bin.part" \
+             "$ESKI/models/ggml-rubaistt.bin" "$ESKI/models/ggml-rubaistt.bin.part" \
              "$ESKI/models/ggml-rubaistt-f16.bin" "$ESKI/models/ggml-model.bin"; do
         [ -f "$f" ] && { rm -f "$f"; n=$((n+1)); }
     done
@@ -169,7 +186,7 @@ else
 fi
 
 echo
-echo "✅ Kotib Mac'dan to'liq olib tashlandi."
+echo "✅ Voxly Mac'dan to'liq olib tashlandi."
 echo
 echo "Eslatma: System Settings > Privacy & Security > Accessibility ro'yxatida"
 echo "eski yozuvlar ko'rinib qolsa, Settings'ni yopib qayta oching — ro'yxat yangilanadi."

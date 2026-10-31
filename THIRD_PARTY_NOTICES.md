@@ -1,45 +1,47 @@
-# Uchinchi tomon dasturlari va modellari / Third-party notices
+# Third-party notices
 
-Kotib quyidagi ochiq dasturlar va modellar ustiga qurilgan. Ularning toʻliq
-litsenziya matnlari ilova bilan birga tarqatiladi: macOS'da
-`Kotib.app/Contents/Resources/Litsenziyalar.txt`, Windows'da Kotib papkasidagi
-`Litsenziyalar.txt` (Sozlamalar / tray menyusi → «Litsenziyalar…»). Bu fayl
-yigʻish paytida `scripts/litsenziyalar.sh` bilan pinlangan manbalarning oʻz
-LICENSE fayllaridan yasaladi.
-
-Kotib is built on the open-source software and models below. Their full license
-texts ship with the app (`Litsenziyalar.txt`), generated at build time by
+Voxly is built on the open-source software and models below. Their full license
+texts ship with the app in `Voxly.app/Contents/Resources/Litsenziyalar.txt`
+(Settings → «Лицензии…» / «Licenses…»). The file is generated at build time by
 `scripts/litsenziyalar.sh` from the LICENSE files of the pinned sources.
 
-## Modellar / Models
+## macOS app
 
-| Model | Litsenziya | Qayerda | Eslatma |
+### Models
+
+| Model | License | Used for | Notes |
 |---|---|---|---|
-| [rubaiSTT v2 medium](https://huggingface.co/islomov/rubaistt_v2_medium) — muallif **islomov** | Apache-2.0 | Nutqni tanish (ikkala platforma, oʻrnatuvchi ichida) | Atribusiya shart. ggml formatiga oʻgirilgan va q8_0 ga kvantlangan |
-| [OpenAI Whisper medium](https://github.com/openai/whisper) | MIT | rubaiSTT shu model ustida fine-tune qilingan | |
-| [Silero VAD v6.2.0](https://github.com/snakers4/silero-vad) — Silero Team ([ggml nusxasi](https://huggingface.co/ggml-org/whisper-vad)) | MIT | Nutq bor-yoʻqligini aniqlash va uzun ovozni boʻlish (ikkala platforma, ilova ichida, 885 KB) | |
-| [NLLB-200 3.3B](https://huggingface.co/facebook/nllb-200-3.3B) — Meta AI | **CC-BY-NC-4.0** | Oflayn tarjimon (talab boʻyicha yuklab olinadi) | **Faqat notijorat** foydalanish; atribusiya shart. CTranslate2 formatiga oʻgirilgan, int8 |
+| [OpenAI Whisper large-v3-turbo](https://github.com/openai/whisper) ([ggml build](https://huggingface.co/ggerganov/whisper.cpp)) | MIT | Russian and English speech recognition | Downloaded on first launch, q5_0 quantization, ~550 MB |
+| [rubaiSTT v2 medium](https://huggingface.co/islomov/rubaistt_v2_medium) by **islomov** | Apache-2.0 | Uzbek speech recognition (optional) | Attribution required. Converted to ggml, q8_0 |
+| [OpenAI Whisper medium](https://github.com/openai/whisper) | MIT | Base model that rubaiSTT is fine-tuned from | |
+| [Silero VAD v6.2.0](https://github.com/snakers4/silero-vad) by Silero Team ([ggml build](https://huggingface.co/ggml-org/whisper-vad)) | MIT | Speech detection and splitting long audio | Bundled with the app, 885 KB |
 
-## Dasturlar / Software
+### Software
 
-| Komponent | Litsenziya | Qayerda |
+| Component | License | Used for |
 |---|---|---|
-| [whisper.cpp / ggml](https://github.com/ggml-org/whisper.cpp) | MIT | Nutqni tanish dvigateli (ikkala platforma) |
-| [CTranslate2](https://github.com/OpenNMT/CTranslate2) | MIT | Tarjima dvigateli |
-| ↳ [ruy](https://github.com/google/ruy) | Apache-2.0 | CTranslate2 ichida (matritsa hisobi) |
-| ↳ [cpuinfo](https://github.com/pytorch/cpuinfo) | BSD-2-Clause | ruy ichida |
-| ↳ [cpu_features](https://github.com/google/cpu_features) | Apache-2.0 | CTranslate2 ichida |
-| ↳ [spdlog](https://github.com/gabime/spdlog) | MIT | CTranslate2 ichida |
-| ↳ [BS::thread_pool](https://github.com/bshoshany/thread-pool) | MIT | CTranslate2 ichida |
-| ↳ avx/neon_mathfun (J. Pommier; marian-nmt) | zlib / MIT | CTranslate2 ichida |
-| [SentencePiece](https://github.com/google/sentencepiece) | Apache-2.0 | Tarjima tokenizatori |
-| ↳ [Abseil](https://github.com/abseil/abseil-cpp) | Apache-2.0 | SentencePiece ichida |
-| ↳ protobuf-lite | BSD-3-Clause | SentencePiece ichida |
-| ↳ darts-clone | BSD-2-Clause | SentencePiece ichida |
-| ↳ esaxx | MIT | SentencePiece ichida |
-| [Monocypher](https://monocypher.org) | CC0-1.0 yoki BSD-2-Clause | Windows: yangilanish imzosini tekshirish (Ed25519) |
-| [LLVM libc++, libunwind, OpenMP](https://llvm.org) (llvm-mingw) | Apache-2.0 WITH LLVM-exception | Windows: `libc++.dll`, `libunwind.dll`, `libomp.dll` |
-| [mingw-w64](https://www.mingw-w64.org) runtime | ZPL-2.1 / ommaviy mulk | Windows: statik CRT qismi |
-| [Inno Setup](https://jrsoftware.org/isinfo.php) | Inno Setup License | Windows oʻrnatuvchisi |
+| [whisper.cpp / ggml](https://github.com/ggml-org/whisper.cpp) | MIT | Speech recognition engine, statically linked |
+| Apple Accelerate, AVFoundation, AppKit | Apple SDK | System frameworks, not redistributed |
 
-Kotib'ning oʻzi — [MIT](LICENSE).
+The offline translator from the original project (NLLB-200, CC-BY-NC-4.0,
+non-commercial only) was **removed** from Voxly together with its engine
+(CTranslate2, SentencePiece).
+
+## Windows port (`win/`)
+
+The `win/` folder is the untouched upstream Kotib Windows port. It still contains
+the translator and links CTranslate2 (MIT), ruy (Apache-2.0), cpuinfo
+(BSD-2-Clause), cpu_features (Apache-2.0), spdlog (MIT), BS::thread_pool (MIT),
+avx/neon_mathfun (zlib/MIT), SentencePiece (Apache-2.0), Abseil (Apache-2.0),
+protobuf-lite (BSD-3-Clause), darts-clone (BSD-2-Clause), esaxx (MIT),
+Monocypher (CC0-1.0 or BSD-2-Clause), LLVM libc++/libunwind/OpenMP
+(Apache-2.0 WITH LLVM-exception), the mingw-w64 runtime (ZPL-2.1) and Inno Setup.
+Its full license file is built with `scripts/litsenziyalar.sh <file> win`.
+It must not be sold with the NLLB model.
+
+## Voxly itself
+
+Voxly is a fork of [Kotib](https://github.com/MuhammadMirrr/kotib) by
+Muhammad Mirqobilov, released under the [MIT License](LICENSE). The MIT license
+allows commercial use and modification. The original copyright notice must stay
+in `LICENSE` and in every copy of the app.

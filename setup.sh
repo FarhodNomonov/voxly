@@ -1,22 +1,27 @@
 #!/bin/bash
-# Kotib — bir buyruqli o'rnatuvchi (macOS, Apple Silicon).
-#   ./setup.sh
-#   FAQAT_KUTUBXONALAR=1 UNIVERSAL=0 ./setup.sh   # CI: faqat arm64 kutubxonalar
+# Voxly — bir buyruqli o'rnatuvchi (macOS 13+, Apple Silicon va Intel).
+#   ./setup.sh                                   # kutubxonalar → rus/ingliz modeli → ilova
+#   OZBEK=1 ./setup.sh                           # + oʻzbek modeli (rubaiSTT)
+#   FAQAT_KUTUBXONALAR=1 UNIVERSAL=0 ./setup.sh  # CI: faqat kutubxonalar
 #
-# whisper.cpp, CTranslate2 va SentencePiece aniq commit'larga pinlangan
-# (`scripts/bogliqliklar.env`) — toza mashinada ham sinalgan kod yigʻiladi.
+# whisper.cpp aniq commit'ga pinlangan (`scripts/bogliqliklar.env`) — toza
+# mashinada ham sinalgan kod yigʻiladi.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=scripts/bogliqliklar.sh
 source "$ROOT/scripts/bogliqliklar.sh"
 WC="$ROOT/whisper.cpp"
+# Rus/ingliz modeli — ilova oʻzi yuklaydigan joyga (Yollar.foydalanuvchiModellari).
+RU_DIR="$HOME/Library/Application Support/Voxly/models"
+RU_MODEL="$RU_DIR/$RU_MODEL_NOM"
+# Oʻzbek modeli (ixtiyoriy, OZBEK=1) — eski dasturchi yoʻli, ilova u yerdan ham qidiradi.
 MODELDIR="$HOME/rubai-stt/models"
-MODEL="$MODELDIR/ggml-rubaistt.bin"       # q8_0 (yengil ~820MB) — ilova shu nomdan o'qiydi
+MODEL="$MODELDIR/ggml-rubaistt.bin"       # q8_0 (~820MB)
 MODEL_F16="$MODELDIR/ggml-rubaistt-f16.bin"
 # Tayyor q8_0 ggml model (CDN). Bo'sh bo'lsa — HF'dan konversiya + quant qilinadi.
 MODEL_URL="${MODEL_URL-$MODEL_CDN_URL}"
 
-echo "==> Kotib o'rnatilmoqda"
+echo "==> Voxly o'rnatilmoqda"
 
 # 1) Talablar
 if ! xcode-select -p >/dev/null 2>&1; then
@@ -74,117 +79,35 @@ if [ "$(uname -m)" = "arm64" ] && [ "${UNIVERSAL:-1}" = "1" ] && [ ! -f "$WC/bui
     nice -n 10 cmake --build "$WC/build-x64" --config Release -j4 --target whisper
 fi
 
-# 2c) CTranslate2 — tarjima dvigateli (statik, faqat CPU)
-#
-# Nega llama.cpp emas: llama-server encoder-decoder (T5 / M2M100) modellarini
-# qoʻllab-quvvatlamaydi — sinalgan, maʼnosiz belgilar chiqaradi.
-#
-# Bayroqlar haqida:
-#   OPENMP_RUNTIME=NONE          — aks holda ilova libomp.dylib ga bogʻlanadi va
-#                                  Homebrew oʻrnatilmagan mashinada ishga tushmaydi
-#   CMAKE_POLICY_VERSION_MINIMUM — ichidagi eski `clog` CMake 4.x da configure
-#                                  boʻlmaydi ("Compatibility with CMake < 3.5 has
-#                                  been removed")
-#   nice + -j4                   — cheklovsiz `-j` bu mashinani yarim soat qotirdi:
-#                                  CTranslate2 manbalarini bir necha protsessor
-#                                  komandalari uchun qayta-qayta kompilyatsiya
-#                                  qiladi, har jarayon 1–2 GB oladi
-CT2="$ROOT/ctranslate2"
-bogliqlik_tayyorla "$CT2" "$CT2_URL" "$CT2_COMMIT" --submodullar
-if [ "$INTEL_XOST" = 1 ] && [ ! -f "$CT2/build-x64/libctranslate2.a" ]; then
-    echo "==> CTranslate2 build (Intel, 15-25 daqiqa)..."
-    cmake -B "$CT2/build-x64" -S "$CT2" \
-        -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DBUILD_CLI=OFF \
-        -DWITH_MKL=OFF -DWITH_DNNL=OFF -DWITH_ACCELERATE=ON -DWITH_RUY=ON \
-        -DOPENMP_RUNTIME=NONE -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
-        -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_ARCHITECTURES=x86_64
-    nice -n 10 cmake --build "$CT2/build-x64" --config Release -j4
-fi
-if [ "$INTEL_XOST" = 0 ] && [ ! -f "$CT2/build-static/libctranslate2.a" ]; then
-    echo "==> CTranslate2 build (15-25 daqiqa, mashina qiziydi)..."
-    cmake -B "$CT2/build-static" -S "$CT2" \
-        -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DBUILD_CLI=OFF \
-        -DWITH_MKL=OFF -DWITH_DNNL=OFF \
-        -DWITH_ACCELERATE=ON -DWITH_RUY=ON \
-        -DOPENMP_RUNTIME=NONE \
-        -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
-        -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
-        -DCMAKE_OSX_ARCHITECTURES=arm64
-    nice -n 10 cmake --build "$CT2/build-static" --config Release -j4
-fi
-
-# 2c') CTranslate2 x86_64 — universal ilova uchun (faqat Apple Silicon'da).
-#
-# Ilgari bu qadam yoʻq edi: toza checkout'dan faqat arm64 ilova chiqardi va
-# `build.sh` buni jimgina qabul qilardi — Intel Mac'larda ishlamaydigan paket
-# (barqarorlik I3). `toolchain-mac-x64.cmake` SHART: oddiy
-# `CMAKE_OSX_ARCHITECTURES=x86_64` bilan CTranslate2 NEON yadrolarini x86_64
-# uchun kompilyatsiya qilib yiqiladi (sababi toolchain faylining izohida).
-if [ "$(uname -m)" = "arm64" ] && [ "${UNIVERSAL:-1}" = "1" ] && [ ! -f "$CT2/build-x64/libctranslate2.a" ]; then
-    echo "==> CTranslate2 x86_64 (Intel) build (yana 15-25 daqiqa)..."
-    cmake -B "$CT2/build-x64" -S "$CT2" \
-        -DCMAKE_TOOLCHAIN_FILE="$ROOT/scripts/cmake/toolchain-mac-x64.cmake" \
-        -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DBUILD_CLI=OFF \
-        -DWITH_MKL=OFF -DWITH_DNNL=OFF \
-        -DWITH_ACCELERATE=ON -DWITH_RUY=ON \
-        -DOPENMP_RUNTIME=NONE \
-        -DCMAKE_POLICY_VERSION_MINIMUM=3.5
-    nice -n 10 cmake --build "$CT2/build-x64" --config Release -j4
-fi
-
-# 2d) SentencePiece — tarjima tokenizatori (statik)
-#
-# v0.2.0 ATAYLAB: `master` shoxi tashqi abseil-cpp ga bogʻlanib qolgan va uni
-# FetchContent bilan tortadi — 94 ta qoʻshimcha statik kutubxona. v0.2.0 da
-# absl `third_party/absl` ichida keladi, jami 2 ta kutubxona.
-SP="$ROOT/sentencepiece"
-bogliqlik_tayyorla "$SP" "$SP_URL" "$SP_COMMIT"
-if [ "$INTEL_XOST" = 1 ] && [ ! -f "$SP/build-x64/src/libsentencepiece.a" ]; then
-    echo "==> SentencePiece build (Intel)..."
-    cmake -B "$SP/build-x64" -S "$SP" \
-        -DCMAKE_BUILD_TYPE=Release -DSPM_ENABLE_SHARED=OFF -DSPM_ENABLE_TCMALLOC=OFF \
-        -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
-        -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_ARCHITECTURES=x86_64
-    nice -n 10 cmake --build "$SP/build-x64" --config Release -j4
-fi
-if [ "$INTEL_XOST" = 0 ] && [ ! -f "$SP/build-static/src/libsentencepiece.a" ]; then
-    echo "==> SentencePiece build..."
-    cmake -B "$SP/build-static" -S "$SP" \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DSPM_ENABLE_SHARED=OFF -DSPM_ENABLE_TCMALLOC=OFF \
-        -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
-        -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
-        -DCMAKE_OSX_ARCHITECTURES=arm64
-    nice -n 10 cmake --build "$SP/build-static" --config Release -j4
-fi
-
-# 2d') SentencePiece x86_64 — universal ilova uchun (faqat Apple Silicon'da).
-# Bu yerda toolchain fayli shart emas: SentencePiece arxitekturani oʻzi tanlamaydi.
-if [ "$(uname -m)" = "arm64" ] && [ "${UNIVERSAL:-1}" = "1" ] && [ ! -f "$SP/build-x64/src/libsentencepiece.a" ]; then
-    echo "==> SentencePiece x86_64 (Intel) build..."
-    cmake -B "$SP/build-x64" -S "$SP" \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DSPM_ENABLE_SHARED=OFF -DSPM_ENABLE_TCMALLOC=OFF \
-        -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
-        -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
-        -DCMAKE_OSX_ARCHITECTURES=x86_64
-    nice -n 10 cmake --build "$SP/build-x64" --config Release -j4
-fi
-
 # CI va tekshiruv uchun: faqat kutubxonalar — model yuklanmaydi, ilova
-# oʻrnatilmaydi. `UNIVERSAL=0` x86_64 nusxalarini oʻtkazib yuboradi (CI'da
-# CTranslate2 ning ikkinchi ~20 daqiqasi kerak emas).
+# oʻrnatilmaydi. `UNIVERSAL=0` x86_64 nusxasini oʻtkazib yuboradi.
 if [ "${FAQAT_KUTUBXONALAR:-0}" = "1" ]; then
     echo "==> Kutubxonalar tayyor (FAQAT_KUTUBXONALAR=1 — model va ilova oʻtkazib yuborildi)"
     exit 0
 fi
 
-# 3) Model — avval CDN'dan tayyor q8_0 (tez), bo'lmasa HuggingFace'dan + quant
+# 3) Rus/ingliz modeli — Whisper large-v3-turbo q5_0 (HuggingFace, MIT).
+# `.part` ga yuklanadi, sha256 mos kelsagina asl nomga koʻchadi.
+if [ ! -f "$RU_MODEL" ]; then
+    mkdir -p "$RU_DIR"
+    echo "==> Model yuklanmoqda: $RU_MODEL_NOM (~550 MB)"
+    curl -fL --progress-bar -o "$RU_MODEL.part" "$RU_MODEL_URL"
+    hash="$(shasum -a 256 "$RU_MODEL.part" | cut -d' ' -f1)"
+    if [ "$hash" != "$RU_MODEL_SHA256" ]; then
+        rm -f "$RU_MODEL.part"
+        echo "Xato: model sha256 mos emas (kutilgan $RU_MODEL_SHA256, olingan $hash)" >&2
+        exit 1
+    fi
+    mv "$RU_MODEL.part" "$RU_MODEL"
+    echo "==> Model yuklandi, sha256 mos ✓"
+fi
+
+# 3b) Oʻzbek modeli (OZBEK=1) — avval CDN'dan tayyor q8_0, boʻlmasa HuggingFace'dan + quant.
 #
 # Yuklash `.part` ga ketadi va sha256 tekshirilgandan keyingina asl nomga
 # koʻchadi: ilova modelni shu nom bilan qidiradi, chala yoki buzilgan fayl
 # esa «Model yuklanmadi» bilan yiqiladi.
-if [ ! -f "$MODEL" ]; then
+if [ "${OZBEK:-0}" = "1" ] && [ ! -f "$MODEL" ]; then
     mkdir -p "$MODELDIR"
     if [[ "$MODEL_URL" == http* ]] && curl -fL --progress-bar -o "$MODEL.part" "$MODEL_URL"; then
         hash="$(shasum -a 256 "$MODEL.part" | cut -d' ' -f1)"
@@ -233,10 +156,10 @@ if [ -f "$ESKI_PLIST" ]; then
 fi
 
 echo ""
-echo "✅ O'rnatildi! Menyu-bardagi 🎙️ ikonkani ko'rasiz."
+echo "✅ O'rnatildi: ~/Applications/Voxly.app — menyu-barda ikonka paydo boʻladi."
 echo ""
-echo "OXIRGI QADAM — Accessibility ruxsati (⌘V yuborish uchun):"
-echo "  System Settings > Privacy & Security > Accessibility"
-echo "  → 'Kotib' ni qo'shing va yoqing"
+echo "Oxirgi qadam — Accessibility ruxsati (matnni kursor turgan joyga qoʻyish uchun):"
+echo "  System Settings → Privacy & Security → Accessibility → Voxly ni yoqing"
 echo ""
-echo "Ishlatish: istalgan joyda  ⌃⌥D  → gapiring → ⌃⌥D"
+echo "Har yigʻishda ruxsat tushib qolmasligi uchun keyingi build'larni"
+echo "  ./scripts/mahalliy-yigish.sh  bilan qiling (doimiy mahalliy imzo)."

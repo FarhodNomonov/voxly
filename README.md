@@ -1,220 +1,256 @@
-# 🎙️ Kotib — Oʻzbekcha ovozli yozuv
+# Voxly
 
-Istalgan ilovada (Telegram, brauzer, hujjat — qayerda kursor boʻlsa) tugmani bosib oʻzbekcha gapiring — matn avtomatik oʻsha joyga lotin alifbosida yoziladi.
+**Offline dictation for macOS.** Press a hotkey in any app, speak, and the text
+appears where your cursor is: Telegram, a browser, Notes, a code editor. Speech
+is recognized on your Mac. No audio leaves the computer and no internet is needed.
 
-**Ikkala platforma uchun ham tayyor:**
+[Русский ↓](#voxly--по-русски)
 
-| Platforma | Tugma | Yuklab olish | Texnik hujjat |
-|---|---|---|---|
-| **macOS** 13+ | ⌃⌥D | [.pkg (789 MB)](https://cdn.mirqobilov.com/dl/mac/Kotib-1.2.1-mac.pkg) | shu hujjat |
-| **Windows** 10/11 | Ctrl+Alt+D | [.exe (845 MB)](https://cdn.mirqobilov.com/dl/win/Kotib-1.2.1-win-setup.exe) | [win/README.md](win/README.md) |
-
-Ikkala versiya bir xil modeldan (`rubaiSTT v2 medium`) va bir xil inference parametrlaridan
-foydalanadi — natijalar bir xil boʻladi. Tizimning oʻrnatilgan diktovkasi kabi, lekin
-**oʻzbek tili uchun maxsus**, **butunlay oflayn** (internetsiz), va **bepul**.
-
-> **Nom haqida:** mahsulot nomi 1.1.0 dan boshlab — **Kotib** (`Kotib.app`).
-> Ilgari u *Audio-Matnga*, undan ham oldin *RubaiSTT Dictation* deb atalgan.
-> Bundle identifikatori esa
-> ataylab `com.rubaistt.dictation` boʻlib **qoldi**: macOS'da Accessibility va
-> Mikrofon ruxsatlari shu ID ga bogʻlangan, oʻzgartirilsa mavjud
-> foydalanuvchilarda ruxsatlar qaytadan soʻralar edi. Foydalanuvchi maʼlumotlari
-> (`~/Library/Application Support/Audio-Matnga` → `Kotib`) birinchi ishga
-> tushishda avtomatik koʻchiriladi — `src/yollar.swift` ga qarang.
-
-> System-wide Uzbek speech-to-text dictation for **macOS and Windows**. Press the hotkey
-> anywhere, speak Uzbek, and the transcribed text is typed into the focused field.
-> Powered by the [rubaiSTT](https://huggingface.co/islomov/rubaistt_v2_medium) model running
-> locally via [whisper.cpp](https://github.com/ggml-org/whisper.cpp) — Metal on macOS,
-> Vulkan on Windows. Fully offline.
+| | |
+|---|---|
+| Platform | macOS 13 Ventura or newer, Apple Silicon and Intel |
+| Languages | Russian (Cyrillic), English, Uzbek |
+| Default hotkey | **⌃⌥D**: press to start, press again to stop |
+| Interface | Russian / English (Settings → Interface language) |
+| Model | Whisper large-v3-turbo (q5_0, ~550 MB, downloaded on first use) |
 
 ---
 
-## 🗂 Repozitoriy tuzilishi
+## Features
 
-```
-src/          macOS ilovasi (Swift + C shim)
-win/          Windows ilovasi (C++20 + Win32)   -> win/README.md
-scripts/      macOS release skriptlari
-web/          yuklab olish sahifasi
-assets/       ikonkalar
-```
+- **Works everywhere.** A global hotkey types the text into whatever field has
+  focus, either by pasting through the clipboard (fast, the clipboard is restored
+  afterwards) or by typing it character by character.
+- **Fixed output language.** Choose the speech language in Settings. In Russian
+  mode speech is written in Cyrillic, even if you slip into English words.
+  Brand names such as YouTube or Google Chrome may keep their usual Latin
+  spelling.
+- **Fully offline.** Recognition runs locally on whisper.cpp. There are no
+  accounts, no telemetry and no update pings.
+- **Files.** Drop an audio or video file to get a full transcript. Long files
+  are split at pauses (Silero VAD) and processed in pieces.
+- **Optional AI actions.** With your own API key you can clean up, summarize,
+  extract key points, write meeting minutes, shorten or expand a transcript, or
+  run a custom request. Without a key the app works fully. No key ships with it.
+- **Dictation history.** Recent dictations stay in the main window, one click
+  to copy.
+- **Light on resources.** It lives in the menu bar, and the model is unloaded
+  from RAM after 3 minutes without use.
 
-Oʻzgarishlar: [CHANGELOG.md](CHANGELOG.md) · arxitektura va reliz tartibi: [AGENTS.md](AGENTS.md) · hissa qoʻshish: [CONTRIBUTING.md](CONTRIBUTING.md)
+## Speed
 
-Windows portining texnik tafsilotlari, oʻlchangan koʻrsatkichlar va sinovda topilgan
-xatolar: [docs/windows/WINDOWS-PORT-PLAN.md](docs/windows/WINDOWS-PORT-PLAN.md)
+Measured on an Intel i7-9750H (6 cores, 2019 MacBook Pro), CPU only, with the
+time counted from the end of speech to the finished text:
 
----
+| Phrase length | Time to text |
+|---|---|
+| 1.5 s («Привет, как дела?») | 3.0 s |
+| 5 s | 3.3 s |
+| 10 s | 3.5 s |
+| 20 s | 7.3 s |
 
-## ✨ Xususiyatlar / Features
+For comparison, the original upstream build on the same machine took 84 s for
+22 s of speech.
 
-- 🌐 **Tizim boʻylab** — istalgan ilovada ishlaydi (global hotkey **⌃⌥D**)
-- 🇺🇿 **Oʻzbek tiliga maxsus** — `rubaiSTT v2 medium` modeli, lotin alifbosi
-- ⚡ **Metal tezlashtirish** — Apple Silicon GPU'da tez · Intel'da CPU bilan ishlaydi (universal)
-- 🔌 **Toʻliq oflayn** — hech qanday server/internet kerak emas, ovoz qurilmangizdan chiqmaydi
-- 🪶 **Yengil** — menyu-bar ilovasi; model 3 daqiqa ishlatilmasa RAM'dan boʻshaydi
-- ⌨️ **Sozlanadigan tugma** — diktovka tugmasini Sozlamalardan oʻzgartirish mumkin (standart ⌃⌥D)
-- 📄 **Fayl boʻlimi** — ovozli yoki video faylni tashlang, toʻliq matn chiqadi (uzun fayllar boʻlaklab qayta ishlanadi)
-- 🌍 **Oflayn tarjimon** — 202 til, istalgan yoʻnalishda (oʻzbek, rus, ingliz, turk, qozoq…). Internetsiz ishlaydi va videokarta talab qilmaydi. Model (3,1 GB) bir marta yuklab olinadi.
-- 🤖 **Ixtiyoriy sunʼiy intellekt** — oʻz API kalitingizni qoʻysangiz matnni tozalash va xulosa qilish qoʻshiladi. Model roʻyxati provayderning oʻzidan olinadi, shuning uchun u hech qachon eskirmaydi. Ilova busiz ham toʻliq ishlaydi va hech qanday kalit bilan tarqatilmaydi.
+What makes it fast:
 
-## 📋 Talablar / Requirements
+- **Model.** Whisper large-v3-turbo (4 decoder layers instead of 32), q5_0.
+- **Window size.** The encoder only processes the length of the phrase plus a
+  margin, not the whole 30-second window. The size is rounded up to a multiple
+  of 256 frames: a non-aligned window left uninitialized cache cells and caused
+  looping output.
+- **Intel builds.** Native AVX2/FMA plus Apple Accelerate (BLAS), and one thread
+  per physical core.
+- **Loop guard.** If the decoder starts repeating itself, it is stopped
+  immediately and the piece is re-run with a larger window.
 
-- macOS 13+ · **Universal** — Apple Silicon (M1–M5, Metal bilan tez) yoki Intel (CPU, sekinroq)
-- [Homebrew](https://brew.sh)
-- Xcode Command Line Tools (`xcode-select --install`)
-- ~1 GB disk (model ~820 MB, q8_0)
+Apple Silicon builds use Metal on the GPU and should be faster still. They have
+not been measured yet.
 
-## 🚀 Oʻrnatish / Install
-
-### A) Tayyor ilova (oson)
-
-**[⬇️ macOS uchun — Kotib-1.2.1-mac.pkg (789 MB)](https://cdn.mirqobilov.com/dl/mac/Kotib-1.2.1-mac.pkg)**
-· **[⬇️ Windows uchun — Kotib-1.2.1-win-setup.exe (845 MB)](https://cdn.mirqobilov.com/dl/win/Kotib-1.2.1-win-setup.exe)**
-
-Dastur va oʻzbek tili modeli bitta faylda keladi. Internet faqat yuklab olish
-uchun kerak — oʻrnatgandan keyin butunlay internetsiz ishlaydi. Windows fayli
-ikkala protsessor turini ham qamraydi (Intel/AMD va ARM) — qaysi biri
-borligini bilish shart emas, oʻrnatuvchi oʻzi tanlaydi.
-
-1. Faylni oching va oʻrnatuvchi koʻrsatmalariga amal qiling
-2. Ilovani ishga tushiring — **Xush kelibsiz** oynasi ikkita ruxsatni
-   (mikrofon + Accessibility) berishda yoʻl-yoʻriq koʻrsatadi
-
-macOS oʻrnatuvchisi Apple tomonidan **notarize qilingan** (`Developer ID
-Installer: Muhammad Mirkabilov`) — Gatekeeper ogohlantirishi chiqmaydi,
-qoʻshimcha harakat kerak emas.
-
-### B) Manbadan build (developer)
+To check real-world speed on your Mac, every dictation is logged:
 
 ```bash
-git clone https://github.com/MuhammadMirrr/kotib.git
-cd kotib
-./setup.sh
+grep 'stt:' ~/Library/Logs/Voxly.log | tail
+# stt: ovoz=4.2s ishlov=3.1s    ← 4.2 s of audio, 3.1 s processing
 ```
 
-`setup.sh` avtomatik: kerakli vositalarni oʻrnatadi → whisper.cpp, CTranslate2 va SentencePiece'ni pinlangan commit'lardan (`scripts/bogliqliklar.env`) build qiladi → modelni yuklab sha256 ni tekshiradi → ilovani build qilib oʻrnatadi → login'da avto-ishga tushishni sozlaydi.
+## Installation (from source)
 
-### Oxirgi qadam — Accessibility ruxsati
-
-Matn avtomatik joylashishi uchun (⌘V yuborish) bir marta ruxsat bering:
-
-1. **System Settings → Privacy & Security → Accessibility**
-2. **"Kotib"** ni qoʻshing (`+`) va **yoqing** ✅
-
-Birinchi yozishda **mikrofon** ruxsati ham soʻraladi — ruxsat bering.
-
-## 🎯 Ishlatish / Usage
-
-1. Istalgan joyda kursorni yozish maydoniga qoʻying
-2. **⌃⌥D** bosing → 🔴 gapiring → **⌃⌥D** yana bosing
-3. Matn oʻsha joyga yoziladi
-
-Menyu-bardagi 🎙️ ikonadan ham boshqarish mumkin.
-
-## 📦 Tarqatish / Release (developer)
-
-Imzolangan + notarize qilingan `.pkg` oʻrnatuvchi yasash:
+You need the Xcode Command Line Tools (`xcode-select --install`). cmake is
+installed automatically through Homebrew or pip.
 
 ```bash
-# Bir martalik: notarize uchun keychain profil
-xcrun notarytool store-credentials rubai-notary \
-    --apple-id "siz@example.com" --team-id "TEAMID" \
-    --password "xxxx-xxxx-xxxx-xxxx"   # app-specific parol
-
-./scripts/release.sh        # build → Developer ID imzo → notarize → .pkg
+git clone https://github.com/FarhodNomonov/voxly.git
+cd voxly
+./setup.sh                    # whisper.cpp → Russian/English model → app
+OZBEK=1 ./setup.sh            # also download the Uzbek model (rubaiSTT, ~820 MB)
 ```
 
-Natija: `dist/Kotib-<versiya>-mac.pkg` — model ichida, bitta toʻliq fayl.
-Butun mantiq `scripts/make_pkg.sh` da; skript sertifikatlarni avtomatik topadi.
-Notarize qilinmagan `.pkg` ni macOS 15+ **bloklaydi**, shuning uchun bu qadam majburiy.
+The first build of whisper.cpp takes a few minutes. The app ends up in
+`~/Applications/Voxly.app`; move it to `/Applications` if you like.
 
-## ⚠️ Eslatma / Notes
+### Permissions
 
-- Tarqatiladigan `.pkg` **Developer ID bilan imzolangan va notarize qilingan** (hardened runtime) — foydalanuvchida hech qanday Gatekeeper qadami kerak emas. Manbadan build (`setup.sh`) esa **ad-hoc imzolangan** (lokal, Gatekeeper bloklamaydi).
-- App Store'ga **chiqmaydi** — tizim boʻylab matn yozish (synthetic ⌘V) sandbox'da taqiqlangan; shuning uchun Developer ID orqali tarqatiladi.
-- **Universal binary** — Apple Silicon (Metal GPU) va Intel (CPU). Intel'da sezilarli sekinroq, lekin ishlaydi.
+On first launch macOS asks for:
 
-## 🔒 Maxfiylik
+1. **Microphone**, to record speech.
+2. **Accessibility**, to insert text into other apps:
+   System Settings → Privacy & Security → Accessibility → enable Voxly.
 
-**Ovoz va matn hech qayerga yuborilmaydi.** Nutqni matnga oʻgirish butunlay
-sizning kompyuteringizda ketadi — model ham, hisob-kitob ham lokal. Internet
-faqat uchta ish uchun kerak boʻladi va uchalasi ham ixtiyoriy:
+macOS ties these permissions to the app's signature. An ad-hoc signed build
+loses them after every rebuild, so build with a stable local signature:
 
-| Nima | Qachon | Nima yuboriladi |
-|---|---|---|
-| **Model yuklab olish** | birinchi oʻrnatishda | hech nima (oddiy fayl yuklash) |
-| **Yangi versiya tekshiruvi** | kuniga bir marta | ilova versiyasi |
-| **Anonim statistika** | kuniga bir marta, **oʻchirsa boʻladi** | platforma (mac/win), ilova versiyasi, tizim versiyasi va tasodifiy raqam |
+```bash
+./scripts/mahalliy-yigish.sh  # creates a local "Kotib Local Signing" certificate once
+```
 
-Anonim statistika Sozlamalardan oʻchiriladi. Oʻchirilgan boʻlsa ham yangi
-versiya haqidagi xabar ishlab turadi — u alohida soʻrov.
+That signature only works on your own Mac. Distributing the app needs a
+Developer ID certificate and notarization. The packaging script
+(`scripts/release.sh` → `make_pkg.sh`) is still the original Kotib one and has
+not been adapted to Voxly yet.
 
-**Hech qachon yuborilmaydi:** ovoz, transkript, mikrofon nomi, fayl nomi,
-elektron pochta, ism, qurilma identifikatori. Tasodifiy raqam qurilmaga
-bogʻlanmagan: ilovani oʻchirib qayta oʻrnatsangiz yangisi paydo boʻladi.
-IP manzil soʻrov jurnalida saqlanmaydi — faqat mamlakat kodi (Cloudflare
-beradi) yoziladi.
+### Uninstall
 
-**Sunʼiy intellekt amallari (ixtiyoriy).** Studiyadagi «Matnni yaxshilash»
-sizning **oʻz** API kalitingiz bilan ishlaydi va matnni siz tanlagan
-provayderga yuboradi. Ilova hech qanday kalit bilan kelmaydi, kalit faqat
-tizim kalit omborida saqlanadi (macOS Keychain / Windows Credential Manager)
-va hech qachon logʻga yozilmaydi. Kalit kiritilmasa bu qism butunlay
-oʻchiq boʻladi va ilovaning qolgan hamma qismi toʻliq ishlaydi.
+Settings → «Удалить Voxly…» copies the command for you, or run it yourself:
 
-**Tarjima ham oflayn** — model kompyuterga yuklab olinadi va matn hech
-qayerga chiqmaydi.
+```bash
+sudo ./scripts/uninstall.sh               # app, settings, permissions, models
+sudo ./scripts/uninstall.sh --keep-model  # keep the downloaded models
+```
 
-## 🛠 Texnik tafsilotlar
+## Privacy
 
-- **Model:** [`islomov/rubaistt_v2_medium`](https://huggingface.co/islomov/rubaistt_v2_medium) → ggml **q8_0** (8-bit) ga siqilgan — ~820 MB, ~700 MB kamroq RAM, aniqlik deyarli oʻzgarmaydi
-- **Inference:** whisper.cpp + Metal, beam search (maksimal aniqlik)
-- **Til:** `uz`, lotin alifbosi
-- **UI:** Swift / AppKit, menyu-bar (LSUIElement), global hotkey Carbon orqali
-- **Matn kiritish:** clipboard + ⌘V (CGEvent) — Accessibility ruxsati kerak
+- Audio is processed in memory on your Mac and is never sent anywhere.
+- The only network requests are the model download (from Hugging Face) and,
+  if you set one up, the AI provider you chose, with your own key, for the
+  actions you run.
+- Your data lives in `~/Library/Application Support/Voxly` and the log in
+  `~/Library/Logs/Voxly.log`. The log records timings and errors, not
+  transcripts.
 
-## 🤝 Hissa qoʻshish / Contributing
+## Development
 
-- [CONTRIBUTING.md](CONTRIBUTING.md) — yigʻish (kalitlarsiz ham), testlar, kod qoidalari
-- [CHANGELOG.md](CHANGELOG.md) — versiyalar tarixi
-- [SECURITY.md](SECURITY.md) — zaiflik haqida maxfiy xabar berish, imzo kaliti siyosati
-- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — xulq-atvor qoidalari
-- [AGENTS.md](AGENTS.md) — arxitektura va muhandislik qarorlari
+```bash
+./src/build.sh                     # rebuild the app only → ~/Applications/Voxly.app
+./scripts/mahalliy-yigish.sh       # the same, with the stable local signature
+./src/test.sh                      # pure-logic Swift tests (seconds) + version check
+win/tests/mac/parametr-tekshir.sh  # macOS/Windows bridge parity
+```
 
-## 📄 Litsenziya
+| Path | What it holds |
+|---|---|
+| `src/` | The macOS app: Swift/AppKit plus a C bridge to whisper.cpp (`whisper_bridge.c`) |
+| `src/ui_tili.swift` | Interface language: every string is `tr("русский", "English")` |
+| `src/model_tanlov.swift` | Speech languages and their models |
+| `src/yollar.swift` | All user-data paths, plus migration from Kotib |
+| `tests/` | Tests, registered in `tests/test_ruyxat.swift` |
+| `scripts/` | Build, signing, uninstall and license scripts |
+| `scripts/bogliqliklar.env` | Pinned versions of whisper.cpp, the models and VAD |
+| `win/` | The original Kotib Windows port (not adapted to Voxly yet) |
 
-MIT ([LICENSE](LICENSE)). Uchinchi tomon dasturlari va modellari oʻz
-litsenziyalari ostida — [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); toʻliq
-matnlar ilova ichida («Litsenziyalar…»). Eʼtibor: tarjima modeli **NLLB-200 —
-CC-BY-NC-4.0**, faqat notijorat foydalanish uchun.
+Code comments and logs are in Uzbek, inherited from the original project.
+`AGENTS.md` has the detailed engineering notes.
 
-## 🙏 Minnatdorchilik
+## Status and plans
 
-- [rubaiSTT](https://huggingface.co/islomov/rubaistt_v2_medium) — Sardor Islomov (oʻzbek STT modeli)
-- [whisper.cpp](https://github.com/ggml-org/whisper.cpp) — Georgi Gerganov
-- [OpenAI Whisper](https://github.com/openai/whisper)
-- [CTranslate2](https://github.com/OpenNMT/CTranslate2) — OpenNMT (tarjima dvigateli)
-- [NLLB-200](https://huggingface.co/facebook/nllb-200-3.3B) — Meta AI (tarjima modeli)
-- [SentencePiece](https://github.com/google/sentencepiece) — Google
+- [x] Russian/English recognition, Cyrillic output in Russian mode
+- [x] Russian/English interface
+- [x] Speed-up for Intel (BLAS, adaptive window, loop guard)
+- [x] Translator, auto-updater, telemetry and donation window removed
+- [ ] Developer ID signing and notarization
+- [ ] Subscription and licensing
+- [ ] Measurements on Apple Silicon
+- [ ] Our own host for the Uzbek model (it still downloads from the original author's CDN)
+- [ ] Windows version
+
+## License and credits
+
+Voxly is a fork of [Kotib](https://github.com/MuhammadMirrr/kotib) by
+Muhammad Mirqobilov (MIT). The MIT license allows commercial use. The original
+copyright notice stays in [LICENSE](LICENSE).
+
+- [whisper.cpp](https://github.com/ggml-org/whisper.cpp): MIT
+- [OpenAI Whisper](https://github.com/openai/whisper) models: MIT
+- [rubaiSTT v2 medium](https://huggingface.co/islomov/rubaistt_v2_medium) by islomov: Apache-2.0
+- [Silero VAD](https://github.com/snakers4/silero-vad): MIT
+
+The full list is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ---
 
-## 🇬🇧 English
+# Voxly — по-русски
 
-**Kotib** is a free, fully offline Uzbek speech-to-text app for **macOS** (13+,
-universal) and **Windows** (10/11, x64 and ARM64). Press the hotkey (⌃⌥D /
-Ctrl+Alt+D) in any app, speak Uzbek, press it again — the text is typed into the
-focused field in the Latin script, with proper `oʻ`/`gʻ`/`ʼ`.
+**Офлайн-диктовка для macOS.** Нажимаете клавишу в любом приложении, говорите,
+и текст появляется там, где стоит курсор. Распознавание идёт на вашем Mac: звук
+никуда не отправляется, интернет не нужен.
 
-- **Dictation** anywhere, **Audio/File** transcription of long recordings, and an
-  **offline translator** for 202 languages (NLLB-200, downloaded on demand).
-- **Private by design:** audio and text never leave the device. Anonymous usage
-  statistics contain no audio, no text and no raw IP — see [PRIVACY.md](PRIVACY.md).
-- **Same output on both platforms:** one model ([rubaiSTT v2 medium](https://huggingface.co/islomov/rubaistt_v2_medium),
-  q8_0) and identical inference parameters, enforced by tests.
-- **Build from source:** see [CONTRIBUTING.md](CONTRIBUTING.md) — works without any
-  signing keys. Architecture and design decisions: [AGENTS.md](AGENTS.md).
-- **License:** MIT; third-party components in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
-  (note: the NLLB-200 translation model is CC-BY-NC-4.0, non-commercial).
+## Что умеет
+
+- **Работает везде**: Telegram, браузер, Заметки, редактор кода. Клавиша по
+  умолчанию **⌃⌥D**: нажали, сказали, нажали ещё раз. Её можно сменить в
+  настройках.
+- **Язык речи выбирается в настройках**: русский, английский или узбекский.
+  В русском режиме речь пишется кириллицей. Названия вроде YouTube или
+  Google Chrome могут остаться латиницей.
+- **Файлы**: перетащите аудио или видео и получите полную расшифровку.
+- **ИИ-действия** (по желанию, со своим API-ключом): почистить текст, сделать
+  краткое содержание, ключевые пункты или протокол встречи, сократить или
+  расширить текст, свой запрос.
+- **Интерфейс** на русском и английском: Настройки → «Язык интерфейса».
+- Живёт в строке меню. Через 3 минуты простоя модель выгружается из памяти.
+
+## Скорость
+
+Замеры на Intel i7-9750H (MacBook Pro 2019, только процессор). Время считается
+от конца фразы до готового текста:
+
+| Длина фразы | Время |
+|---|---|
+| 1,5 с | 3,0 с |
+| 5 с | 3,3 с |
+| 10 с | 3,5 с |
+| 20 с | 7,3 с |
+
+Исходная сборка на том же Mac тратила 84 с на 22 с речи. На Apple Silicon (GPU,
+Metal) должно быть ещё быстрее, но там замеров пока не было.
+
+Проверить реальную скорость на своём Mac:
+
+```bash
+grep 'stt:' ~/Library/Logs/Voxly.log | tail
+# stt: ovoz=4.2s ishlov=3.1s   ← 4,2 с звука, 3,1 с обработки
+```
+
+## Установка из исходников
+
+```bash
+xcode-select --install          # если ещё не стоят инструменты разработчика
+git clone https://github.com/FarhodNomonov/voxly.git
+cd voxly
+./setup.sh                      # whisper.cpp → модель (~550 МБ) → приложение
+./scripts/mahalliy-yigish.sh    # пересборка с постоянной локальной подписью
+```
+
+После первого запуска разрешите доступ к **микрофону** и к **универсальному
+доступу**: Системные настройки → Конфиденциальность и безопасность →
+Универсальный доступ → Voxly. Без универсального доступа текст не вставится в
+другие приложения.
+
+Пересобирайте через `scripts/mahalliy-yigish.sh`, а не через голый
+`src/build.sh`: иначе macOS сбрасывает разрешения после каждой сборки.
+
+Удаление: Настройки → «Удалить Voxly…» или `sudo ./scripts/uninstall.sh`.
+
+## Конфиденциальность
+
+Звук обрабатывается в памяти и никуда не уходит. В сеть приложение ходит только
+за моделью (Hugging Face) и, если вы сами подключили ИИ-провайдера, к нему с
+вашим ключом. В лог (`~/Library/Logs/Voxly.log`) пишется время обработки и
+ошибки, но не тексты.
+
+## Лицензия
+
+Voxly — форк проекта [Kotib](https://github.com/MuhammadMirrr/kotib) (Мухаммад
+Миркабилов, лицензия MIT, коммерческое использование разрешено). Строка с
+авторскими правами оригинала должна оставаться в [LICENSE](LICENSE). Модели и
+библиотеки перечислены в [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

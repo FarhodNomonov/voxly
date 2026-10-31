@@ -214,7 +214,7 @@ ilova_qur() {
 
     # Uchinchi tomon litsenziyalari — oʻrnatuvchi `{app}` ga qoʻyadi, tray
     # menyusidagi «Litsenziyalar…» ochadi.
-    "$ROOT/scripts/litsenziyalar.sh" "win/build-${arch}/Litsenziyalar.txt"
+    "$ROOT/scripts/litsenziyalar.sh" "win/build-${arch}/Litsenziyalar.txt" win
 }
 
 for arch in "${ARCHLAR[@]}"; do
