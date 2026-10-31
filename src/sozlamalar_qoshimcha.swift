@@ -12,7 +12,7 @@ extension SozlamalarVC {
         qoshimcha.isHidden = !qoshimchaOchiq
         qoshimchaLink.stringValue =
             qoshimchaOchiq
-            ? "Qoʻshimcha sozlamalar  ⌃" : "Qoʻshimcha sozlamalar  ⌄"
+            ? tr("Дополнительно  ⌃", "Advanced  ⌃") : tr("Дополнительно  ⌄", "Advanced  ⌄")
     }
 
     func qurQoshimcha() -> NSStackView {
@@ -28,13 +28,13 @@ extension SozlamalarVC {
         modePopup.action = #selector(modeOzgardi)
         modePopup.translatesAutoresizingMaskIntoConstraints = false
         modePopup.widthAnchor.constraint(equalToConstant: 240).isActive = true
-        let modeQator = teng(U.yozuv("Matn kiritish usuli", 16), modePopup)
+        let modeQator = teng(U.yozuv(tr("Способ ввода текста", "Text input method"), 16), modePopup)
 
         // — Apostrof
         apostrofSwitch = NSSwitch()
         apostrofSwitch.target = self
         apostrofSwitch.action = #selector(apostrofOzgardi)
-        let apostrofQator = teng(U.yozuv("Oddiy apostrof (') ishlatish", 16), apostrofSwitch)
+        let apostrofQator = teng(U.yozuv(tr("Простой апостроф (') в узбекском", "Plain apostrophe (') for Uzbek"), 16), apostrofSwitch)
 
         // — Diagnostika rejimi (barqarorlik spec'i, G1). Standart holatda logga
         // transkript MATNI yozilmaydi; muammoni tekshirish uchun 24 soatga
@@ -43,9 +43,9 @@ extension SozlamalarVC {
         diagnostikaSwitch.target = self
         diagnostikaSwitch.action = #selector(diagnostikaOzgardi)
         diagnostikaSwitch.toolTip =
-            "Yoqilsa, 24 soat davomida diktovka matni ham logga yoziladi — "
-            + "muammoni tekshirish uchun. Keyin oʻzi oʻchadi. Oddiy holatda logda matn boʻlmaydi."
-        let diagnostikaQator = teng(U.yozuv("Diagnostika rejimi (24 soat)", 16), diagnostikaSwitch)
+            tr("Если включить, 24 часа текст диктовок будет попадать в лог — ", "When on, dictated text is written to the log for 24 hours — ")
+            + tr("для поиска проблем. Потом выключится сам. Обычно текста в логе нет.", "to help diagnose problems. It then turns itself off. Normally the log has no text.")
+        let diagnostikaQator = teng(U.yozuv(tr("Режим диагностики (24 часа)", "Diagnostic mode (24 hours)"), 16), diagnostikaSwitch)
 
         // — Anonim statistika (oshkoralik yozuvi)
         //
@@ -53,13 +53,13 @@ extension SozlamalarVC {
         // YASHIRIN emas: bu yozuv nima yuborilishini va nima YUBORILMASLIGINI
         // aniq aytadi, va maxfiylik siyosatiga havola beradi. Bu — huquqiy
         // oshkoralik talabini qondiradigan qism.
-        let statistikaSarlavha = U.yozuv("Anonim ishlash statistikasi", 16)
+        let statistikaSarlavha = U.yozuv(tr("Конфиденциальность", "Privacy"), 16)
 
         let statistikaIzoh = U.yozuv(
-            "Ilovani yaxshilash uchun anonim ma'lumot yuboriladi: ilova va tizim "
-                + "versiyasi, qurilma turi (protsessor, xotira, videokarta), hamda har "
-                + "transkripsiya/tarjima uchun tezlik va davomiylik. Ovoz, matn va nima "
-                + "yozganingiz HECH QACHON yuborilmaydi. Batafsil: uzb.mirqobilov.com/maxfiylik",
+            tr("Распознавание речи работает полностью на вашем Mac, без интернета. ", "Speech recognition runs entirely on your Mac, offline. ")
+                + tr("Голос, текст и статистика никуда не отправляются. ", "Your voice, text and usage data are never sent anywhere. ")
+                + tr("Интернет нужен только для скачивания модели и для ИИ-функций, ", "The internet is only used to download models and for AI features, ")
+                + tr("если вы сами добавите ключ.", "if you add your own key."),
             14, .regular, U.matn2)
         statistikaIzoh.lineBreakMode = .byWordWrapping
         statistikaIzoh.maximumNumberOfLines = 6
@@ -71,16 +71,16 @@ extension SozlamalarVC {
         statistika.spacing = 4
 
         // — Sunʼiy intellekt
-        let aiSarlavha = U.yozuv("Sunʼiy intellekt (ixtiyoriy)", 16)
+        let aiSarlavha = U.yozuv(tr("Искусственный интеллект (по желанию)", "AI (optional)"), 16)
         let aiIzoh = U.yozuv(
-            "Kalit qoʻshsangiz, matnni tozalash va xulosa qilish qoʻshiladi. "
-                + "Ilova busiz ham toʻliq ishlaydi.", 14, .regular, U.matn2)
+            tr("С вашим ключом API появятся чистка текста и краткое изложение. ", "Add your API key to get text cleanup and summaries. ")
+                + tr("Без него приложение тоже полностью работает.", "The app works fully without it."), 14, .regular, U.matn2)
         aiIzoh.lineBreakMode = .byWordWrapping
         aiIzoh.maximumNumberOfLines = 3
         aiIzoh.preferredMaxLayoutWidth = 512
 
         provayderPopup = NSPopUpButton()
-        provayderPopup.addItem(withTitle: "— tanlanmagan —")
+        provayderPopup.addItem(withTitle: tr("— не выбран —", "— none —"))
         provayderlar.forEach { provayderPopup.addItem(withTitle: $0.nom) }
         provayderPopup.target = self
         provayderPopup.action = #selector(provayderOzgardi)
@@ -88,7 +88,7 @@ extension SozlamalarVC {
         provayderPopup.widthAnchor.constraint(equalToConstant: 180).isActive = true
 
         kalitMaydon = NSSecureTextField()
-        kalitMaydon.placeholderString = "API kalit"
+        kalitMaydon.placeholderString = tr("Ключ API", "API key")
         kalitMaydon.delegate = self
 
         let aiQator = NSStackView(views: [provayderPopup, kalitMaydon])
@@ -119,14 +119,14 @@ extension SozlamalarVC {
         modelCombo.completes = true
         modelCombo.hasVerticalScroller = true
         modelCombo.numberOfVisibleItems = 12
-        modelCombo.placeholderString = "model nomi"
+        modelCombo.placeholderString = tr("название модели", "model name")
         modelCombo.delegate = self
         let yangilash = U.ikkilamchiTugma(
-            "Yangilash", target: self,
+            tr("Обновить", "Refresh"), target: self,
             action: #selector(modellarniYangila),
             balandlik: 38, shrift: 14)
         modelHolati = U.yozuv("", 13, .regular, U.matn2)
-        let modelQator = NSStackView(views: [U.yozuv("Model", 16), modelCombo, yangilash])
+        let modelQator = NSStackView(views: [U.yozuv(tr("Модель", "Model"), 16), modelCombo, yangilash])
         modelQator.orientation = .horizontal
         modelQator.alignment = .centerY
         modelQator.spacing = 10
@@ -141,7 +141,7 @@ extension SozlamalarVC {
         eskirganYozuv.preferredMaxLayoutWidth = 320
         eskirganTugma =
             U.ikkilamchiTugma(
-                "Oʻtish", target: self,
+                tr("Перейти", "Switch"), target: self,
                 action: #selector(taklifgaOt),
                 balandlik: 32, shrift: 13) as? FonliTugma
         eskirganQator = NSStackView(views: [U.yozuv("⚠️", 14), eskirganYozuv, eskirganTugma])
@@ -152,7 +152,7 @@ extension SozlamalarVC {
 
         tekshirTugma =
             U.ikkilamchiTugma(
-                "Ulanishni tekshirish", target: self,
+                tr("Проверить подключение", "Test connection"), target: self,
                 action: #selector(ulanishniTekshir),
                 balandlik: 38, shrift: 14) as? FonliTugma
         tekshirNatija = U.yozuv("", 14, .regular, U.matn2)
@@ -171,13 +171,13 @@ extension SozlamalarVC {
 
         // — Xizmat tugmalari
         let log = U.ikkilamchiTugma(
-            "Log faylini ochish…", target: self,
+            tr("Открыть лог…", "Open log file…"), target: self,
             action: #selector(logniOch), balandlik: 38, shrift: 14)
         let ochir = U.ikkilamchiTugma(
-            "Ilovani oʻchirish…", target: self,
+            tr("Удалить приложение…", "Uninstall…"), target: self,
             action: #selector(ilovaniOchir), balandlik: 38, shrift: 14)
         let litsenziya = U.ikkilamchiTugma(
-            "Litsenziyalar…", target: self,
+            tr("Лицензии…", "Licenses…"), target: self,
             action: #selector(litsenziyalarniOch), balandlik: 38, shrift: 14)
         let xizmat = NSStackView(views: [log, litsenziya, ochir])
         xizmat.orientation = .horizontal

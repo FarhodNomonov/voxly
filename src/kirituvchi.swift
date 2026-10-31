@@ -24,7 +24,7 @@ enum Inserter {
     /// 3000 belgida ~5 s, va asosiy oqimda UI shuncha qotardi (D6). Serial:
     /// ketma-ket ikki diktovkaning belgilari bir-biriga aralashmaydi.
     private static let sekinQ = DispatchQueue(
-        label: "com.rubaistt.dictation.sekin-kiritish",
+        label: "app.voxly.mac.sekin-kiritish",
         qos: .userInitiated)
 
     /// "Sekin" usul: har bir belgini Unicode hodisa sifatida yuboradi.

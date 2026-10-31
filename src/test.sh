@@ -18,17 +18,10 @@ UNDER_TEST=()
 [ -f "$SRC/diktovka_tarixi.swift" ] && UNDER_TEST+=("$SRC/diktovka_tarixi.swift")
 [ -f "$SRC/yollar.swift" ]      && UNDER_TEST+=("$SRC/yollar.swift")
 [ -f "$SRC/vaqt_format.swift" ] && UNDER_TEST+=("$SRC/vaqt_format.swift")
-[ -f "$SRC/matn_boluvchi.swift" ] && UNDER_TEST+=("$SRC/matn_boluvchi.swift")
-[ -f "$SRC/tillar.swift" ]       && UNDER_TEST+=("$SRC/tillar.swift")
-[ -f "$SRC/tarjima_model.swift" ] && UNDER_TEST+=("$SRC/tarjima_model.swift")
+[ -f "$SRC/ui_tili.swift" ]     && UNDER_TEST+=("$SRC/ui_tili.swift")
 [ -f "$SRC/model_tanlov.swift" ] && UNDER_TEST+=("$SRC/model_tanlov.swift")
 [ -f "$SRC/log_siyosati.swift" ] && UNDER_TEST+=("$SRC/log_siyosati.swift")
 [ -f "$SRC/saqlanmagan.swift" ]  && UNDER_TEST+=("$SRC/saqlanmagan.swift")
-# yangilanish.swift EMAS: u Metal import qiladi (GPU nomi uchun). Uning sof
-# mantigʻi — versiya taqqoslash, siyosat, manifest — alohida faylda.
-# imzo.swift CryptoKit'ni import qiladi: bu ham sof hisob (fayl/tarmoq yoʻq).
-[ -f "$SRC/yangilanish_siyosat.swift" ] && UNDER_TEST+=("$SRC/yangilanish_siyosat.swift")
-[ -f "$SRC/imzo.swift" ]        && UNDER_TEST+=("$SRC/imzo.swift")
 
 swiftc -O "$ROOT"/tests/main.swift "$ROOT"/tests/test_*.swift "${UNDER_TEST[@]}" -o "$OUT/testlar"
 "$OUT/testlar"

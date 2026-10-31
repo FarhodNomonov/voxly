@@ -1,4 +1,4 @@
-// Kotib — ilova fayllari turadigan yoʻllar, bitta joyda.
+// Voxly — ilova fayllari turadigan yoʻllar, bitta joyda.
 //
 // Ilova avval "Audio-Matnga" deb atalgan va maʼlumotlarini
 // ~/Library/Application Support/Audio-Matnga/ da saqlagan. Nom "Kotib"ga
@@ -16,8 +16,11 @@ import Foundation
 
 enum Yollar {
 
-    static let papkaNomi = "Kotib"
-    static let eskiPapkaNomi = "Audio-Matnga"
+    static let papkaNomi = "Voxly"
+    /// Oldingi nomlar, yangisidan eskisiga: Voxly — Kotib fork'i, Kotib esa
+    /// avval «Audio-Matnga» edi. Birinchi topilgani koʻchiriladi.
+    static let eskiPapkaNomlari = ["Kotib", "Audio-Matnga"]
+    static var eskiPapkaNomi: String { eskiPapkaNomlari[0] }
 
     /// ~/Library/Application Support
     private static func appSupport(_ fm: FileManager = .default) -> URL {
@@ -29,62 +32,48 @@ enum Yollar {
     // boʻlib yoʻl soʻrasa ham.
     private static let birMartaKochirildi: Bool = kochir(baza: appSupport())
 
-    /// ~/Library/Application Support/Kotib — birinchi murojaatda eski papkani koʻchiradi.
+    /// ~/Library/Application Support/Voxly — birinchi murojaatda eski papkani koʻchiradi.
     static var qollab: URL {
         _ = birMartaKochirildi
         return appSupport().appendingPathComponent(papkaNomi, isDirectory: true)
     }
 
-    /// ~/Library/Application Support/Kotib/diktovka-tarixi.json
+    /// ~/Library/Application Support/Voxly/diktovka-tarixi.json
     static var diktovkaTarixi: URL { qollab.appendingPathComponent("diktovka-tarixi.json") }
 
-    /// ~/Library/Application Support/Kotib/saqlanmagan/ — matnga oʻgirib
+    /// ~/Library/Application Support/Voxly/saqlanmagan/ — matnga oʻgirib
     /// boʻlmagan diktovka ovozi (`saqlanmagan.swift`).
     static var saqlanmagan: URL { qollab.appendingPathComponent("saqlanmagan", isDirectory: true) }
 
-    /// ~/Library/Application Support/Kotib/hujjatlar
+    /// ~/Library/Application Support/Voxly/hujjatlar
     static var hujjatlar: URL { qollab.appendingPathComponent("hujjatlar", isDirectory: true) }
 
-    /// ~/Library/Application Support/Kotib/tarjima-model-33b
-    ///
-    /// CTranslate2 papkasi (model.bin + lugʻat + sentencepiece). `.app` ichida
-    /// KELMAYDI — 3,4 GB; foydalanuvchi kerak boʻlganda yuklab oladi.
-    /// Papka toʻliqmi — `TarjimaModel.tayyormi` tekshiradi.
-    ///
-    /// Nega nomda `-33b`: 1.3B dan 3.3B ga oʻtishda papka nomi oʻzgarishi
-    /// SHART. Aks holda `TarjimaModel.tayyormi` eski 1.3B papkasini toʻliq deb
-    /// oʻqiydi va yangilanish hech qachon boshlanmaydi.
-    static var tarjimaModeli: URL {
-        qollab.appendingPathComponent("tarjima-model-33b", isDirectory: true)
-    }
-
-    /// Eski 1.3B papkasini oʻchiradi — foydalanuvchi diskida 1,38 GB boʻshaydi.
-    /// Oʻchirgan boʻlsa `true`. Xato bersa `false`, ilova baribir ishlaydi.
+    /// Olib tashlangan oflayn tarjimon modellari (NLLB, CC-BY-NC — tijoratda
+    /// ishlatib boʻlmaydi). Kotib'dan koʻchirilgan foydalanuvchida 1,4–3,4 GB
+    /// joy egallab yotmasin — oʻchiriladi. Oʻchirgan boʻlsa `true`.
     ///
     /// `baza` parametri sinov uchun: testlar vaqtinchalik papka beradi.
     @discardableResult
-    static func eskiTarjimaModeliniOchir(baza: URL, fm: FileManager = .default) -> Bool {
-        let eski = baza.appendingPathComponent("tarjima-model", isDirectory: true)
-        guard fm.fileExists(atPath: eski.path) else { return false }
-        do {
-            try fm.removeItem(at: eski)
-            return true
-        } catch {
-            return false
+    static func eskiTarjimaModellariniOchir(baza: URL, fm: FileManager = .default) -> Bool {
+        var ochdi = false
+        for nom in ["tarjima-model", "tarjima-model-33b"] {
+            let eski = baza.appendingPathComponent(nom, isDirectory: true)
+            if fm.fileExists(atPath: eski.path), (try? fm.removeItem(at: eski)) != nil { ochdi = true }
         }
+        return ochdi
     }
 
-    /// ~/Library/Application Support/Kotib/models/ggml-rubaistt.bin
+    /// ~/Library/Application Support/Voxly/models/ggml-rubaistt.bin
     ///
     /// Model faylining nomi ATAYLAB oʻzgarmadi: u ichki fayl, foydalanuvchi uni
     /// koʻrmaydi, lekin CDN'dagi nusxa ham shu nom bilan yotibdi (823 MB).
     /// Ilova ichidagi yuklovchi modelni SHU yerga yozadi.
     static var model: URL { qollab.appendingPathComponent("models/ggml-rubaistt.bin") }
 
-    /// ~/Library/Application Support/Kotib/models — foydalanuvchi modellari papkasi.
+    /// ~/Library/Application Support/Voxly/models — foydalanuvchi modellari papkasi.
     static var foydalanuvchiModellari: URL { model.deletingLastPathComponent() }
 
-    /// /Library/Application Support/Kotib/models — 1.2 dan boshlab `.pkg` modelni
+    /// /Library/Application Support/Voxly/models — 1.2 dan boshlab `.pkg` modelni
     /// SHU yerga qoʻyadi (root, hamma foydalanuvchiga umumiy, faqat oʻqish).
     /// Nega bundle'dan tashqarida: avto-yangilanish (Sparkle) butun bundle'ni
     /// almashtiradi — model ichida boʻlsa har yangilanish 800 MB boʻlardi; bundle
@@ -92,6 +81,11 @@ enum Yollar {
     static let tizimModellari = URL(
         fileURLWithPath: "/Library/Application Support/\(papkaNomi)/models",
         isDirectory: true)
+
+    /// /Library/Application Support/Kotib/models — Kotib .pkg qoʻygan oʻzbek
+    /// modeli (823 MB). Qayta yuklamaslik uchun nomzodlar roʻyxatida turadi.
+    static let eskiTizimModellari = URL(
+        fileURLWithPath: "/Library/Application Support/Kotib/models", isDirectory: true)
 
     /// ~/rubai-stt/models — eski dasturchi yoʻli (setup.sh hali shu yerga qoʻyadi).
     static var eskiModellar: URL {
@@ -105,7 +99,7 @@ enum Yollar {
         let papka = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Logs", isDirectory: true)
         try? FileManager.default.createDirectory(at: papka, withIntermediateDirectories: true)
-        return papka.appendingPathComponent("Kotib.log")
+        return papka.appendingPathComponent("Voxly.log")
     }
 
     /// Eski nomdagi papkani yangisiga koʻchiradi. Koʻchirgan boʻlsa `true`.
@@ -118,16 +112,19 @@ enum Yollar {
     /// `baza` parametri sinov uchun: testlar vaqtinchalik papka beradi.
     @discardableResult
     static func kochir(baza: URL, fm: FileManager = .default) -> Bool {
-        let eski = baza.appendingPathComponent(eskiPapkaNomi, isDirectory: true)
         let yangi = baza.appendingPathComponent(papkaNomi, isDirectory: true)
-        guard fm.fileExists(atPath: eski.path), !fm.fileExists(atPath: yangi.path) else {
-            return false
+        guard !fm.fileExists(atPath: yangi.path) else { return false }
+        for nom in eskiPapkaNomlari {
+            let eski = baza.appendingPathComponent(nom, isDirectory: true)
+            guard fm.fileExists(atPath: eski.path) else { continue }
+            do {
+                try fm.moveItem(at: eski, to: yangi)
+                eskiTarjimaModellariniOchir(baza: yangi, fm: fm)
+                return true
+            } catch {
+                return false
+            }
         }
-        do {
-            try fm.moveItem(at: eski, to: yangi)
-            return true
-        } catch {
-            return false
-        }
+        return false
     }
 }

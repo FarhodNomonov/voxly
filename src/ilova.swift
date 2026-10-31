@@ -139,17 +139,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Menyu.qur()
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: "Kotib")
+        statusItem.button?.image = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: "Voxly")
         let menu = NSMenu()
         dictateItem = NSMenuItem(
-            title: "Diktovka  (\(hkConfig.displayString))", action: #selector(toggle), keyEquivalent: "")
+            title: tr("Диктовка  (\(hkConfig.displayString))", "Dictate  (\(hkConfig.displayString))"), action: #selector(toggle), keyEquivalent: "")
         menu.addItem(dictateItem)
         qaytaItem = NSMenuItem(title: "", action: #selector(qaytaUrinBosildi), keyEquivalent: "")
         qaytaItem.isHidden = true
         menu.addItem(qaytaItem)
-        menu.addItem(NSMenuItem(title: "Oynani ochish", action: #selector(oynaniOch), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: tr("Открыть окно", "Open window"), action: #selector(oynaniOch), keyEquivalent: ""))
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Chiqish", action: #selector(quit), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: tr("Выйти", "Quit"), action: #selector(quit), keyEquivalent: "q"))
         menu.delegate = self
         statusItem.menu = menu
 
@@ -164,11 +164,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             name: .studiyaIshTugadi, object: nil)
 
         LoginItem.eskiRoyxatdanKochir()
-
-        // Anonim statistika (`statistika.swift`) va avto-yangilanish
-        // (`yangilovchi.swift`, Sparkle) — kodda ATAYLAB alohida (G2).
-        Statistika.pingYubor()
-        Yangilovchi.birgalik.boshla()
 
         // Model yoʻq boʻlsa — avval uni yuklaymiz, onboarding keyin.
         if ModelStore.isReady {
@@ -220,7 +215,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard hotkey.apply(cfg) else { return false }
         hkConfig = cfg
         HotKeyStore.save(cfg)
-        dictateItem.title = "Diktovka  (\(cfg.displayString))"
+        dictateItem.title = tr("Диктовка  (\(cfg.displayString))", "Dictate  (\(cfg.displayString))")
         return true
     }
 
@@ -261,8 +256,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if text.isEmpty {
             let msg =
                 samples.count < 8000
-                ? "Juda qisqa — kamida 1 soniya gapiring"
-                : "Ovoz aniqlanmadi — balandroq gapiring"
+                ? tr("Слишком коротко — говорите хотя бы секунду", "Too short — speak for at least a second")
+                : tr("Речь не распознана — говорите громче", "No speech detected — speak louder")
             overlay.vaqtincha("⚠️ \(msg)", soniya: 3.5)
             scheduleIdleUnload()
             return
@@ -280,7 +275,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSPasteboard.general.setString(text, forType: .string)
             let opts = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
             _ = AXIsProcessTrustedWithOptions(opts)
-            overlay.vaqtincha("Matn clipboard'da — ⌘V bosing (Accessibility kerak)", soniya: 4.0)
+            overlay.vaqtincha(tr("Текст в буфере обмена — нажмите ⌘V (нужен Универсальный доступ)", "Text is on the clipboard — press ⌘V (Accessibility needed)"), soniya: 4.0)
         }
 
         // Tarixga yozamiz. Xato boʻlsa faqat logga tushadi — foydalanuvchining matni
@@ -366,32 +361,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let davom = Date().timeIntervalSinceReferenceDate - yozishBoshlandi
             if davom < 1.0 {
                 RubaiLog.write(String(format: "juda qisqa yozuv (%.2fs) — transkripsiya oʻtkazib yuborildi", davom))
-                overlay.vaqtincha("Juda qisqa — kamida 1 soniya gapiring", soniya: 2.5)
+                overlay.vaqtincha(tr("Слишком коротко — говорите хотя бы секунду", "Too short — speak for at least a second"), soniya: 2.5)
             } else {
                 RubaiLog.write("XATO: mikrofondan ovoz kelmadi (peak=\(peak)) — transkripsiya oʻtkazib yuborildi")
-                overlay.vaqtincha("⚠️ Mikrofondan ovoz kelmadi", soniya: 5.0)
+                overlay.vaqtincha(tr("⚠️ С микрофона не идёт звук", "⚠️ No sound from the microphone"), soniya: 5.0)
             }
             scheduleIdleUnload()
             return
         }
-        let belgi = overlay.show("Matnga oʻgirilmoqda…", recording: false)
+        let belgi = overlay.show(tr("Распознаю…", "Transcribing…"), recording: false)
         DiktovkaBand.transkripsiya += 1
         let prepared = kuchaytir(samples)
         let ovozSoniya = Double(samples.count) / 16000.0
         let boshlandi = Date().timeIntervalSinceReferenceDate
         Whisper.shared.transcribe(prepared) { [weak self] text in
-            Statistika.amalYubor(
-                tur: "stt", ovoz_s: ovozSoniya,
-                ishlov_s: Date().timeIntervalSinceReferenceDate - boshlandi,
-                backend: Statistika.sttBackend)
+            RubaiLog.write(
+                String(
+                    format: "stt: ovoz=%.1fs ishlov=%.1fs", ovozSoniya,
+                    Date().timeIntervalSinceReferenceDate - boshlandi))
             DiktovkaBand.transkripsiya -= 1
             self?.finishTranscription(text, samples: samples, belgi: belgi)
         } fail: { [weak self] msg in
             DiktovkaBand.transkripsiya -= 1
-            Statistika.amalYubor(
-                tur: "stt", ovoz_s: ovozSoniya,
-                ishlov_s: Date().timeIntervalSinceReferenceDate - boshlandi,
-                backend: Statistika.sttBackend, natija: "xato:transkripsiya")
             RubaiLog.write("transcription XATO: \(msg)")
             self?.ovozniSaqla(samples, sabab: msg)
             self?.scheduleIdleUnload()
@@ -418,7 +409,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let qanday = AppDelegate.avtomatikIshgaTushdi ? "login" : "qoʻlda"
         let saqlangan = SaqlanmaganOvoz.royxat().count
         return
-            "ishga tushdi: Kotib \(v) (\(build)) \(arx), \(os), model: \(model), GPU: \(Statistika.sttBackend), \(qanday)"
+            "ishga tushdi: Voxly \(v) (\(build)) \(arx), \(os), model: \(model), til: \(ModelStore.til.kod), oqimlar: \(Whisper.oqimlar), \(qanday)"
             + (saqlangan > 0 ? ", saqlanmagan ovoz: \(saqlangan)" : "")
     }
 
@@ -428,15 +419,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // kerak, aks holda mikrofon studiya ishi tugaguncha (soatlab) tirik
         // qolib, bufer cheksiz oʻsadi.
         guard !TranskripsiyaIshi.ishlayapti else {
-            overlay.vaqtincha("Fayl ustida ish ketmoqda — kuting", soniya: 2.0)
-            return
-        }
-        // Majburiy yangilanish muhlati tugagan (S9): yangi yozuv boshlanmaydi.
-        // Sabab, «Qayta urinish» va «Saytdan yuklab olish» — oynadagi bannerda.
-        guard !Yangilovchi.birgalik.bloklanganmi else {
-            RubaiLog.write("yozish boshlanmadi: majburiy yangilanish muhlati tugagan")
-            overlay.vaqtincha("Yangilanish majburiy — oynada batafsil", soniya: 4)
-            AsosiyOyna.birgalik.korsat()
+            overlay.vaqtincha(tr("Идёт обработка файла — подождите", "A file is being processed — please wait"), soniya: 2.0)
             return
         }
         boshlanyapti = true
@@ -451,15 +434,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case .ok:
                 self.yozishBoshlandi = Date().timeIntervalSinceReferenceDate
                 if !self.oynaOldindami {
-                    let m = "Yozilmoqda… (yana \(self.hkConfig.displayString))"
+                    let m = tr("Запись… (ещё раз \(self.hkConfig.displayString))", "Recording… (press \(self.hkConfig.displayString) again)")
                     self.overlay.asosiy = m
                     self.overlay.show(m, recording: true)
                 }
                 self.maxYozishniRejalashtir()
             case .ruxsatYoq:
-                self.overlay.vaqtincha("Mikrofonga ruxsat yoʻq", soniya: 1.5)
+                self.overlay.vaqtincha(tr("Нет доступа к микрофону", "No microphone access"), soniya: 1.5)
             case .javobYoq:
-                self.overlay.vaqtincha("⚠️ Mikrofon javob bermayapti — qayta urining", soniya: 4.0)
+                self.overlay.vaqtincha(tr("⚠️ Микрофон не отвечает — попробуйте снова", "⚠️ The microphone isn't responding — try again"), soniya: 4.0)
             case .xato(let x):
                 self.overlay.vaqtincha("⚠️ \(x.xabar)", soniya: 3.0)
             }

@@ -22,8 +22,8 @@ struct MicDevice {
         /// Roʻyxatdagi qisqa yorliq. Windows'dagi matnlar bilan bir xil.
         var badge: String {
             switch self {
-            case .virtual: return "   [mikrofon emas!]"
-            case .bluetooth: return "   [sifat past]"
+            case .virtual: return tr("   [не микрофон!]", "   [not a microphone!]")
+            case .bluetooth: return tr("   [низкое качество]", "   [low quality]")
             case .aggregate: return "   [virtual]"
             default: return ""
             }
@@ -33,13 +33,13 @@ struct MicDevice {
         var warning: String {
             switch self {
             case .virtual:
-                return "Bu haqiqiy mikrofon emas — virtual qurilma (masalan BlackHole). "
-                    + "U tizim ovozini uzatadi, gapirganingizni eshitmaydi."
+                return tr("Это не настоящий микрофон, а виртуальное устройство (например, BlackHole). ", "This isn't a real microphone — it's a virtual device (e.g. BlackHole). ")
+                    + tr("Оно передаёт звук системы и не слышит ваш голос.", "It carries system audio and won't hear your voice.")
             case .bluetooth:
-                return "Bluetooth mikrofon: ovoz sifati past boʻladi va matn xato chiqishi mumkin. "
-                    + "Iloji boʻlsa ichki yoki simli mikrofonni tanlang."
+                return tr("Bluetooth-микрофон: качество звука низкое, возможны ошибки в тексте. ", "Bluetooth microphone: audio quality is low and the text may have errors. ")
+                    + tr("По возможности выберите встроенный или проводной микрофон.", "If you can, choose the built-in or a wired microphone.")
             case .aggregate:
-                return "Birlashtirilgan (aggregate) qurilma — kutilmagan natija berishi mumkin."
+                return tr("Составное (aggregate) устройство — результат может быть непредсказуемым.", "Aggregate device — results may be unpredictable.")
             default:
                 return ""
             }
@@ -48,7 +48,7 @@ struct MicDevice {
 
     /// Roʻyxatda koʻrinadigan toʻliq qator.
     var listLabel: String {
-        name + kind.badge + (isDefault ? "   (standart)" : "")
+        name + kind.badge + (isDefault ? tr("   (по умолчанию)", "   (default)") : "")
     }
 }
 

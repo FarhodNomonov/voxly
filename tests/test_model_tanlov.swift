@@ -64,7 +64,8 @@ func modelTanlovTestlari() {
             "rus modeli yoʻq — boʻsh",
             ModelTanlov.nomzodlar(papkalar: [uy], til: .rus) { $0.lastPathComponent == uz.fayl ? uz.hajm : nil },
             [])
-        tengmi("til kodlari", NutqTili.allCases.map(\.kod), ["ru", "uz"])
+        tengmi("til kodlari", NutqTili.allCases.map(\.kod), ["ru", "en", "uz"])
+        tengmi("ingliz — rus bilan bir model", ModelTanlov.joriy(.ingliz), rus)
     }
 
     testQosh("model — yoʻllar va jadval bir xilligi") {
@@ -72,7 +73,8 @@ func modelTanlovTestlari() {
         tengmi(
             "foydalanuvchi modellari = Yollar.model papkasi",
             Yollar.foydalanuvchiModellari, Yollar.model.deletingLastPathComponent())
-        tengmi("tizim papkasi", Yollar.tizimModellari.path, "/Library/Application Support/Kotib/models")
+        tengmi("tizim papkasi", Yollar.tizimModellari.path, "/Library/Application Support/Voxly/models")
+        tengmi("Kotib .pkg papkasi", Yollar.eskiTizimModellari.path, "/Library/Application Support/Kotib/models")
         tekshir("eski yoʻl ~/rubai-stt/models", Yollar.eskiModellar.path.hasSuffix("/rubai-stt/models"))
 
         // Hajm va sha256 — scripts/bogliqliklar.env bilan bir xil boʻlishi SHART:
@@ -104,5 +106,16 @@ func modelSha256Testlari() {
             "4 MB + 123 bayt", ModelTanlov.faylSha256(yol),
             SHA256.hash(data: katta).map { String(format: "%02x", $0) }.joined())
         tengmi("yoʻq fayl", ModelTanlov.faylSha256(yol.appendingPathExtension("yoq")), nil)
+    }
+}
+
+func uiTiliTestlari() {
+    testQosh("interfeys tili — tizim tillaridan") {
+        tengmi("rus", UITili.tizimdan(["ru-RU"]), .ru)
+        tengmi("oʻzbek → rus", UITili.tizimdan(["uz-Latn-UZ", "en-US"]), .ru)
+        tengmi("ingliz", UITili.tizimdan(["en-US", "ru-RU"]), .en)
+        tengmi("nemis → ingliz", UITili.tizimdan(["de-DE"]), .en)
+        tengmi("nemis, keyin rus → rus", UITili.tizimdan(["de-DE", "ru"]), .ru)
+        tengmi("boʻsh → ingliz", UITili.tizimdan([]), .en)
     }
 }

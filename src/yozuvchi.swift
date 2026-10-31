@@ -45,9 +45,9 @@ final class Recorder {
         }
         var xabar: String {
             switch self {
-            case .formatYoq: return "Mikrofon topilmadi"
-            case .konvertorYoq: return "Mikrofon formati mos emas"
-            case .ishgaTushmadi(let k): return "Mikrofon ochilmadi (kod \(k))"
+            case .formatYoq: return tr("Микрофон не найден", "No microphone found")
+            case .konvertorYoq: return tr("Неподдерживаемый формат микрофона", "Unsupported microphone format")
+            case .ishgaTushmadi(let k): return tr("Не удалось открыть микрофон (код \(k))", "Couldn't open the microphone (code \(k))")
             }
         }
     }
@@ -89,7 +89,7 @@ final class Recorder {
 
     /// Mikrofon FAQAT shu navbatda ochiladi — asosiy oqim hech qachon
     /// CoreAudio'ni kutib turmasligi kerak (pastdagi izohga qarang).
-    private let ochishQ = DispatchQueue(label: "com.rubaistt.dictation.recorder")
+    private let ochishQ = DispatchQueue(label: "app.voxly.mac.recorder")
 
     func start(_ cb: @escaping (Natija) -> Void) {
         switch AVCaptureDevice.authorizationStatus(for: .audio) {

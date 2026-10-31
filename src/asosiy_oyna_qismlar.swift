@@ -63,11 +63,11 @@ final class YangilanishBanneri: NSView {
         chiziq.layer?.backgroundColor = U.bannerChet.cgColor
 
         let yuklash = U.ikkilamchiTugma(
-            "Ochish", target: self,
+            tr("Открыть", "Open"), target: self,
             action: #selector(amalBosildi), balandlik: 26, shrift: 12)
         tugmaView = yuklash
         let ikkinchi = U.ikkilamchiTugma(
-            "Sayt", target: self,
+            tr("Сайт", "Website"), target: self,
             action: #selector(ikkinchiBosildi), balandlik: 26, shrift: 12)
         ikkinchiView = ikkinchi
         let yopish = NSButton(title: "✕", target: self, action: #selector(yopish))
@@ -223,15 +223,11 @@ final class SozlamalarSheetVC: NSViewController {
         chiziq.layer?.backgroundColor = U.ajratgich.cgColor
 
         let tayyor = U.asosiyTugma(
-            "Tayyor", target: self, action: #selector(tayyorBosildi),
+            tr("Готово", "Done"), target: self, action: #selector(tayyorBosildi),
             balandlik: 42, shrift: 16)
-        let donat = U.ikkilamchiTugma(
-            "♥  Donat qilish", target: ichki,
-            action: #selector(SozlamalarVC.openDonate),
-            balandlik: 42, shrift: 15, matnRangi: U.qizil)
 
         for x in [kontent, footer] { x.translatesAutoresizingMaskIntoConstraints = false; v.addSubview(x) }
-        for x in [chiziq, tayyor, donat] { x.translatesAutoresizingMaskIntoConstraints = false; footer.addSubview(x) }
+        for x in [chiziq, tayyor] { x.translatesAutoresizingMaskIntoConstraints = false; footer.addSubview(x) }
 
         // Sheet oʻlchami. Kenglik dizayndagidek qatʼiy 560. Balandlik esa
         // KONTENTGA qarab oʻsadi, lekin dizayndagi 588 dan oshmaydi ("Qoʻshimcha
@@ -271,10 +267,7 @@ final class SozlamalarSheetVC: NSViewController {
             chiziq.heightAnchor.constraint(equalToConstant: 1),
 
             tayyor.trailingAnchor.constraint(equalTo: footer.trailingAnchor, constant: -24),
-            tayyor.centerYAnchor.constraint(equalTo: footer.centerYAnchor),
-
-            donat.leadingAnchor.constraint(equalTo: footer.leadingAnchor, constant: 24),
-            donat.centerYAnchor.constraint(equalTo: footer.centerYAnchor)
+            tayyor.centerYAnchor.constraint(equalTo: footer.centerYAnchor)
         ])
         view = v
     }

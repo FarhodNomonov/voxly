@@ -86,65 +86,65 @@ enum Menyu {
     // MARK: Menyular
 
     private static func ilova() -> NSMenuItem {
-        let m = NSMenu(title: "Kotib")
-        m.addItem(band("Kotib haqida", #selector(NSApplication.orderFrontStandardAboutPanel(_:))))
+        let m = NSMenu(title: "Voxly")
+        m.addItem(band(tr("О Voxly", "About Voxly"), #selector(NSApplication.orderFrontStandardAboutPanel(_:))))
         m.addItem(.separator())
         m.addItem(
             band(
-                "Sozlamalar…", #selector(AsosiyOyna.menyuSozlamalar), ",",
+                tr("Настройки…", "Settings…"), #selector(AsosiyOyna.menyuSozlamalar), ",",
                 nishon: AsosiyOyna.birgalik))
         m.addItem(.separator())
 
         // Tizim «Xizmatlar» menyusi: matn tanlanganda boshqa ilovalarga uzatish.
-        let xizmatlar = NSMenu(title: "Xizmatlar")
-        m.addItem(bolim("Xizmatlar", xizmatlar))
+        let xizmatlar = NSMenu(title: tr("Службы", "Services"))
+        m.addItem(bolim(tr("Службы", "Services"), xizmatlar))
         NSApp.servicesMenu = xizmatlar
 
         m.addItem(.separator())
-        m.addItem(band("Kotibni yashirish", #selector(NSApplication.hide(_:)), "h"))
+        m.addItem(band(tr("Скрыть Voxly", "Hide Voxly"), #selector(NSApplication.hide(_:)), "h"))
         m.addItem(
             band(
-                "Boshqalarni yashirish",
+                tr("Скрыть остальные", "Hide Others"),
                 #selector(NSApplication.hideOtherApplications(_:)), "h", [.command, .option]))
-        m.addItem(band("Hammasini koʻrsatish", #selector(NSApplication.unhideAllApplications(_:))))
+        m.addItem(band(tr("Показать все", "Show All"), #selector(NSApplication.unhideAllApplications(_:))))
         m.addItem(.separator())
-        m.addItem(band("Kotibdan chiqish", #selector(NSApplication.terminate(_:)), "q"))
-        return bolim("Kotib", m)
+        m.addItem(band(tr("Завершить Voxly", "Quit Voxly"), #selector(NSApplication.terminate(_:)), "q"))
+        return bolim("Voxly", m)
     }
 
     private static func fayl() -> NSMenuItem {
-        let m = NSMenu(title: "Fayl")
+        let m = NSMenu(title: tr("Файл", "File"))
         m.addItem(
             band(
-                "Ochish…", #selector(AsosiyOyna.menyuFaylOch), "o",
+                tr("Открыть…", "Open…"), #selector(AsosiyOyna.menyuFaylOch), "o",
                 nishon: AsosiyOyna.birgalik))
         m.addItem(.separator())
-        m.addItem(band("Oynani yopish", #selector(NSWindow.performClose(_:)), "w"))
-        return bolim("Fayl", m)
+        m.addItem(band(tr("Закрыть окно", "Close Window"), #selector(NSWindow.performClose(_:)), "w"))
+        return bolim(tr("Файл", "File"), m)
     }
 
     private static func tahrir() -> NSMenuItem {
-        let m = NSMenu(title: "Tahrir")
+        let m = NSMenu(title: tr("Правка", "Edit"))
         // undo:/redo: NSResponder'da eʼlon qilinmagan — ular UndoManager'ga
         // javobgarlik zanjiri orqali boradi, shuning uchun selektor qoʻlda.
-        m.addItem(qatiy("Orqaga qaytarish", Selector(("undo:")), "z"))
-        m.addItem(qatiy("Qaytarish", Selector(("redo:")), "z", [.command, .shift]))
+        m.addItem(qatiy(tr("Отменить", "Undo"), Selector(("undo:")), "z"))
+        m.addItem(qatiy(tr("Повторить", "Redo"), Selector(("redo:")), "z", [.command, .shift]))
         m.addItem(.separator())
-        m.addItem(band("Kesish", #selector(NSText.cut(_:)), "x"))
-        m.addItem(band("Nusxa olish", #selector(NSText.copy(_:)), "c"))
-        m.addItem(band("Qoʻyish", #selector(NSText.paste(_:)), "v"))
+        m.addItem(band(tr("Вырезать", "Cut"), #selector(NSText.cut(_:)), "x"))
+        m.addItem(band(tr("Копировать", "Copy"), #selector(NSText.copy(_:)), "c"))
+        m.addItem(band(tr("Вставить", "Paste"), #selector(NSText.paste(_:)), "v"))
         m.addItem(
             band(
-                "Uslubsiz qoʻyish", #selector(NSTextView.pasteAsPlainText(_:)), "v",
+                tr("Вставить без форматирования", "Paste and Match Style"), #selector(NSTextView.pasteAsPlainText(_:)), "v",
                 [.command, .option, .shift]))
-        m.addItem(band("Oʻchirish", #selector(NSText.delete(_:))))
+        m.addItem(band(tr("Удалить", "Delete"), #selector(NSText.delete(_:))))
         m.addItem(.separator())
-        m.addItem(band("Hammasini tanlash", #selector(NSText.selectAll(_:)), "a"))
-        return bolim("Tahrir", m)
+        m.addItem(band(tr("Выбрать всё", "Select All"), #selector(NSText.selectAll(_:)), "a"))
+        return bolim(tr("Правка", "Edit"), m)
     }
 
     private static func korinish() -> NSMenuItem {
-        let m = NSMenu(title: "Koʻrinish")
+        let m = NSMenu(title: tr("Вид", "View"))
         for b in Bolim.allCases {
             let i = band(
                 b.nom, #selector(AsosiyOyna.menyuBolim(_:)), "\(b.rawValue + 1)",
@@ -152,19 +152,19 @@ enum Menyu {
             i.tag = b.rawValue
             m.addItem(i)
         }
-        return bolim("Koʻrinish", m)
+        return bolim(tr("Вид", "View"), m)
     }
 
     private static func oyna() -> NSMenuItem {
-        let m = NSMenu(title: "Oyna")
-        m.addItem(band("Kichraytirish", #selector(NSWindow.performMiniaturize(_:)), "m"))
-        m.addItem(band("Kattalashtirish", #selector(NSWindow.performZoom(_:))))
+        let m = NSMenu(title: tr("Окно", "Window"))
+        m.addItem(band(tr("Свернуть", "Minimize"), #selector(NSWindow.performMiniaturize(_:)), "m"))
+        m.addItem(band(tr("Изменить масштаб", "Zoom"), #selector(NSWindow.performZoom(_:))))
         m.addItem(.separator())
         m.addItem(
             band(
-                "Hammasini oldinga chiqarish",
+                tr("Все окна — на передний план", "Bring All to Front"),
                 #selector(NSApplication.arrangeInFront(_:))))
         NSApp.windowsMenu = m
-        return bolim("Oyna", m)
+        return bolim(tr("Окно", "Window"), m)
     }
 }

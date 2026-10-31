@@ -4,7 +4,7 @@
 import Foundation
 import Security
 
-private let servis = "com.rubaistt.dictation.llm"
+private let servis = "app.voxly.mac.llm"
 
 enum Kalitlar {
 

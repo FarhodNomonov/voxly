@@ -16,7 +16,7 @@ import ServiceManagement
 // shuning uchun oynani ochish/ochmaslikni hal qilib boʻlmasdi.
 enum LoginItem {
 
-    static let agentPlist = "com.rubaistt.dictation.autostart.plist"
+    static let agentPlist = "app.voxly.mac.autostart.plist"
 
     @available(macOS 13.0, *)
     private static var xizmat: SMAppService { SMAppService.agent(plistName: agentPlist) }

@@ -26,13 +26,12 @@
 import AppKit
 
 enum Bolim: Int, CaseIterable {
-    case yozish, audio, tarjima
+    case yozish, audio
 
     var nom: String {
         switch self {
-        case .yozish: return "Yozish"
-        case .audio: return "Audio"
-        case .tarjima: return "Tarjima"
+        case .yozish: return tr("Диктовка", "Dictate")
+        case .audio: return tr("Файлы", "Files")
         }
     }
 }
@@ -78,8 +77,6 @@ final class AsosiyOyna: NSObject, NSWindowDelegate, NSToolbarDelegate {
 
     private var yozishVC: DiktovkaVC?
     private var faylVC: StudiyaVC?
-    private var tarjimaVC: TarjimaVC?
-    private var tarjimaYuklovchi: TarjimaYuklovchi?
     private var sozlamalarVC: SozlamalarVC?
     private var sozlamalarOyna: NSWindow?
     private var hotkeyKonfig: HotKeyConfig?
@@ -170,7 +167,7 @@ final class AsosiyOyna: NSObject, NSWindowDelegate, NSToolbarDelegate {
             contentRect: NSRect(x: 0, y: 0, width: 900, height: 640),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered, defer: false)
-        w.title = "Kotib"
+        w.title = "Voxly"
         w.titleVisibility = .hidden
         w.minSize = NSSize(width: 820, height: 560)
         w.contentViewController = konteyner
@@ -212,21 +209,21 @@ final class AsosiyOyna: NSObject, NSWindowDelegate, NSToolbarDelegate {
         case Self.segmentIdent:
             let item = NSToolbarItem(itemIdentifier: id)
             item.view = segment
-            item.label = "Boʻlim"
+            item.label = tr("Раздел", "Section")
             return item
         case Self.sozlamalarIdent:
             let item = NSToolbarItem(itemIdentifier: id)
             let b = NSButton(
                 image: NSImage(
                     systemSymbolName: "gearshape",
-                    accessibilityDescription: "Sozlamalar")!,
+                    accessibilityDescription: tr("Настройки", "Settings"))!,
                 target: self, action: #selector(sozlamalarniOch))
             b.bezelStyle = .texturedRounded
             b.isBordered = false
             b.contentTintColor = U.matn
             item.view = b
-            item.label = "Sozlamalar"
-            item.toolTip = "Sozlamalar"
+            item.label = tr("Настройки", "Settings")
+            item.toolTip = tr("Настройки", "Settings")
             return item
         default:
             return nil
@@ -263,50 +260,14 @@ final class AsosiyOyna: NSObject, NSWindowDelegate, NSToolbarDelegate {
             if yangiYaratildi { yozishVC?.holatniOzgartir(yozilyapti: yozilyaptiHolati) }
         case .audio:
             konteyner?.korsat(faylniOl())
-        case .tarjima:
-            let vc = tarjimaniOl()
-            konteyner?.korsat(vc)
-            // Model boshqa tabda turganda yuklab olingan boʻlishi mumkin —
-            // holat har koʻrsatishda qayta tekshiriladi.
-            vc.modelHolatiniYangila()
         }
     }
 
     private func faylniOl() -> StudiyaVC {
         if let s = faylVC { return s }
         let s = StudiyaVC()
-        s.onTarjima = { [weak self] matn, til in self?.tarjimagaMatn(matn, maqsad: til) }
         faylVC = s
         return s
-    }
-
-    /// «Audio» tabidagi transkriptni «Tarjima» tabiga oʻtkazadi.
-    /// `til` nil boʻlsa tarjima boshlanmaydi — foydalanuvchi tilni oʻsha yerda
-    /// tanlaydi. Model yoʻq boʻlsa tab oʻz bannerini koʻrsatadi, shuning uchun
-    /// bu yerda alohida tekshiruv shart emas.
-    func tarjimagaMatn(_ matn: String, maqsad til: Til?) {
-        korsat(.tarjima)
-        tarjimaniOl().matnniQabulQil(matn, maqsad: til)
-    }
-
-    private func tarjimaniOl() -> TarjimaVC {
-        if let t = tarjimaVC { return t }
-        let t = TarjimaVC()
-        t.onModelKerak = { [weak self] in self?.tarjimaModeliniYukla() }
-        tarjimaVC = t
-        return t
-    }
-
-    /// Tarjima modelini yuklab olish sheet'i. Bir vaqtda faqat bitta yuklovchi —
-    /// aks holda ikkalasi bitta `.part` fayliga yozadi va arxiv buziladi.
-    private func tarjimaModeliniYukla() {
-        guard let window, tarjimaYuklovchi == nil else { return }
-        let y = TarjimaYuklovchi()
-        tarjimaYuklovchi = y
-        y.boshla(ustida: window) { [weak self] muvaffaqiyat in
-            self?.tarjimaYuklovchi = nil
-            if muvaffaqiyat { self?.tarjimaVC?.modelHolatiniYangila() }
-        }
     }
 
     // MARK: Menyu satri amallari

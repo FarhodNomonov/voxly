@@ -5,7 +5,7 @@
 // "toggle" signalini uzatadi va bildirishnomalar orqali holatni koʻrsatadi.
 // Matn baribir fokusdagi ilovaga ⌘V bilan tushadi; tarix — qoʻshimcha qulaylik.
 //
-// Dizayndan bitta ATAYLAB chetlanish: dizayn tarix qatorida faqat "Nusxa"
+// Dizayndan bitta ATAYLAB chetlanish: dizayn tarix qatorida faqat tr("Копировать", "Copy")
 // tugmasini koʻrsatadi, yaʼni yozuvni oʻchirish va tarixni tozalash yoʻqoladi.
 // Bu maʼlumotni boshqarish imkoniyati — uni olib tashlash mumkin emas, shuning
 // uchun ikkalasi ham qatorning kontekst menyusiga (oʻng tugma) koʻchirildi:
@@ -43,7 +43,7 @@ final class DiktovkaVC: NSViewController {
         karta.hotkeyMatni = hotkeyMatni
         karta.onBos = { [weak self] in self?.onDiktovka?() }
 
-        let sarlavha = U.bolimSarlavhasi("Oxirgi yozuvlar")
+        let sarlavha = U.bolimSarlavhasi(tr("Последние записи", "Recent dictations"))
 
         jadval = NSTableView()
         jadval.headerView = nil
@@ -63,7 +63,7 @@ final class DiktovkaVC: NSViewController {
         scroll.borderType = .noBorder
         scroll.automaticallyAdjustsContentInsets = false
 
-        bosYozuv = U.yozuv("Hali hech narsa yozilmagan", 15, .regular, U.matn3)
+        bosYozuv = U.yozuv(tr("Пока ничего не записано", "Nothing dictated yet"), 15, .regular, U.matn3)
         bosYozuv.alignment = .center
         bosYozuv.isHidden = true
 
@@ -141,9 +141,12 @@ final class DiktovkaVC: NSViewController {
         let mikrofon = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
         let matnYozish = AXIsProcessTrusted()
         let kerak = !(mikrofon && matnYozish)
-        guard banner.isHidden == kerak else { return }  // oʻzgarmagan boʻlsa tegmaymiz
         banner.isHidden = !kerak
-        bannerBalandlik.isActive = !kerak
+        // Balandlik HAR DOIM qatʼiy: koʻrinsa 72, yashirinsa 0. Ilgari koʻrinib
+        // turganda faqat «≥ 68» qolardi va boʻsh tarix roʻyxati boʻsh joyni
+        // bannerga berib, u oynaning yarmigacha choʻzilib ketardi.
+        bannerBalandlik.constant = kerak ? 72 : 0
+        bannerBalandlik.isActive = true
         // Yashiringanda tepadagi masofa ham yigʻiladi — aks holda karta dizaynda
         // koʻrsatilganidan 16pt pastda turadi.
         bannerTepa.constant = kerak ? 16 : 0
@@ -190,10 +193,10 @@ final class DiktovkaVC: NSViewController {
     /// Kontekst menyusi — dizaynda koʻrinmaydigan, lekin zarur amallar.
     private func tarixMenyusi() -> NSMenu {
         let m = NSMenu()
-        m.addItem(NSMenuItem(title: "Nusxa olish", action: #selector(menyuNusxa), keyEquivalent: ""))
-        m.addItem(NSMenuItem(title: "Oʻchirish", action: #selector(menyuOchir), keyEquivalent: ""))
+        m.addItem(NSMenuItem(title: tr("Копировать", "Copy"), action: #selector(menyuNusxa), keyEquivalent: ""))
+        m.addItem(NSMenuItem(title: tr("Удалить", "Delete"), action: #selector(menyuOchir), keyEquivalent: ""))
         m.addItem(.separator())
-        m.addItem(NSMenuItem(title: "Tarixni tozalash…", action: #selector(menyuTozala), keyEquivalent: ""))
+        m.addItem(NSMenuItem(title: tr("Очистить историю…", "Clear history…"), action: #selector(menyuTozala), keyEquivalent: ""))
         for item in m.items { item.target = self }
         return m
     }
@@ -220,10 +223,10 @@ final class DiktovkaVC: NSViewController {
 
     @objc private func menyuTozala() {
         let ogoh = NSAlert()
-        ogoh.messageText = "Tarixni tozalash"
-        ogoh.informativeText = "Barcha yozuvlar oʻchiriladi. Bu amalni qaytarib boʻlmaydi."
-        ogoh.addButton(withTitle: "Tozalash")
-        ogoh.addButton(withTitle: "Bekor qilish")
+        ogoh.messageText = tr("Очистить историю", "Clear history")
+        ogoh.informativeText = tr("Все записи будут удалены. Это нельзя отменить.", "All entries will be deleted. This can't be undone.")
+        ogoh.addButton(withTitle: tr("Очистить", "Clear"))
+        ogoh.addButton(withTitle: tr("Отмена", "Cancel"))
         guard ogoh.runModal() == .alertFirstButtonReturn else { return }
         DiktovkaTarixi.birgalik.tozala()
         yangila()
@@ -232,9 +235,9 @@ final class DiktovkaVC: NSViewController {
     @objc private func nusxaBosildi(_ sender: FonliTugma) {
         guard yozuvlar.indices.contains(sender.tag) else { return }
         nusxaOl(yozuvlar[sender.tag].matn)
-        sender.matnniAlmashtir("Nusxa olindi")
+        sender.matnniAlmashtir(tr("Скопировано", "Copied"))
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak sender] in
-            sender?.matnniAlmashtir("Nusxa")
+            sender?.matnniAlmashtir(tr("Копировать", "Copy"))
         }
     }
 }
@@ -260,7 +263,7 @@ extension DiktovkaVC: NSTableViewDataSource, NSTableViewDelegate {
 
         let tafsilot = U.yozuv(VaqtFormat.nisbiy(y.sana), 13, .regular, U.matn3)
 
-        let nusxa = U.ikkilamchiTugma("Nusxa", target: self, action: #selector(nusxaBosildi(_:)))
+        let nusxa = U.ikkilamchiTugma(tr("Копировать", "Copy"), target: self, action: #selector(nusxaBosildi(_:)))
         nusxa.tag = row
         nusxa.setContentHuggingPriority(.required, for: .horizontal)
 
@@ -304,14 +307,14 @@ final class RuxsatBanneri: NSView {
 
         let ikonka = U.yozuv("⚠️", 20)
         let matn = U.yozuv(
-            "Mikrofon va matn yozish uchun ruxsat kerak. Bir marta beriladi.",
+            tr("Нужен доступ к микрофону и вводу текста. Даётся один раз.", "Voxly needs microphone and text input access. You grant it once."),
             15, .regular, U.bannerMatn)
         matn.lineBreakMode = .byWordWrapping
         matn.maximumNumberOfLines = 2
         matn.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         let tugma = U.asosiyTugma(
-            "Ruxsat berish", target: self, action: #selector(bosildi),
+            tr("Разрешить", "Allow"), target: self, action: #selector(bosildi),
             balandlik: 40, shrift: 15)
         tugma.setContentHuggingPriority(.required, for: .horizontal)
 

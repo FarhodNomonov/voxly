@@ -70,7 +70,7 @@ let provayderlar: [Provayder] = [
         baseURL: "https://api.anthropic.com/v1",
         standartModel: "claude-haiku-4-5", adapter: .anthropic),
     Provayder(
-        id: "custom", nom: "Boshqa (custom)",
+        id: "custom", nom: tr("Другой (свой адрес)", "Other (custom)"),
         baseURL: "", standartModel: "", adapter: .openai)
 ]
 
@@ -237,19 +237,19 @@ extension LLMXato {
     var xabar: String {
         switch self {
         case .kalitYoq:
-            return "API kalit kiritilmagan. Sozlamalar → LLM boʻlimiga oʻting."
+            return tr("Ключ API не указан. Откройте Настройки → Дополнительно.", "No API key. Open Settings → Advanced.")
         case .notogriKalit:
-            return "API kalit notoʻgʻri yoki muddati tugagan."
+            return tr("Ключ API неверный или истёк.", "The API key is invalid or expired.")
         case .modelTopilmadi(let m):
-            return "Model topilmadi: «\(m)». Sozlamalarda model nomini tekshiring."
+            return tr("Модель «\(m)» не найдена. Проверьте её название в настройках.", "Model “\(m)” not found. Check the model name in Settings.")
         case .limit:
-            return "Provayder limiti tugadi. Biroz kutib qayta urinib koʻring."
+            return tr("Лимит провайдера исчерпан. Подождите и попробуйте снова.", "The provider's rate limit was hit. Wait a bit and try again.")
         case .tarmoq:
-            return "Internetga ulanish yoʻq. Matn xom holda qoldi."
+            return tr("Нет подключения к интернету. Текст остался без изменений.", "No internet connection. The text was left unchanged.")
         case .server(let kod):
-            return "Provayder xatosi (\(kod)). Keyinroq urinib koʻring."
+            return tr("Ошибка провайдера (\(kod)). Попробуйте позже.", "Provider error (\(kod)). Try again later.")
         case .javobOqilmadi:
-            return "Provayder javobini oʻqib boʻlmadi."
+            return tr("Не удалось прочитать ответ провайдера.", "Couldn't read the provider's response.")
         }
     }
 }

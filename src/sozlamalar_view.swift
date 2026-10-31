@@ -35,7 +35,6 @@ final class SozlamalarVC: NSViewController {
     private var micPopup: NSPopUpButton!
     private var micWarning: NSTextField!
     private var avtoSwitch: NSSwitch!
-    private var yangilanishIzoh: NSTextField!
 
     private var mikBelgi: NSTextField!
     private var mikYozuv: NSTextField!
@@ -49,6 +48,7 @@ final class SozlamalarVC: NSViewController {
 
     var modePopup: NSPopUpButton!
     private var tilPopup: NSPopUpButton!
+    private var uiTilPopup: NSPopUpButton!
     private var tilIzoh: NSTextField!
     var apostrofSwitch: NSSwitch!
     var diagnostikaSwitch: NSSwitch!
@@ -69,8 +69,6 @@ final class SozlamalarVC: NSViewController {
     /// Roʻyxatdagi tartib: [0] = tizim standarti, keyin qurilmalar.
     private var micList: [MicDevice] = []
 
-    private let donate = DonateWindow()
-
     init(_ c: HotKeyConfig) {
         joriyHotkey = c
         super.init(nibName: nil, bundle: nil)
@@ -90,7 +88,6 @@ final class SozlamalarVC: NSViewController {
         stopRecording()
         holatniYukla()
         ruxsatniYangila()
-        yangilanishIzohiniYangila()
         // Ruxsat ilovadan TASHQARIDA beriladi va hech qanday bildirishnoma
         // kelmaydi — sheet ochiq turganida davriy tekshiramiz.
         ruxsatTimer?.invalidate()
@@ -112,6 +109,7 @@ final class SozlamalarVC: NSViewController {
     private func holatniYukla() {
         reloadMics()
         tilniYukla()
+        uiTilPopup.selectItem(at: UITili.allCases.firstIndex(of: UITili.tanlangan) ?? 0)
         modePopup.selectItem(at: Prefs.insertMode.rawValue)
         avtoSwitch.state = LoginItem.isEnabled ? .on : .off
         apostrofSwitch.state = Prefs.apostrof == .oddiy ? .on : .off
@@ -130,16 +128,16 @@ final class SozlamalarVC: NSViewController {
         kontent.edgeInsets = NSEdgeInsets(top: 22, left: 24, bottom: 18, right: 24)
         kontent.translatesAutoresizingMaskIntoConstraints = false
 
-        kontent.addArrangedSubview(U.yozuv("Sozlamalar", 22, .bold))
+        kontent.addArrangedSubview(U.yozuv(tr("Настройки", "Settings"), 22, .bold))
         kontent.addArrangedSubview(qurHotkey())
         kontent.addArrangedSubview(qurNutqTili())
+        kontent.addArrangedSubview(qurUITili())
         kontent.addArrangedSubview(qurMikrofon())
         kontent.addArrangedSubview(qurAvtoIshga())
-        kontent.addArrangedSubview(qurYangilanish())
         kontent.addArrangedSubview(qurRuxsatQutisi())
 
         qoshimchaLink = BosiladiganYozuv(
-            "Qoʻshimcha sozlamalar  ⌄", rang: U.kok,
+            tr("Дополнительно  ⌄", "Advanced  ⌄"), rang: U.kok,
             size: 16, weight: .medium)
         qoshimchaLink.onBos = { [weak self] in self?.qoshimchaniAlmashtir() }
         kontent.addArrangedSubview(qoshimchaLink)
@@ -171,8 +169,8 @@ final class SozlamalarVC: NSViewController {
     // MARK: Diktovka tugmasi
 
     private func qurHotkey() -> NSView {
-        let sarlavha = U.yozuv("Diktovka tugmasi", 17)
-        let izoh = U.yozuv("Istalgan ilovada shu tugmani bosing", 14, .regular, U.matn2)
+        let sarlavha = U.yozuv(tr("Клавиша диктовки", "Dictation shortcut"), 17)
+        let izoh = U.yozuv(tr("Нажмите её в любом приложении", "Press it in any app"), 14, .regular, U.matn2)
         let matnlar = NSStackView(views: [sarlavha, izoh])
         matnlar.orientation = .vertical
         matnlar.alignment = .leading
@@ -197,7 +195,7 @@ final class SozlamalarVC: NSViewController {
 
         hotkeyTugma =
             U.ikkilamchiTugma(
-                "Oʻzgartirish", target: self,
+                tr("Изменить", "Change"), target: self,
                 action: #selector(toggleRecord),
                 balandlik: 40) as? FonliTugma
 
@@ -224,10 +222,10 @@ final class SozlamalarVC: NSViewController {
 
     private func hotkeyniYangila() {
         guard hotkeyChip != nil else { return }
-        hotkeyChip.stringValue = recording ? "Bosing…" : joriyHotkey.displayString
-        hotkeyTugma.matnniAlmashtir(recording ? "Bekor" : "Oʻzgartirish")
+        hotkeyChip.stringValue = recording ? tr("Нажмите…", "Press keys…") : joriyHotkey.displayString
+        hotkeyTugma.matnniAlmashtir(recording ? tr("Отмена", "Cancel") : tr("Изменить", "Change"))
         hotkeyIzoh.isHidden = !recording
-        hotkeyIzoh.stringValue = "⌃, ⌥ yoki ⌘ (⇧ qoʻshsa boʻladi) + tugma. Bekor qilish: ⎋"
+        hotkeyIzoh.stringValue = tr("⌃, ⌥ или ⌘ (можно с ⇧) + клавиша. Отмена: ⎋", "⌃, ⌥ or ⌘ (⇧ optional) + a key. Cancel: ⎋")
         hotkeyIzoh.textColor = U.matn2
     }
 
@@ -250,7 +248,7 @@ final class SozlamalarVC: NSViewController {
             // Modifikatorsiz tugma global qotib qoladi, yolgʻiz ⇧ esa bosh
             // harflarni yeb qoʻyadi — ikkalasiga ham ruxsat yoʻq (F5).
             guard yangi.modifikatorYetarli else {
-                self.hotkeyIzoh.stringValue = "⌃, ⌥ yoki ⌘ dan kamida bittasi kerak — yolgʻiz ⇧ yetmaydi."
+                self.hotkeyIzoh.stringValue = tr("Нужна хотя бы одна из ⌃, ⌥ или ⌘ — одной ⇧ мало.", "Use at least one of ⌃, ⌥ or ⌘ — ⇧ alone is not enough.")
                 self.hotkeyIzoh.textColor = U.qizil
                 return nil
             }
@@ -265,7 +263,7 @@ final class SozlamalarVC: NSViewController {
                 self.hotkeyniYangila()
                 self.hotkeyIzoh.isHidden = false
                 self.hotkeyIzoh.stringValue =
-                    "\(yangi.displayString) roʻyxatdan oʻtmadi — boshqa ilova band qilgan boʻlishi mumkin. Eski tugma ishlayapti."
+                    tr("\(yangi.displayString) не удалось назначить — возможно, её занимает другое приложение. Работает прежняя клавиша.", "Couldn't register \(yangi.displayString) — another app may be using it. The previous shortcut still works.")
                 self.hotkeyIzoh.textColor = U.qizil
                 RubaiLog.write("sozlamalar: tugma \(yangi.displayString) roʻyxatdan oʻtmadi")
             }
@@ -290,7 +288,7 @@ final class SozlamalarVC: NSViewController {
         tilPopup.translatesAutoresizingMaskIntoConstraints = false
         tilPopup.widthAnchor.constraint(equalToConstant: 280).isActive = true
 
-        let qator = NSStackView(views: [U.yozuv("Nutq tili", 17), tilPopup])
+        let qator = NSStackView(views: [U.yozuv(tr("Язык речи", "Speech language"), 17), tilPopup])
         qator.orientation = .horizontal
         qator.alignment = .centerY
         qator.spacing = 16
@@ -308,6 +306,44 @@ final class SozlamalarVC: NSViewController {
         return ustun
     }
 
+    // MARK: Interfeys tili
+
+    private func qurUITili() -> NSView {
+        uiTilPopup = NSPopUpButton()
+        for t in UITili.allCases { uiTilPopup.addItem(withTitle: t.nomi) }
+        uiTilPopup.target = self
+        uiTilPopup.action = #selector(uiTilOzgardi)
+        uiTilPopup.translatesAutoresizingMaskIntoConstraints = false
+        uiTilPopup.widthAnchor.constraint(equalToConstant: 280).isActive = true
+        let qator = NSStackView(views: [U.yozuv(tr("Язык интерфейса", "App language"), 17), uiTilPopup])
+        qator.orientation = .horizontal
+        qator.alignment = .centerY
+        qator.spacing = 16
+        return qator
+    }
+
+    /// Til ishga tushishda bir marta aniqlanadi (ui_tili.swift) — oʻzgarsa
+    /// ilova qayta ishga tushadi.
+    @objc private func uiTilOzgardi() {
+        let idx = uiTilPopup.indexOfSelectedItem
+        guard idx >= 0, idx < UITili.allCases.count else { return }
+        let yangi = UITili.allCases[idx]
+        guard yangi != UITili.tanlangan else { return }
+        UITili.tanlangan = yangi
+        let a = NSAlert()
+        a.messageText = tr("Перезапустить Voxly?", "Restart Voxly?")
+        a.informativeText = tr(
+            "Язык интерфейса сменится после перезапуска.", "The new language applies after a restart.")
+        a.addButton(withTitle: tr("Перезапустить", "Restart"))
+        a.addButton(withTitle: tr("Позже", "Later"))
+        guard a.runModal() == .alertFirstButtonReturn else { return }
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/bin/sh")
+        p.arguments = ["-c", "sleep 1; /usr/bin/open \"$0\"", Bundle.main.bundlePath]
+        try? p.run()
+        NSApp.terminate(nil)
+    }
+
     private func tilniYukla() {
         tilPopup.selectItem(at: NutqTili.allCases.firstIndex(of: Prefs.nutqTili) ?? 0)
         tilIzohiniYangila()
@@ -317,8 +353,8 @@ final class SozlamalarVC: NSViewController {
         let m = ModelTanlov.joriy(Prefs.nutqTili)
         tilIzoh.stringValue =
             ModelStore.isReady
-            ? "Hamma narsa shu tilda yoziladi. Model: \(m.fayl)"
-            : "Bu til modeli (~\(m.hajm / 1_048_576) MB) birinchi diktovkada yuklab olinadi."
+            ? tr("Всё будет записываться на этом языке.", "Everything will be transcribed in this language.")
+            : tr("Модель (~\(m.hajm / 1_048_576) МБ) скачается при первой диктовке.", "The model (~\(m.hajm / 1_048_576) MB) will download on first dictation.")
     }
 
     @objc private func tilOzgardi() {
@@ -336,7 +372,7 @@ final class SozlamalarVC: NSViewController {
         micPopup.translatesAutoresizingMaskIntoConstraints = false
         micPopup.widthAnchor.constraint(equalToConstant: 280).isActive = true
 
-        let qator = NSStackView(views: [U.yozuv("Mikrofon", 17), micPopup])
+        let qator = NSStackView(views: [U.yozuv(tr("Микрофон", "Microphone"), 17), micPopup])
         qator.orientation = .horizontal
         qator.alignment = .centerY
         qator.spacing = 16
@@ -360,7 +396,7 @@ final class SozlamalarVC: NSViewController {
     private func reloadMics() {
         micList = AudioDevices.inputDevices()
         micPopup.removeAllItems()
-        micPopup.addItem(withTitle: "(tizim standarti)")
+        micPopup.addItem(withTitle: tr("(системный)", "(system default)"))
         for d in micList { micPopup.addItem(withTitle: d.listLabel) }
 
         // Saqlangan qurilma hali ulanganmi?
@@ -389,10 +425,10 @@ final class SozlamalarVC: NSViewController {
         if idx <= 0 {
             if let def = AudioDevices.defaultInput() {
                 let w = def.kind.warning
-                matn = "Tizim standarti: \(def.name)" + (w.isEmpty ? "" : "\n\(w)")
+                matn = tr("Системный: \(def.name)", "System default: \(def.name)") + (w.isEmpty ? "" : "\n\(w)")
                 ogohmi = !w.isEmpty
             } else {
-                matn = "Mikrofon topilmadi. Qurilma ulanganini tekshiring."
+                matn = tr("Микрофон не найден. Проверьте, что он подключён.", "No microphone found. Check that it's connected.")
                 ogohmi = true
             }
         } else {
@@ -410,7 +446,7 @@ final class SozlamalarVC: NSViewController {
         avtoSwitch = NSSwitch()
         avtoSwitch.target = self
         avtoSwitch.action = #selector(avtoOzgardi)
-        let qator = NSStackView(views: [U.yozuv("Kompyuter yonganda ishga tushsin", 17), avtoSwitch])
+        let qator = NSStackView(views: [U.yozuv(tr("Запускать при входе в систему", "Open at login"), 17), avtoSwitch])
         qator.orientation = .horizontal
         qator.alignment = .centerY
         qator.spacing = 16
@@ -423,9 +459,8 @@ final class SozlamalarVC: NSViewController {
         if !LoginItem.set(xohlangan) {
             avtoSwitch.state = LoginItem.isEnabled ? .on : .off
             ogohlantir(
-                "Avtomatik ishga tushirish sozlanmadi",
-                "macOS bu amalni rad etdi. System Settings → General → Login Items "
-                    + "boʻlimida qoʻlda yoqishingiz mumkin.")
+                tr("Не удалось включить автозапуск", "Couldn't enable open at login"),
+                tr("macOS отклонила запрос. Включите вручную: Системные настройки → Основные → Объекты входа.", "macOS declined the request. Turn it on in System Settings → General → Login Items."))
         }
     }
 
@@ -433,33 +468,6 @@ final class SozlamalarVC: NSViewController {
 
     /// Avto-yangilanish (`yangilovchi.swift`). Yoqish/oʻchirish tugmasi YOʻQ —
     /// spec: yangilanish doim avtomatik; bu yerda faqat holat va qoʻlda tekshirish.
-    private func qurYangilanish() -> NSView {
-        yangilanishIzoh = U.yozuv("", 13, .regular, U.matn2)
-        let chap = NSStackView(views: [U.yozuv("Yangilanishlar", 17), yangilanishIzoh])
-        chap.orientation = .vertical
-        chap.alignment = .leading
-        chap.spacing = 2
-        let tugma = U.ikkilamchiTugma(
-            "Hozir tekshirish", target: self, action: #selector(yangilanishniTekshir),
-            balandlik: 32, shrift: 13)
-        let qator = NSStackView(views: [chap, tugma])
-        qator.orientation = .horizontal
-        qator.alignment = .centerY
-        qator.spacing = 16
-        return qator
-    }
-
-    private func yangilanishIzohiniYangila() {
-        let y = Yangilovchi.birgalik
-        guard y.faolmi else {
-            yangilanishIzoh.stringValue = "Bu nusxada avto-yangilanish oʻchiq"
-            return
-        }
-        let oxirgi = y.oxirgiMuvaffaqiyat.map { "oxirgi tekshiruv: \(VaqtFormat.nisbiy($0))" }
-        yangilanishIzoh.stringValue = "Avtomatik oʻrnatiladi · " + (oxirgi ?? "hali tekshirilmagan")
-    }
-
-    @objc private func yangilanishniTekshir() { Yangilovchi.birgalik.hozirTekshir() }
 
     // MARK: Ruxsat holati
 
@@ -471,17 +479,17 @@ final class SozlamalarVC: NSViewController {
         quti.layer?.cornerCurve = .continuous
 
         mikBelgi = U.yozuv("○", 17, .regular, U.matn4)
-        mikYozuv = U.yozuv("Mikrofon ruxsati", 16)
+        mikYozuv = U.yozuv(tr("Доступ к микрофону", "Microphone access"), 16)
         let mikQator = NSStackView(views: [mikBelgi, mikYozuv])
         mikQator.orientation = .horizontal
         mikQator.alignment = .centerY
         mikQator.spacing = 10
 
         axBelgi = U.yozuv("○", 17, .regular, U.matn4)
-        let axYozuv = U.yozuv("Matn yozish ruxsati", 16)
+        let axYozuv = U.yozuv(tr("Доступ к вводу текста (Универсальный доступ)", "Text input access (Accessibility)"), 16)
         axTugma =
             U.ikkilamchiTugma(
-                "Berish", target: self, action: #selector(axniOch),
+                tr("Разрешить", "Allow"), target: self, action: #selector(axniOch),
                 balandlik: 36, shrift: 15) as? FonliTugma
         let axQator = NSStackView(views: [axBelgi, axYozuv, NSView(), axTugma])
         axQator.orientation = .horizontal
@@ -510,7 +518,7 @@ final class SozlamalarVC: NSViewController {
         let axOK = AXIsProcessTrusted()
         mikBelgi.stringValue = mikOK ? "✓" : "○"
         mikBelgi.textColor = mikOK ? U.yashil : U.matn4
-        mikYozuv.stringValue = mikOK ? "Mikrofon ruxsati berilgan" : "Mikrofon ruxsati"
+        mikYozuv.stringValue = mikOK ? tr("Доступ к микрофону есть", "Microphone access granted") : tr("Доступ к микрофону", "Microphone access")
         axBelgi.stringValue = axOK ? "✓" : "○"
         axBelgi.textColor = axOK ? U.yashil : U.matn4
         axTugma.isHidden = axOK
@@ -527,7 +535,6 @@ final class SozlamalarVC: NSViewController {
 
     // MARK: Xizmat amallari
 
-    @objc func openDonate() { donate.show() }
 
     @objc func logniOch() {
         let path = Yollar.log.path
@@ -554,16 +561,16 @@ final class SozlamalarVC: NSViewController {
     /// Foydalanuvchi nima bajarilishini koʻrib turib oʻzi tasdiqlaydi.
     @objc func ilovaniOchir() {
         let skript = Bundle.main.path(forResource: "uninstall", ofType: "sh")
-        let buyruq = "sudo \"\(skript ?? "/Applications/Kotib.app/Contents/Resources/uninstall.sh")\""
+        let buyruq = "sudo \"\(skript ?? "/Applications/Voxly.app/Contents/Resources/uninstall.sh")\""
 
         let a = NSAlert()
-        a.messageText = "Kotib'ni oʻchirish"
+        a.messageText = tr("Удалить Voxly", "Uninstall Voxly")
         a.informativeText =
-            "Ilova, sozlamalar, ruxsatlar va til modeli oʻchiriladi. Diktovka tarixi va "
-            + "Studiya hujjatlari ham ketadi.\n\nOʻchirish administrator parolini talab qiladi, "
-            + "shuning uchun uni Terminal'da bajarasiz. Quyidagi buyruq nusxalanadi:\n\n\(buyruq)"
-        a.addButton(withTitle: "Buyruqni nusxalash")
-        a.addButton(withTitle: "Bekor qilish")
+            tr("Будут удалены приложение, настройки, разрешения и модели. История диктовок и ", "This removes the app, settings, permissions and models. Dictation history and ")
+            + tr("документы тоже удалятся.\n\nНужен пароль администратора, ", "documents are removed too.\n\nIt needs an administrator password, ")
+            + tr("поэтому команда выполняется в Терминале. Она будет скопирована:\n\n\(buyruq)", "so you run it in Terminal. This command will be copied:\n\n\(buyruq)")
+        a.addButton(withTitle: tr("Скопировать команду", "Copy command"))
+        a.addButton(withTitle: tr("Отмена", "Cancel"))
         guard a.runModal() == .alertFirstButtonReturn else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(buyruq, forType: .string)

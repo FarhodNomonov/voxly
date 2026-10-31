@@ -25,9 +25,6 @@ extension StudiyaVC {
         // Dizayn: tugma LLM sozlanmagan boʻlsa umuman koʻrinmaydi.
         yaxshilashTugma?.isHidden = !LLMSozlama.sozlanganmi
         yaxshilashTugma?.isEnabled = joriy != nil && !bandmi
-        // Tarjima oflayn ishlaydi — LLM sozlamasiga bogʻliq emas, shuning uchun
-        // hech qachon yashirilmaydi.
-        tarjimaTugma?.isEnabled = joriy != nil && !bandmi
     }
 
     /// "Matnni yaxshilash ⌄" — dizayndagi yagona LLM boshqaruvi. Barcha amallar
@@ -41,7 +38,7 @@ extension StudiyaVC {
             m.addItem(item)
         }
         m.addItem(.separator())
-        let erkin = NSMenuItem(title: "Oʻz soʻrovim…", action: #selector(erkinBosildi), keyEquivalent: "")
+        let erkin = NSMenuItem(title: tr("Свой запрос…", "Custom request…"), action: #selector(erkinBosildi), keyEquivalent: "")
         erkin.target = self
         m.addItem(erkin)
         // Menyu tugmaning TEPASIDA ochiladi — tugma oynaning pastki chetida
@@ -50,61 +47,6 @@ extension StudiyaVC {
             positioning: nil,
             at: NSPoint(x: 0, y: -6),
             in: yaxshilashTugma)
-    }
-
-    /// «Tarjima qilish ⌄» — tillar menyusi. Tepada «Tarjima» tabida oxirgi
-    /// ishlatilgan til (`tr.maqsad`), keyin eng koʻp soʻraladigan uchtasi,
-    /// oxirida toʻliq 202 tillik tanlagichga oʻtish.
-    @objc func tarjimaBosildi() {
-        let m = NSMenu()
-        var korsatilgan: [Til] = []
-
-        func qosh(_ t: Til) {
-            // Oʻzbekchaga tarjima qilishning maʼnosi yoʻq — manba oʻzbekcha.
-            guard t != .uz, !korsatilgan.contains(t) else { return }
-            korsatilgan.append(t)
-            let i = NSMenuItem(title: t.nom, action: #selector(tilTanlandi(_:)), keyEquivalent: "")
-            i.representedObject = t.nllb
-            i.target = self
-            m.addItem(i)
-        }
-
-        if let oxirgi = UserDefaults.standard.string(forKey: "tr.maqsad"),
-            let t = Til.topilsin(oxirgi)
-        {
-            qosh(t)
-        }
-        qosh(.ru)
-        qosh(.en)
-        if let turk = Til.topilsin("tur_Latn") { qosh(turk) }
-
-        m.addItem(.separator())
-        let boshqa = NSMenuItem(title: "Boshqa til…", action: #selector(boshqaTil), keyEquivalent: "")
-        boshqa.target = self
-        m.addItem(boshqa)
-
-        // Yaxshilash menyusi kabi tepaga ochiladi — tugma oynaning pastida.
-        m.popUp(positioning: nil, at: NSPoint(x: 0, y: -6), in: tarjimaTugma)
-    }
-
-    @objc private func tilTanlandi(_ sender: NSMenuItem) {
-        guard let kod = sender.representedObject as? String,
-            let til = Til.topilsin(kod)
-        else { return }
-        tarjimagaUzat(til)
-    }
-
-    /// Til koʻrsatilmaydi: matn «Tarjima» tabiga qoʻyiladi, foydalanuvchi
-    /// oʻsha yerdagi qidiruvli roʻyxatdan tilni oʻzi tanlaydi. Menyuga 202 ta
-    /// band solishdan koʻra shu maʼqul — tanlagich allaqachon oʻsha yerda.
-    @objc private func boshqaTil() { tarjimagaUzat(nil) }
-
-    private func tarjimagaUzat(_ til: Til?) {
-        // `NSTextView.string` ichki bufer ustidan dangasa koʻrinish qaytaradi —
-        // nusxa majburlanadi (`tarjima_view.swift` dagi ⇄ xatosiga qarang).
-        let matn = String(matnView.string[...])
-        guard !matn.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        onTarjima?(matn, til)
     }
 
     @objc private func amalTanlandi(_ sender: NSMenuItem) {
@@ -116,13 +58,13 @@ extension StudiyaVC {
 
     @objc private func erkinBosildi() {
         let a = NSAlert()
-        a.messageText = "Oʻz soʻrovingiz"
-        a.informativeText = "Matn ustida nima qilish kerakligini yozing."
+        a.messageText = tr("Свой запрос", "Custom request")
+        a.informativeText = tr("Напишите, что сделать с текстом.", "Describe what to do with the text.")
         let maydon = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
-        maydon.placeholderString = "masalan: inglizchaga tarjima qil"
+        maydon.placeholderString = tr("например: переведи на английский", "e.g. translate into Spanish")
         a.accessoryView = maydon
-        a.addButton(withTitle: "Bajarish")
-        a.addButton(withTitle: "Bekor")
+        a.addButton(withTitle: tr("Выполнить", "Run"))
+        a.addButton(withTitle: tr("Отмена", "Cancel"))
         guard a.runModal() == .alertFirstButtonReturn else { return }
         let korsatma = maydon.stringValue.trimmingCharacters(in: .whitespaces)
         guard !korsatma.isEmpty else { return }
@@ -179,7 +121,7 @@ extension StudiyaVC {
                 // ekranni koʻradi va matnini yoʻqotdim deb oʻylaydi. Tayyor
                 // matnni qaytaramiz, keyin xatoni aytamiz.
                 self.matnniOqi(.chiroyli)
-                self.ogohlantir("Xato", m)
+                self.ogohlantir(tr("Ошибка", "Error"), m)
             })
     }
 
@@ -204,9 +146,9 @@ extension StudiyaVC {
     @objc func eksport() {
         guard joriy != nil else { return }
         let p = NSSavePanel()
-        p.title = "Matnni saqlash"
+        p.title = tr("Сохранить текст", "Save text")
         p.nameFieldStringValue =
-            ((joriy?.manbaNomi ?? "matn") as NSString).deletingPathExtension + ".txt"
+            ((joriy?.manbaNomi ?? "text") as NSString).deletingPathExtension + ".txt"
         p.allowedContentTypes = [.plainText]
         guard p.runModal() == .OK, let url = p.url else { return }
         try? matnView.string.write(to: url, atomically: true, encoding: .utf8)

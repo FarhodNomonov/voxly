@@ -18,16 +18,16 @@ extension MediaXato {
     var xabar: String {
         switch self {
         case .ochilmadi(let kengaytma):
-            return "«.\(kengaytma)» fayllari qoʻllab-quvvatlanmaydi. "
-                + "mp4, mov, m4a, mp3, wav yoki flac faylini tanlang."
+            return tr("Файлы «.\(kengaytma)» не поддерживаются. ", "“.\(kengaytma)” files aren't supported. ")
+                + tr("Выберите mp4, mov, m4a, mp3, wav или flac.", "Choose an mp4, mov, m4a, mp3, wav or flac file.")
         case .audioYoliYoq:
-            return "Bu faylda ovoz yoʻli topilmadi."
+            return tr("В этом файле нет звуковой дорожки.", "This file has no audio track.")
         case .bosh:
-            return "Fayl boʻsh."
+            return tr("Файл пустой.", "The file is empty.")
         case .oqishXatosi:
-            return "Faylni oʻqib boʻlmadi — u buzilgan boʻlishi mumkin."
+            return tr("Не удалось прочитать файл — возможно, он повреждён.", "Couldn't read the file — it may be corrupted.")
         case .bekorQilindi:
-            return "Bekor qilindi."
+            return tr("Отменено.", "Cancelled.")
         }
     }
 }

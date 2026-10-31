@@ -28,8 +28,8 @@ final class YozishKartasi: NSView {
     private let pulsQatlam = CALayer()
     private let mikrofon = NSImageView()
     private let toxtatBelgi = NSView()
-    private let sarlavha = U.yozuv("Bosing va gapiring", 20, .semibold)
-    private let izoh = U.yozuv("Matn siz turgan joyga oʻzi yoziladi", 14, .regular, U.matn2)
+    private let sarlavha = U.yozuv(tr("Нажмите и говорите", "Press and speak"), 20, .semibold)
+    private let izoh = U.yozuv(tr("Текст появится там, где стоит курсор", "Text appears wherever your cursor is"), 14, .regular, U.matn2)
     private let ongTaraf = NSStackView()
     private let klavishalar = NSStackView()
     private let tolqin = TolqinView()
@@ -133,8 +133,8 @@ final class YozishKartasi: NSView {
         mikrofon.isHidden = q
         toxtatBelgi.isHidden = !q
 
-        sarlavha.stringValue = q ? "Eshityapman… gapiring" : "Bosing va gapiring"
-        izoh.stringValue = q ? "Tugatgach yana bosing" : "Matn siz turgan joyga oʻzi yoziladi"
+        sarlavha.stringValue = q ? tr("Слушаю… говорите", "Listening… speak") : tr("Нажмите и говорите", "Press and speak")
+        izoh.stringValue = q ? tr("Когда закончите — нажмите ещё раз", "Press again when you're done") : tr("Текст появится там, где стоит курсор", "Text appears wherever your cursor is")
         izoh.textColor = q ? U.yozishMatn2 : U.matn2
 
         ongTaraf.setViews(q ? [tolqin, taymer] : [klavishalar], in: .leading)

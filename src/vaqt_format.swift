@@ -29,11 +29,11 @@ enum VaqtFormat {
     static func nisbiy(_ sana: Date, hozir: Date = Date()) -> String {
         let taqvim = Calendar.current
         let vaqt = soatFormatter.string(from: sana)
-        if taqvim.isDate(sana, inSameDayAs: hozir) { return "bugun \(vaqt)" }
+        if taqvim.isDate(sana, inSameDayAs: hozir) { return tr("сегодня \(vaqt)", "today \(vaqt)") }
         if let kecha = taqvim.date(byAdding: .day, value: -1, to: hozir),
             taqvim.isDate(sana, inSameDayAs: kecha)
         {
-            return "kecha \(vaqt)"
+            return tr("вчера \(vaqt)", "yesterday \(vaqt)")
         }
         return "\(sanaFormatter.string(from: sana)) \(vaqt)"
     }
@@ -45,22 +45,22 @@ enum VaqtFormat {
     static func davomiylik(_ soniya: Double) -> String {
         let daqiqa = max(0, Int(soniya)) / 60
         // Nol daqiqa "fayl boʻsh" degan taassurot beradi — buni ochiq aytamiz.
-        if daqiqa == 0 { return "1 daqiqadan kam" }
-        if daqiqa < 60 { return "\(daqiqa) daqiqa" }
+        if daqiqa == 0 { return tr("меньше минуты", "under a minute") }
+        if daqiqa < 60 { return tr("\(daqiqa) мин", "\(daqiqa) min") }
         let soat = daqiqa / 60
         let qoldiq = daqiqa % 60
-        return qoldiq == 0 ? "\(soat) soat" : "\(soat) soat \(qoldiq) daqiqa"
+        return qoldiq == 0 ? tr("\(soat) ч", "\(soat) h") : tr("\(soat) ч \(qoldiq) мин", "\(soat) h \(qoldiq) min")
     }
 
     /// Faqat kun: `bugun`, `kecha`, aks holda `22 avg`. Vaqtsiz — fayl
     /// roʻyxatida soat-daqiqa ortiqcha shovqin.
     static func kun(_ sana: Date, hozir: Date = Date()) -> String {
         let taqvim = Calendar.current
-        if taqvim.isDate(sana, inSameDayAs: hozir) { return "bugun" }
+        if taqvim.isDate(sana, inSameDayAs: hozir) { return tr("сегодня", "today") }
         if let kecha = taqvim.date(byAdding: .day, value: -1, to: hozir),
             taqvim.isDate(sana, inSameDayAs: kecha)
         {
-            return "kecha"
+            return tr("вчера", "yesterday")
         }
         return sanaFormatter.string(from: sana)
     }
@@ -69,14 +69,14 @@ enum VaqtFormat {
     // roʻyxati esa har yangilanishda 200 tagacha qator chizadi.
     private static let soatFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "uz_Latn")
+        f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "HH:mm"
         return f
     }()
 
     private static let sanaFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "uz_Latn")
+        f.locale = Locale(identifier: UITili.joriy == .en ? "en_US" : "ru_RU")
         f.dateFormat = "d MMM"
         return f
     }()

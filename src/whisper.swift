@@ -34,6 +34,12 @@ final class Whisper {
     private func modelniYukla() -> String? {
         let til = ModelStore.til
         if loaded, yuklanganTil == til { return nil }
+        // Rus va ingliz — bitta model: faqat whisper tili almashadi.
+        if loaded, let eski = yuklanganTil, ModelTanlov.joriy(eski) == ModelTanlov.joriy(til) {
+            rubai_set_language(til.kod)
+            yuklanganTil = til
+            return nil
+        }
         if loaded {
             RubaiLog.write("nutq tili oʻzgardi → \(til.kod): model almashtirilmoqda")
             rubai_unload()
@@ -43,7 +49,7 @@ final class Whisper {
         let nomzodlar = ModelStore.nomzodlar(til)
         guard !nomzodlar.isEmpty else {
             RubaiLog.write("XATO: model topilmadi (foydalanuvchi, tizim, bundle, eski yoʻl)")
-            return "Model fayli topilmadi"
+            return tr("Файл модели не найден", "Model file not found")
         }
         for yol in nomzodlar {
             let rc = rubai_load(yol)
@@ -55,7 +61,7 @@ final class Whisper {
             }
             RubaiLog.write("XATO: rubai_load(\(yol)) = \(rc): \(String(cString: rubai_last_error()))")
         }
-        return "Model yuklanmadi (\(nomzodlar.count) ta nomzod sinaldi)"
+        return tr("Не удалось загрузить модель", "Couldn't load the model")
     }
 
     func transcribe(
@@ -78,7 +84,7 @@ final class Whisper {
             // boʻlib «Ovoz aniqlanmadi» deb koʻrsatilar va ovoz tashlanardi (A3).
             guard let text else {
                 RubaiLog.write("XATO: rubai_transcribe: \(String(cString: rubai_last_error()))")
-                DispatchQueue.main.async { fail("Matnga oʻgirib boʻlmadi") }
+                DispatchQueue.main.async { fail(tr("Не удалось распознать", "Transcription failed")) }
                 return
             }
             DispatchQueue.main.async { done(text) }
@@ -133,7 +139,7 @@ final class Whisper {
             }
 
             if rc == 2 { DispatchQueue.main.async { fail("bekor") }; return }
-            guard rc == 0 else { DispatchQueue.main.async { fail("Transkripsiya xatosi") }; return }
+            guard rc == 0 else { DispatchQueue.main.async { fail(tr("Ошибка распознавания", "Transcription error")) }; return }
 
             var segs: [Segment] = []
             let n = Int(rubai_n_segments())

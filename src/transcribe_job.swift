@@ -60,7 +60,7 @@ final class TranskripsiyaIshi {
     func boshla() {
         guard TranskripsiyaIshi.ishNiOlish() else {
             DispatchQueue.main.async {
-                self.onXato?("Boshqa fayl ustida ish ketmoqda. Tugashini kuting.")
+                self.onXato?(tr("Обрабатывается другой файл. Дождитесь окончания.", "Another file is being processed. Please wait."))
             }
             return
         }
@@ -162,18 +162,13 @@ final class TranskripsiyaIshi {
         }
 
         guard !hammaSegmentlar.isEmpty else {
-            Statistika.amalYubor(
-                tur: "stt", ovoz_s: davomiylik,
-                ishlov_s: Date().timeIntervalSinceReferenceDate - boshlandi,
-                backend: Statistika.sttBackend, natija: "xato:nutq_yoq")
-            xato("Faylda nutq aniqlanmadi."); return
+            xato(tr("В файле не найдено речи.", "No speech found in the file.")); return
         }
 
-        // Studiya (fayl) transkripsiyasi tugadi — anonim oʻlchov (kontentsiz).
-        Statistika.amalYubor(
-            tur: "stt", ovoz_s: davomiylik,
-            ishlov_s: Date().timeIntervalSinceReferenceDate - boshlandi,
-            backend: Statistika.sttBackend)
+        RubaiLog.write(
+            String(
+                format: "fayl stt: ovoz=%.1fs ishlov=%.1fs", davomiylik,
+                Date().timeIntervalSinceReferenceDate - boshlandi))
 
         do {
             let h = try HujjatOmbori.saqla(
@@ -183,7 +178,7 @@ final class TranskripsiyaIshi {
             tugat()
             DispatchQueue.main.async { self.onTayyor?(h) }
         } catch {
-            xato("Diskka saqlab boʻlmadi. Joy yetarli boʻlmasligi mumkin.")
+            xato(tr("Не удалось сохранить на диск. Возможно, мало места.", "Couldn't save to disk. You may be low on space."))
         }
     }
 
@@ -202,7 +197,7 @@ final class TranskripsiyaIshi {
                 progress: { [weak self] u in
                     self?.progress(
                         dekodlashUlushi(u, chunkBoshi: boshi, chunkOxiri: oxiri, umumiy: umumiy),
-                        "Audio ajratilmoqda…")
+                        tr("Извлекаю звук…", "Extracting audio…"))
                 },
                 bekor: { [weak self] in self?.bekorMi ?? true })
         } catch let e as MediaXato {
@@ -232,7 +227,7 @@ final class TranskripsiyaIshi {
                 progress: { [weak self] u in
                     self?.progress(
                         dekodlashUlushi(u, chunkBoshi: boshi, chunkOxiri: taxminiyOxir, umumiy: umumiy),
-                        "Audio ajratilmoqda…")
+                        tr("Извлекаю звук…", "Extracting audio…"))
                 },
                 bekor: { [weak self] in self?.bekorMi ?? true })
         } catch let e as MediaXato {
@@ -284,7 +279,7 @@ final class TranskripsiyaIshi {
                     transkripsiyaUlushi(
                         bolakUlush, chunkBoshi: chunkBoshi,
                         chunkOxiri: chunkOxiri, umumiy: umumiy),
-                    "Matnga oʻgirilmoqda…")
+                    tr("Распознаю…", "Transcribing…"))
             },
             bekor: { [weak self] in self?.bekorMi ?? true },
             done: { segs in

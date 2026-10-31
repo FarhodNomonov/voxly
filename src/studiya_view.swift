@@ -2,8 +2,8 @@
 // Dizayn manbasi: Claude Design "Kotib - yangi.dc.html".
 //
 // Ikki koʻrinish, bir vaqtda faqat bittasi:
-//   1. Roʻyxat — katta tashlash zonasi va "Oxirgi fayllar"
-//   2. Matn   — "‹ Audio" sarlavhasi, transkript va pastdagi amallar
+//   1. Roʻyxat — katta tashlash zonasi va tr("Недавние файлы", "Recent files")
+//   2. Matn   — tr("‹ Файлы", "‹ Files") sarlavhasi, transkript va pastdagi amallar
 //
 // Oyna qobigʻi yoʻq — asosiy oyna (asosiy_oyna.swift) ichida tab sifatida
 // yashaydi. Faollik siyosati va oyna yopilishini AsosiyOyna boshqaradi.
@@ -41,11 +41,7 @@ final class StudiyaVC: NSViewController {
     private var faylNomi: NSTextField!
     var matnView: NSTextView!
     var yaxshilashTugma: FonliTugma!
-    var tarjimaTugma: FonliTugma!
 
-    /// Transkriptni «Tarjima» tabiga uzatadi. `Til` nil — foydalanuvchi tilni
-    /// oʻsha tabda oʻzi tanlaydi («Boshqa til…»).
-    var onTarjima: ((String, Til?) -> Void)?
 
     // Pastki progress paneli (ikkala koʻrinish ustida)
     private let progressKonteyner = NSView()
@@ -127,9 +123,9 @@ final class StudiyaVC: NSViewController {
         let zona = TashlashZonasi()
         zona.onBos = { [weak self] in self?.faylTanla() }
 
-        let sarlavha = U.bolimSarlavhasi("Oxirgi fayllar")
+        let sarlavha = U.bolimSarlavhasi(tr("Недавние файлы", "Recent files"))
 
-        bosYozuv = U.yozuv("Hali birorta fayl oʻgirilmagan", 15, .regular, U.matn3)
+        bosYozuv = U.yozuv(tr("Пока ни одного файла", "No files transcribed yet"), 15, .regular, U.matn3)
         bosYozuv.alignment = .center
         bosYozuv.isHidden = true
 
@@ -176,7 +172,7 @@ final class StudiyaVC: NSViewController {
     // MARK: 2-koʻrinish — matn
 
     private func qurMatn() {
-        let orqaga = BosiladiganYozuv("‹ Audio", rang: U.kok, size: 16, weight: .medium)
+        let orqaga = BosiladiganYozuv(tr("‹ Файлы", "‹ Files"), rang: U.kok, size: 16, weight: .medium)
         orqaga.onBos = { [weak self] in self?.royxatgaQayt() }
 
         faylNomi = U.yozuv("", 16, .semibold)
@@ -215,27 +211,22 @@ final class StudiyaVC: NSViewController {
         footer.layer?.backgroundColor = U.maydonFon.cgColor
 
         let nusxa = U.asosiyTugma(
-            "Nusxa olish", target: self, action: #selector(nusxaOl),
+            tr("Копировать", "Copy"), target: self, action: #selector(nusxaOl),
             balandlik: 44, shrift: 16)
         let saqla = U.ikkilamchiTugma(
-            "Saqlash…", target: self, action: #selector(eksport),
+            tr("Сохранить…", "Save…"), target: self, action: #selector(eksport),
             balandlik: 44, shrift: 16)
         yaxshilashTugma =
             U.ikkilamchiTugma(
-                "Matnni yaxshilash  ⌄", target: self,
+                tr("Улучшить текст  ⌄", "Improve text  ⌄"), target: self,
                 action: #selector(yaxshilashBosildi),
-                balandlik: 44, shrift: 16) as? FonliTugma
-        tarjimaTugma =
-            U.ikkilamchiTugma(
-                "Tarjima qilish  ⌄", target: self,
-                action: #selector(tarjimaBosildi),
                 balandlik: 44, shrift: 16) as? FonliTugma
 
         for x in [orqaga, faylNomi, sarlavhaChiziq, scroll, footer] as [NSView] {
             x.translatesAutoresizingMaskIntoConstraints = false
             matnKorinish.addSubview(x)
         }
-        for x in [footerChiziq, nusxa, saqla, tarjimaTugma, yaxshilashTugma] as [NSView] {
+        for x in [footerChiziq, nusxa, saqla, yaxshilashTugma] as [NSView] {
             x.translatesAutoresizingMaskIntoConstraints = false
             footer.addSubview(x)
         }
@@ -273,14 +264,8 @@ final class StudiyaVC: NSViewController {
             saqla.leadingAnchor.constraint(equalTo: nusxa.trailingAnchor, constant: 10),
             saqla.centerYAnchor.constraint(equalTo: footer.centerYAnchor),
 
-            // Chap guruhda: «Matnni yaxshilash» LLM sozlanmaganda yashirinadi,
-            // lekin cheklovlari qoladi — tarjima tugmasi oʻngga bogʻlansa,
-            // oʻsha holatda oʻng chetda boʻsh joy osilib qolardi.
-            tarjimaTugma.leadingAnchor.constraint(equalTo: saqla.trailingAnchor, constant: 10),
-            tarjimaTugma.centerYAnchor.constraint(equalTo: footer.centerYAnchor),
-
             yaxshilashTugma.leadingAnchor.constraint(
-                greaterThanOrEqualTo: tarjimaTugma.trailingAnchor, constant: 12),
+                greaterThanOrEqualTo: saqla.trailingAnchor, constant: 12),
             yaxshilashTugma.trailingAnchor.constraint(equalTo: footer.trailingAnchor, constant: -20),
             yaxshilashTugma.centerYAnchor.constraint(equalTo: footer.centerYAnchor)
         ])
@@ -307,7 +292,7 @@ final class StudiyaVC: NSViewController {
 
         holatYozuvi = U.yozuv("", 13, .regular, U.matn2)
         bekorTugma = U.ikkilamchiTugma(
-            "Bekor qilish", target: self,
+            tr("Отмена", "Cancel"), target: self,
             action: #selector(bekorBosildi),
             balandlik: 30, shrift: 13)
 
@@ -343,7 +328,7 @@ final class StudiyaVC: NSViewController {
 
     @objc func faylTanla() {
         let p = NSOpenPanel()
-        p.title = "Ovozli yoki videofayl tanlang"
+        p.title = tr("Выберите аудио- или видеофайл", "Choose an audio or video file")
         p.allowsMultipleSelection = false
         p.canChooseDirectories = false
         p.allowedContentTypes = [.audio, .movie]
@@ -353,18 +338,18 @@ final class StudiyaVC: NSViewController {
 
     func faylniQabulQil(_ url: URL) {
         guard ModelStore.isReady else {
-            ogohlantir("Model topilmadi", "Sozlamalar → Modelni yuklab olish.")
+            ogohlantir(tr("Модель не найдена", "Model not found"), tr("Начните диктовку — модель скачается автоматически.", "Start a dictation — the model downloads automatically."))
             return
         }
         guard !TranskripsiyaIshi.ishlayapti else {
-            ogohlantir("Ish ketmoqda", "Boshqa fayl ustida ish ketmoqda. Tugashini kuting.")
+            ogohlantir(tr("Идёт обработка", "Busy"), tr("Обрабатывается другой файл. Дождитесь окончания.", "Another file is being processed. Please wait."))
             return
         }
         // Diktovka yozilayotgan yoki matnga oʻgirilayotgan boʻlsa — fayl kutadi.
         // Aks holda whisper navbatida diktovka fayl ortida qolib, matni
         // daqiqalar oʻtib boshqa oynaga tushardi (D2).
         guard !DiktovkaBand.faol else {
-            ogohlantir("Diktovka ketmoqda", "Diktovka tugashini kuting, keyin faylni qayta tashlang.")
+            ogohlantir(tr("Идёт диктовка", "Dictation in progress"), tr("Дождитесь конца диктовки и перетащите файл снова.", "Wait for the dictation to finish, then drop the file again."))
             return
         }
         // LLM oqimi joriy hujjatga bogʻlangan (oqimToken). Shu payt yangi fayl
@@ -372,13 +357,13 @@ final class StudiyaVC: NSViewController {
         // uning natijasi yangi hujjatning matniga qoʻshilib ketishi mumkin edi.
         guard !bandmi else {
             ogohlantir(
-                "Amal ketmoqda",
-                "Joriy matn ustida amal tugashini kuting, keyin yangi fayl tashlang.")
+                tr("Выполняется действие", "Action in progress"),
+                tr("Дождитесь окончания действия с текстом, затем добавьте новый файл.", "Wait for the current text action to finish, then add a new file."))
             return
         }
         progressniKorsat(true)
         progressBar.doubleValue = 0
-        holatYozuvi.stringValue = "Tayyorlanmoqda…"
+        holatYozuvi.stringValue = tr("Подготовка…", "Preparing…")
 
         let i = TranskripsiyaIshi(url: url)
         i.onProgress = { [weak self] p, s in
@@ -396,7 +381,7 @@ final class StudiyaVC: NSViewController {
         i.onXato = { [weak self] m in
             self?.progressniKorsat(false)
             self?.ish = nil
-            self?.ogohlantir("Xato", m)
+            self?.ogohlantir(tr("Ошибка", "Error"), m)
         }
         ish = i
         i.boshla()
@@ -412,7 +397,7 @@ final class StudiyaVC: NSViewController {
             // Transkripsiya ishi yoʻq — demak LLM amali ketmoqda.
             amalTask?.cancel()
         }
-        holatYozuvi.stringValue = "Bekor qilinmoqda…"
+        holatYozuvi.stringValue = tr("Отменяю…", "Cancelling…")
     }
 
     // MARK: Kutubxona
@@ -443,10 +428,10 @@ final class StudiyaVC: NSViewController {
 
     private func matnMenyusi() -> NSMenu {
         let m = NSMenu()
-        m.addItem(NSMenuItem(title: "Tayyor matn", action: #selector(chiroyliniKorsat), keyEquivalent: ""))
-        m.addItem(NSMenuItem(title: "Asl (tahrirsiz) matn", action: #selector(xomniKorsat), keyEquivalent: ""))
+        m.addItem(NSMenuItem(title: tr("Готовый текст", "Formatted text"), action: #selector(chiroyliniKorsat), keyEquivalent: ""))
+        m.addItem(NSMenuItem(title: tr("Исходный текст (без правок)", "Original (raw) text"), action: #selector(xomniKorsat), keyEquivalent: ""))
         m.addItem(.separator())
-        let nusxa = NSMenuItem(title: "Nusxa olish", action: #selector(nusxaOl), keyEquivalent: "")
+        let nusxa = NSMenuItem(title: tr("Копировать", "Copy"), action: #selector(nusxaOl), keyEquivalent: "")
         m.addItem(nusxa)
         for item in m.items { item.target = self }
         return m
@@ -493,7 +478,7 @@ final class StudiyaVC: NSViewController {
         let a = NSAlert()
         a.messageText = sarlavha
         a.informativeText = matn
-        a.addButton(withTitle: "Yaxshi")
+        a.addButton(withTitle: tr("OK", "OK"))
         a.runModal()
     }
 
@@ -501,7 +486,7 @@ final class StudiyaVC: NSViewController {
 
     let amalIshi = AmalIshi()
     var bandmi = false
-    /// Joriy LLM amalining Task'i — "Bekor qilish" shuni bekor qiladi.
+    /// Joriy LLM amalining Task'i — tr("Отмена", "Cancel") shuni bekor qiladi.
     var amalTask: Task<Void, Never>?
 
 }

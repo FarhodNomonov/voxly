@@ -34,7 +34,7 @@ enum ModelStore {
     /// va HAJMI bilan tekshirilgan (A1). Bundle — CFBundle keshi orqali EMAS,
     /// papka sifatida: kesh oʻchirilgan faylni ham «bor» deb berardi.
     static func nomzodlar(_ til: NutqTili = ModelStore.til) -> [String] {
-        var papkalar = [Yollar.foydalanuvchiModellari, Yollar.tizimModellari]
+        var papkalar = [Yollar.foydalanuvchiModellari, Yollar.tizimModellari, Yollar.eskiTizimModellari]
         // 1.1.0 dan oʻtish davri: eski .pkg modelni bundle ichiga qoʻygan.
         if let r = Bundle.main.resourceURL { papkalar.append(r) }
         papkalar.append(Yollar.eskiModellar)
@@ -59,13 +59,13 @@ final class ModelDownloader: NSObject, URLSessionDataDelegate {
         var errorDescription: String? {
             switch self {
             case .http(let code):
-                return "Server javob bermadi (kod \(code)). Internetni tekshirib, qayta urinib koʻring."
+                return tr("Сервер не ответил (код \(code)). Проверьте интернет и попробуйте снова.", "The server didn't respond (code \(code)). Check your connection and try again.")
             case .shortFile(let got, let want):
-                return "Fayl toʻliq yuklanmadi (\(got) / \(want) bayt). Qayta urinib koʻring."
+                return tr("Файл скачался не полностью (\(got) / \(want) байт). Попробуйте снова.", "The download is incomplete (\(got) / \(want) bytes). Try again.")
             case .write(let msg):
-                return "Faylga yozib boʻlmadi: \(msg). Diskda joy borligini tekshiring."
+                return tr("Не удалось записать файл: \(msg). Проверьте место на диске.", "Couldn't write the file: \(msg). Check free disk space.")
             case .buzilgan:
-                return "Yuklangan fayl buzilgan — qayta urinib koʻring (boshidan yuklanadi)."
+                return tr("Скачанный файл повреждён — попробуйте снова (загрузка начнётся заново).", "The downloaded file is corrupted — try again (it will restart).")
             }
         }
     }
@@ -123,7 +123,7 @@ final class ModelDownloader: NSObject, URLSessionDataDelegate {
             fm.createFile(atPath: part.path, contents: nil)
         }
         guard let h = try? FileHandle(forWritingTo: part) else {
-            return finish(.failure(Failure.write("'\(part.lastPathComponent)' ochilmadi")))
+            return finish(.failure(Failure.write(tr("не удалось открыть «\(part.lastPathComponent)»", "couldn't open “\(part.lastPathComponent)”"))))
         }
         handle = h
         _ = try? h.seekToEnd()
@@ -270,7 +270,7 @@ final class ModelDownloadWindow: NSObject {
     private var bar: NSProgressIndicator!
     private var statusLabel: NSTextField!
     private var noteLabel: NSTextField!
-    private var actionButton: NSButton!  // "Bekor qilish" yoki "Qayta urinish"
+    private var actionButton: NSButton!  // tr("Отмена", "Cancel") yoki tr("Повторить", "Try again")
     private var downloader: ModelDownloader?
     private var failed = false
     /// Yuklash ketayotganini belgilaydi. Busiz show() har chaqirilganda ikkinchi
@@ -315,7 +315,7 @@ final class ModelDownloadWindow: NSObject {
         let w = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: W, height: H),
             styleMask: [.titled], backing: .buffered, defer: false)
-        w.title = "Kotib"
+        w.title = "Voxly"
         w.isReleasedWhenClosed = false
         let v = NSView(frame: NSRect(x: 0, y: 0, width: W, height: H))
 
@@ -324,7 +324,7 @@ final class ModelDownloadWindow: NSObject {
         icon.imageScaling = .scaleProportionallyUpOrDown
         v.addSubview(icon)
 
-        let title = NSTextField(labelWithString: "Til modeli yuklab olinmoqda")
+        let title = NSTextField(labelWithString: tr("Скачиваю модель распознавания", "Downloading the speech model"))
         title.font = .systemFont(ofSize: 16, weight: .semibold)
         title.alignment = .center
         title.frame = NSRect(x: 20, y: H - 108, width: W - 40, height: 22)
@@ -332,8 +332,8 @@ final class ModelDownloadWindow: NSObject {
 
         noteLabel = NSTextField(
             wrappingLabelWithString:
-                "Bu faqat bir marta bajariladi. Model ~\(ModelStore.expectedBytes / 1_048_576) MB — internet tezligiga qarab "
-                + "5–20 daqiqa olishi mumkin. Ulanish uzilsa, oʻsha joydan davom etadi.")
+                tr("Это нужно один раз. Модель ~\(ModelStore.expectedBytes / 1_048_576) МБ — в зависимости от интернета ", "This happens once. The model is ~\(ModelStore.expectedBytes / 1_048_576) MB — depending on your connection ")
+                + tr("займёт 5–20 минут. Если связь прервётся, загрузка продолжится с того же места.", "it takes 5–20 minutes. If the connection drops, it resumes where it left off."))
         noteLabel.font = .systemFont(ofSize: 11)
         noteLabel.textColor = .secondaryLabelColor
         noteLabel.alignment = .center
@@ -347,13 +347,13 @@ final class ModelDownloadWindow: NSObject {
         bar.style = .bar
         v.addSubview(bar)
 
-        statusLabel = NSTextField(labelWithString: "Ulanmoqda…")
+        statusLabel = NSTextField(labelWithString: tr("Подключаюсь…", "Connecting…"))
         statusLabel.font = .systemFont(ofSize: 11)
         statusLabel.textColor = .secondaryLabelColor
         statusLabel.frame = NSRect(x: 30, y: 62, width: W - 60, height: 16)
         v.addSubview(statusLabel)
 
-        actionButton = NSButton(title: "Bekor qilish", target: self, action: #selector(actionPressed))
+        actionButton = NSButton(title: tr("Отмена", "Cancel"), target: self, action: #selector(actionPressed))
         actionButton.bezelStyle = .rounded
         actionButton.frame = NSRect(x: W - 30 - 130, y: 20, width: 130, height: 30)
         v.addSubview(actionButton)
@@ -366,9 +366,9 @@ final class ModelDownloadWindow: NSObject {
         guard !isDownloading else { return }
         isDownloading = true
         failed = false
-        actionButton.title = "Bekor qilish"
+        actionButton.title = tr("Отмена", "Cancel")
         statusLabel.textColor = .secondaryLabelColor
-        statusLabel.stringValue = "Ulanmoqda…"
+        statusLabel.stringValue = tr("Подключаюсь…", "Connecting…")
         bar.isIndeterminate = true
         bar.startAnimation(nil)
 
@@ -388,7 +388,7 @@ final class ModelDownloadWindow: NSObject {
             switch result {
             case .success:
                 self.bar.doubleValue = 1
-                self.statusLabel.stringValue = "Tayyor!"
+                self.statusLabel.stringValue = tr("Готово!", "Done!")
                 self.window?.close()
                 self.onReady?()
             case .failure(let e):
@@ -406,9 +406,9 @@ final class ModelDownloadWindow: NSObject {
         statusLabel.textColor = .systemRed
         statusLabel.stringValue = e.localizedDescription
         noteLabel.stringValue =
-            "Yuklangan qism saqlanib qoldi — qayta urinilganda "
-            + "oʻsha joydan davom etadi."
-        actionButton.title = "Qayta urinish"
+            tr("Скачанная часть сохранена — при повторе ", "The downloaded part is kept — the next attempt ")
+            + tr("загрузка продолжится с того же места.", "resumes where it left off.")
+        actionButton.title = tr("Повторить", "Try again")
     }
 
     @objc private func actionPressed() {
@@ -418,13 +418,13 @@ final class ModelDownloadWindow: NSObject {
         }
         // Bekor qilish — ilova modelsiz ishlay olmaydi, shuning uchun ogohlantiramiz
         let a = NSAlert()
-        a.messageText = "Yuklab olish toʻxtatilsinmi?"
+        a.messageText = tr("Остановить загрузку?", "Stop the download?")
         a.informativeText =
-            "Modelsiz diktovka ishlamaydi. Yuklangan qism saqlanadi — "
-            + "keyinroq menyu satridagi 🎙 ikonka orqali davom ettirishingiz mumkin."
+            tr("Без модели диктовка не работает. Скачанная часть сохранится — ", "Dictation doesn't work without the model. The downloaded part is kept — ")
+            + tr("продолжить можно позже через значок 🎙 в строке меню.", "you can resume later from the 🎙 icon in the menu bar.")
         a.alertStyle = .warning
-        a.addButton(withTitle: "Davom ettirish")
-        a.addButton(withTitle: "Toʻxtatish")
+        a.addButton(withTitle: tr("Продолжить", "Continue"))
+        a.addButton(withTitle: tr("Остановить", "Stop"))
         if a.runModal() == .alertSecondButtonReturn {
             downloader?.cancel()
             // Holat toʻliq tiklanadi: ilgari `isDownloading` true qolib, keyingi

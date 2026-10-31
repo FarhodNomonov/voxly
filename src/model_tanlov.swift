@@ -28,6 +28,7 @@ struct MaʼlumModel: Equatable {
 /// «privet, kak dela?»), rus tili uchun esa oddiy koʻp tilli Whisper kerak.
 enum NutqTili: String, CaseIterable {
     case rus = "ru"
+    case ingliz = "en"
     case ozbek = "uz"
 
     /// whisper til kodi.
@@ -35,8 +36,9 @@ enum NutqTili: String, CaseIterable {
 
     var nomi: String {
         switch self {
-        case .rus: return "Rus tili (kirill)"
-        case .ozbek: return "Oʻzbek tili (lotin)"
+        case .rus: return tr("Русский", "Russian")
+        case .ingliz: return tr("Английский", "English")
+        case .ozbek: return tr("Узбекский (латиница)", "Uzbek (Latin)")
         }
     }
 
@@ -74,7 +76,7 @@ enum ModelTanlov {
     static func malum(_ til: NutqTili) -> [MaʼlumModel] {
         switch til {
         case .ozbek: return malum
-        case .rus: return rusModellar
+        case .rus, .ingliz: return rusModellar
         }
     }
 

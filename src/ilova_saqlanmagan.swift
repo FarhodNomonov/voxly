@@ -13,7 +13,7 @@ extension AppDelegate {
             DispatchQueue.main.async {
                 if let url {
                     RubaiLog.write("ovoz saqlandi: \(url.lastPathComponent) (\(samples.count) namuna)")
-                    self.overlay.vaqtincha("⚠️ \(sabab) — ovoz saqlandi, menyuda «Qayta urinish»", soniya: 6)
+                    self.overlay.vaqtincha(tr("⚠️ \(sabab) — запись сохранена, повторите из меню", "⚠️ \(sabab) — audio saved, retry from the menu"), soniya: 6)
                 } else {
                     RubaiLog.write("XATO: ovozni saqlab boʻlmadi")
                     self.overlay.vaqtincha("⚠️ \(sabab)", soniya: 3.5)
@@ -41,12 +41,12 @@ extension AppDelegate {
         guard !qaytaIshlanyapti else { return }
         let navbat = SaqlanmaganOvoz.royxat().filter { qolda || !avtoUrinilgan.contains($0.lastPathComponent) }
         guard !navbat.isEmpty else {
-            if qolda { overlay.vaqtincha("Saqlangan ovoz yoʻq", soniya: 2) }
+            if qolda { overlay.vaqtincha(tr("Нет сохранённых записей", "No saved recordings"), soniya: 2) }
             return
         }
         qaytaIshlanyapti = true
         RubaiLog.write("saqlangan ovoz: \(navbat.count) ta qayta urinish (\(qolda ? "qoʻlda" : "avtomatik"))")
-        if qolda { overlay.show("Saqlangan ovoz matnga oʻgirilmoqda…", recording: false) }
+        if qolda { overlay.show(tr("Распознаю сохранённые записи…", "Transcribing saved recordings…"), recording: false) }
         var matnlar: [String] = []
         var xato: String?
 
@@ -62,14 +62,14 @@ extension AppDelegate {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(matnlar.joined(separator: "\n\n"), forType: .string)
                     overlay.vaqtincha(
-                        "✓ \(matnlar.count) ta ovoz matnga oʻgirildi — clipboard'da (⌘V) va tarixda", soniya: 5)
+                        tr("✓ Распознано записей: \(matnlar.count) — в буфере обмена (⌘V) и в истории", "✓ \(matnlar.count) recordings transcribed — on the clipboard (⌘V) and in history"), soniya: 5)
                 } else if let xato {
-                    overlay.vaqtincha("⚠️ \(xato) — ovoz saqlanib qoldi", soniya: 4)
+                    overlay.vaqtincha(tr("⚠️ \(xato) — запись сохранена", "⚠️ \(xato) — the audio is kept"), soniya: 4)
                 } else {
-                    overlay.vaqtincha("Saqlangan ovozda nutq topilmadi", soniya: 3)
+                    overlay.vaqtincha(tr("В сохранённых записях нет речи", "No speech in the saved recordings"), soniya: 3)
                 }
             } else if !matnlar.isEmpty {
-                overlay.vaqtincha("✓ Saqlangan \(matnlar.count) ta ovoz matnga oʻgirildi — Kotib oynasida", soniya: 4)
+                overlay.vaqtincha(tr("✓ Распознано сохранённых записей: \(matnlar.count) — в окне Voxly", "✓ \(matnlar.count) saved recordings transcribed — see the Voxly window"), soniya: 4)
             }
         }
 
@@ -115,6 +115,6 @@ extension AppDelegate: NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         let n = SaqlanmaganOvoz.royxat().count
         qaytaItem.isHidden = n == 0
-        qaytaItem.title = "Saqlangan ovozni matnga oʻgirish (\(n))"
+        qaytaItem.title = tr("Распознать сохранённые записи (\(n))", "Transcribe saved recordings (\(n))")
     }
 }

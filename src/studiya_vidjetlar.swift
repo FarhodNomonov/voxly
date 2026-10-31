@@ -56,7 +56,7 @@ final class DropView: NSView {
 
 // MARK: - Tashlash zonasi
 
-/// Dizayndagi katta punktir ramka: hujjat ikonkasi, sarlavha va "Fayl tanlash".
+/// Dizayndagi katta punktir ramka: hujjat ikonkasi, sarlavha va tr("Выбрать файл", "Choose file").
 /// Butun zona bosiladi — foydalanuvchi tugmani izlab oʻtirmasin.
 final class TashlashZonasi: PunktirQuti {
     var onBos: (() -> Void)?
@@ -65,9 +65,9 @@ final class TashlashZonasi: PunktirQuti {
         super.init(fon: U.maydonFon, radius: 14, chet: U.punktir)
 
         let ikonka = HujjatIkonkasi()
-        let sarlavha = U.yozuv("Ovozli faylni shu yerga tashlang", 20, .semibold)
+        let sarlavha = U.yozuv(tr("Перетащите сюда аудио или видео", "Drop an audio or video file here"), 20, .semibold)
         let tugma = U.asosiyTugma(
-            "Fayl tanlash", target: self, action: #selector(bosildi),
+            tr("Выбрать файл", "Choose file"), target: self, action: #selector(bosildi),
             balandlik: 46, shrift: 16)
 
         let stack = NSStackView(views: [ikonka, sarlavha, tugma])

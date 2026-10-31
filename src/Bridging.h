@@ -2,4 +2,3 @@
 // whisper shim'i va tarjima koʻprigi Swift'ga shu yerdan koʻrinadi.
 
 #include "whisper_bridge.h"
-#include "tarjima_bridge.h"

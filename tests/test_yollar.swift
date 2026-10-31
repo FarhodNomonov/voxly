@@ -84,34 +84,37 @@ func yollarTestlari() {
             faylOqi(baza.appendingPathComponent(Yollar.papkaNomi, isDirectory: true), "a.json"), "1")
     }
 
-    // MARK: Eski tarjima modelini oʻchirish
-    //
-    // 1.3B dan 3.3B ga oʻtishda papka nomi oʻzgardi. Eski papka 1,38 GB joy
-    // egallab yotib qoladi — u oʻchiriladi.
+    // MARK: Eski tarjima modellarini oʻchirish (tarjimon olib tashlandi)
 
-    testQosh("eski tarjima modeli papkasi oʻchiriladi") {
+    testQosh("eski tarjima modellari oʻchiriladi") {
         let baza = vaqtinchalikPapka()
         defer { try? FileManager.default.removeItem(at: baza) }
-        let eski = baza.appendingPathComponent("tarjima-model", isDirectory: true)
-        faylYoz(eski, "model.bin", "xxx")
+        let a = baza.appendingPathComponent("tarjima-model", isDirectory: true)
+        let b = baza.appendingPathComponent("tarjima-model-33b", isDirectory: true)
+        faylYoz(a, "model.bin", "xxx")
+        faylYoz(b, "model.bin", "yyy")
+        faylYoz(baza, "diktovka-tarixi.json", "[]")
 
-        tekshir("oʻchirildi deb qaytdi", Yollar.eskiTarjimaModeliniOchir(baza: baza))
-        tekshir("papka yoʻq", !FileManager.default.fileExists(atPath: eski.path))
+        tekshir("oʻchirildi deb qaytdi", Yollar.eskiTarjimaModellariniOchir(baza: baza))
+        tekshir("1.3B yoʻq", !FileManager.default.fileExists(atPath: a.path))
+        tekshir("3.3B yoʻq", !FileManager.default.fileExists(atPath: b.path))
+        tengmi("tarix joyida", faylOqi(baza, "diktovka-tarixi.json"), "[]")
+        tekshir("ikkinchi marta — false", !Yollar.eskiTarjimaModellariniOchir(baza: baza))
     }
 
-    testQosh("eski model papkasi boʻlmasa hech nima qilinmaydi") {
+    testQosh("koʻchirish — Kotib'dan Voxly'ga, tarjima modeli tashlanadi") {
         let baza = vaqtinchalikPapka()
         defer { try? FileManager.default.removeItem(at: baza) }
-        tekshir("false qaytdi", !Yollar.eskiTarjimaModeliniOchir(baza: baza))
-    }
+        let kotib = baza.appendingPathComponent("Kotib", isDirectory: true)
+        faylYoz(kotib, "diktovka-tarixi.json", "K")
+        faylYoz(kotib.appendingPathComponent("tarjima-model-33b", isDirectory: true), "model.bin", "x")
+        faylYoz(baza.appendingPathComponent("Audio-Matnga", isDirectory: true), "diktovka-tarixi.json", "A")
 
-    testQosh("yangi model papkasiga tegilmaydi") {
-        let baza = vaqtinchalikPapka()
-        defer { try? FileManager.default.removeItem(at: baza) }
-        let yangi = baza.appendingPathComponent("tarjima-model-33b", isDirectory: true)
-        faylYoz(yangi, "model.bin", "yyy")
-
-        _ = Yollar.eskiTarjimaModeliniOchir(baza: baza)
-        tengmi("yangi papka joyida", faylOqi(yangi, "model.bin"), "yyy")
+        tekshir("koʻchirildi", Yollar.kochir(baza: baza))
+        let voxly = baza.appendingPathComponent("Voxly", isDirectory: true)
+        tengmi("eng yangi eski papka olindi", faylOqi(voxly, "diktovka-tarixi.json"), "K")
+        tekshir(
+            "tarjima modeli yoʻq",
+            !FileManager.default.fileExists(atPath: voxly.appendingPathComponent("tarjima-model-33b").path))
     }
 }

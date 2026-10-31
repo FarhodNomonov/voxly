@@ -68,7 +68,7 @@ extension SozlamalarVC {
             // Ilgari xato faqat logga tushardi va foydalanuvchi kalit saqlandi
             // deb oʻylardi — keyin «Matnni yaxshilash» sababsiz yoʻqolardi (F4).
             if rc != errSecSuccess {
-                tekshirNatija.stringValue = "⚠️ Kalit Keychain'ga saqlanmadi (kod \(rc)). Qayta kiritib koʻring."
+                tekshirNatija.stringValue = tr("⚠️ Ключ не сохранился в Связке ключей (код \(rc)). Введите ещё раз.", "⚠️ Couldn't save the key to Keychain (code \(rc)). Enter it again.")
             }
         }
         // Audio tabi shu bildirishnomani tinglab "Matnni yaxshilash" tugmasini
@@ -95,8 +95,8 @@ extension SozlamalarVC {
         if !joriy.isEmpty, !royxat.contains(joriy) {
             taklifQilingan = royxat[0]
             eskirganYozuv.stringValue =
-                "«\(joriy)» provayder roʻyxatida yoʻq. Mavjud: «\(taklifQilingan)»"
-            eskirganTugma.matnniAlmashtir("«\(taklifQilingan)»ga oʻtish")
+                tr("Модели «\(joriy)» больше нет у провайдера. Есть: «\(taklifQilingan)»", "“\(joriy)” is no longer offered. Available: “\(taklifQilingan)”")
+            eskirganTugma.matnniAlmashtir(tr("Перейти на «\(taklifQilingan)»", "Switch to “\(taklifQilingan)”"))
             eskirganQator.isHidden = false
         } else {
             eskirganQator.isHidden = true
@@ -121,10 +121,10 @@ extension SozlamalarVC {
         let kalit = kalitMaydon.stringValue.trimmingCharacters(in: .whitespaces)
         let base = baseURLMaydon.stringValue.trimmingCharacters(in: .whitespaces)
         guard !kalit.isEmpty, !base.isEmpty else {
-            if qolda { modelHolati.stringValue = "Avval API kalitni kiriting" }
+            if qolda { modelHolati.stringValue = tr("Сначала введите ключ API", "Enter the API key first") }
             return
         }
-        modelHolati.stringValue = "Modellar olinmoqda…"
+        modelHolati.stringValue = tr("Загружаю список моделей…", "Loading models…")
         modelTask = Task { [weak self] in
             do {
                 let royxat = try await LLMMijoz().modellar(provayder: p, baseURL: base, kalit: kalit)
@@ -133,11 +133,11 @@ extension SozlamalarVC {
                     guard let self else { return }
                     if royxat.isEmpty {
                         self.modelHolati.stringValue =
-                            "Bu provayder model roʻyxatini bermaydi — nomni qoʻlda yozing"
+                            tr("Провайдер не отдаёт список моделей — введите название вручную", "This provider doesn't list models — type the name")
                     } else {
                         LLMSozlama.modellarniSaqla(p.id, royxat)
                         self.modellarniKorsat(royxat)
-                        self.modelHolati.stringValue = "\(royxat.count) ta model"
+                        self.modelHolati.stringValue = tr("Моделей: \(royxat.count)", "\(royxat.count) models")
                     }
                 }
             } catch let e as LLMXato {
@@ -153,11 +153,11 @@ extension SozlamalarVC {
     @objc func ulanishniTekshir() {
         llmniSaqla()
         guard let p = LLMSozlama.tanlangan else {
-            tekshirNatija.stringValue = "Avval provayderni tanlang"
+            tekshirNatija.stringValue = tr("Сначала выберите провайдера", "Choose a provider first")
             return
         }
         tekshirTugma.isEnabled = false
-        tekshirNatija.stringValue = "Tekshirilmoqda…"
+        tekshirNatija.stringValue = tr("Проверяю…", "Testing…")
 
         Task {
             var javob = ""
@@ -165,13 +165,13 @@ extension SozlamalarVC {
                 try await LLMMijoz().oqim(
                     provayder: p, baseURL: LLMSozlama.baseURL,
                     model: LLMSozlama.model, kalit: LLMSozlama.joriyKalit,
-                    system: "Faqat «ha» deb javob ber.",
-                    user: "Salom",
+                    system: tr("Reply with just \"yes\".", "Reply with just \"yes\"."),
+                    user: "Hello",
                     onDelta: { javob += $0 })
                 await MainActor.run {
                     tekshirNatija.stringValue =
                         javob.isEmpty
-                        ? "⚠️ Javob boʻsh keldi" : "✓ Ulanish ishlayapti"
+                        ? tr("⚠️ Пустой ответ", "⚠️ Empty response") : tr("✓ Подключение работает", "✓ Connection works")
                     tekshirTugma.isEnabled = true
                 }
             } catch let e as LLMXato {
