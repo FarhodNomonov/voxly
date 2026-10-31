@@ -22,16 +22,38 @@ echo "==> Kotib o'rnatilmoqda"
 if ! xcode-select -p >/dev/null 2>&1; then
     echo "Xcode Command Line Tools kerak. O'rnatish: xcode-select --install" >&2; exit 1
 fi
-if ! command -v brew >/dev/null 2>&1; then
-    echo "Homebrew kerak: https://brew.sh" >&2; exit 1
+# cmake: Homebrew boʻlsa — brew orqali, boʻlmasa pip (admin paroli kerak emas).
+PIP_BIN="$(python3 -c 'import site; print(site.USER_BASE)' 2>/dev/null)/bin"
+[ -x "$PIP_BIN/cmake" ] && export PATH="$PIP_BIN:$PATH"
+if ! command -v cmake >/dev/null 2>&1; then
+    echo "==> cmake o'rnatilmoqda"
+    if command -v brew >/dev/null 2>&1; then
+        brew install cmake
+    else
+        python3 -m pip install --user --quiet cmake
+        export PATH="$PIP_BIN:$PATH"
+    fi
 fi
-command -v cmake  >/dev/null 2>&1 || { echo "==> cmake o'rnatilmoqda";  brew install cmake; }
+
+# Intel Mac'da: faqat x86_64, shu protsessor uchun (GGML_NATIVE=ON — AVX2/FMA;
+# rasmiy universal build'dagi x86_64 qismi NATIVE=OFF, ancha sekin). arm64
+# kutubxonalari bu mashinada kerak emas.
+INTEL_XOST=0
+[ "$(uname -m)" = "x86_64" ] && INTEL_XOST=1
 # ffmpeg KERAK EMAS: audio/video dekodlash AVFoundation orqali
 # (`src/media_decode.swift`). Ilgari bu yerda keraksiz oʻrnatilardi.
 
 # 2) whisper.cpp (Metal, statik)
 bogliqlik_tayyorla "$WC" "$WHISPER_URL" "$WHISPER_COMMIT"
-if [ ! -f "$WC/build-static/src/libwhisper.a" ]; then
+if [ "$INTEL_XOST" = 1 ] && [ ! -f "$WC/build-x64/src/libwhisper.a" ]; then
+    echo "==> whisper.cpp build (Intel, CPU, AVX2)..."
+    cmake -S "$WC" -B "$WC/build-x64" \
+        -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_BUILD_TYPE=Release \
+        -DGGML_NATIVE=ON -DGGML_METAL=OFF -DBUILD_SHARED_LIBS=OFF \
+        -DWHISPER_BUILD_EXAMPLES=OFF -DWHISPER_BUILD_TESTS=OFF -DGGML_BLAS=OFF
+    nice -n 10 cmake --build "$WC/build-x64" --config Release -j4 --target whisper
+fi
+if [ "$INTEL_XOST" = 0 ] && [ ! -f "$WC/build-static/src/libwhisper.a" ]; then
     echo "==> whisper.cpp build (Metal)..."
     cmake -S "$WC" -B "$WC/build-static" \
         -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
@@ -67,7 +89,16 @@ fi
 #                                  qiladi, har jarayon 1–2 GB oladi
 CT2="$ROOT/ctranslate2"
 bogliqlik_tayyorla "$CT2" "$CT2_URL" "$CT2_COMMIT" --submodullar
-if [ ! -f "$CT2/build-static/libctranslate2.a" ]; then
+if [ "$INTEL_XOST" = 1 ] && [ ! -f "$CT2/build-x64/libctranslate2.a" ]; then
+    echo "==> CTranslate2 build (Intel, 15-25 daqiqa)..."
+    cmake -B "$CT2/build-x64" -S "$CT2" \
+        -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DBUILD_CLI=OFF \
+        -DWITH_MKL=OFF -DWITH_DNNL=OFF -DWITH_ACCELERATE=ON -DWITH_RUY=ON \
+        -DOPENMP_RUNTIME=NONE -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+        -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_ARCHITECTURES=x86_64
+    nice -n 10 cmake --build "$CT2/build-x64" --config Release -j4
+fi
+if [ "$INTEL_XOST" = 0 ] && [ ! -f "$CT2/build-static/libctranslate2.a" ]; then
     echo "==> CTranslate2 build (15-25 daqiqa, mashina qiziydi)..."
     cmake -B "$CT2/build-static" -S "$CT2" \
         -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DBUILD_CLI=OFF \
@@ -106,7 +137,15 @@ fi
 # absl `third_party/absl` ichida keladi, jami 2 ta kutubxona.
 SP="$ROOT/sentencepiece"
 bogliqlik_tayyorla "$SP" "$SP_URL" "$SP_COMMIT"
-if [ ! -f "$SP/build-static/src/libsentencepiece.a" ]; then
+if [ "$INTEL_XOST" = 1 ] && [ ! -f "$SP/build-x64/src/libsentencepiece.a" ]; then
+    echo "==> SentencePiece build (Intel)..."
+    cmake -B "$SP/build-x64" -S "$SP" \
+        -DCMAKE_BUILD_TYPE=Release -DSPM_ENABLE_SHARED=OFF -DSPM_ENABLE_TCMALLOC=OFF \
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+        -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_OSX_ARCHITECTURES=x86_64
+    nice -n 10 cmake --build "$SP/build-x64" --config Release -j4
+fi
+if [ "$INTEL_XOST" = 0 ] && [ ! -f "$SP/build-static/src/libsentencepiece.a" ]; then
     echo "==> SentencePiece build..."
     cmake -B "$SP/build-static" -S "$SP" \
         -DCMAKE_BUILD_TYPE=Release \

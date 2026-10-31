@@ -40,6 +40,33 @@ func modelTanlovTestlari() {
         tengmi("hech qayerda yoʻq — boʻsh", ModelTanlov.nomzodlar(papkalar: papkalar) { _ in nil }, [])
     }
 
+    testQosh("model — nutq tili boʻyicha tanlov") {
+        let rus = ModelTanlov.joriy(.rus)
+        let uz = ModelTanlov.joriy(.ozbek)
+        tengmi("oʻzbek — rubaiSTT (avvalgi jadval)", uz, m)
+        tengmi("rus — boshqa fayl", rus.fayl == uz.fayl, false)
+        tengmi("rus — oʻz manzili bor", rus.url.hasPrefix("https://"), true)
+        tengmi("rus sha256 — 64 belgi", rus.sha256.count, 64)
+        let ikkalasi: (URL) -> Int64? = { u in
+            u.lastPathComponent == rus.fayl ? rus.hajm : (u.lastPathComponent == uz.fayl ? uz.hajm : nil)
+        }
+        // Ikkala model ham diskda — har til faqat oʻz modelini oladi.
+        tengmi(
+            "rus tili — faqat rus modeli",
+            ModelTanlov.nomzodlar(papkalar: [uy], til: .rus, hajmi: ikkalasi),
+            [uy.appendingPathComponent(rus.fayl)])
+        tengmi(
+            "oʻzbek tili — faqat rubaiSTT",
+            ModelTanlov.nomzodlar(papkalar: [uy], til: .ozbek, hajmi: ikkalasi),
+            [uy.appendingPathComponent(uz.fayl)])
+        // Rus modeli yoʻq — rubaiSTT ga JIM tushib ketmaydi (lotin matn chiqardi).
+        tengmi(
+            "rus modeli yoʻq — boʻsh",
+            ModelTanlov.nomzodlar(papkalar: [uy], til: .rus) { $0.lastPathComponent == uz.fayl ? uz.hajm : nil },
+            [])
+        tengmi("til kodlari", NutqTili.allCases.map(\.kod), ["ru", "uz"])
+    }
+
     testQosh("model — yoʻllar va jadval bir xilligi") {
         tengmi("yuklovchi joriy model nomiga yozadi", Yollar.model.lastPathComponent, m.fayl)
         tengmi(

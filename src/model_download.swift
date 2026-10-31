@@ -14,24 +14,31 @@ import AppKit
 // MARK: - Model qayerda
 
 enum ModelStore {
-    /// Yuklanadigan model — `ModelTanlov.joriy` (hajm/sha256 bitta joyda).
-    static var expectedBytes: Int64 { ModelTanlov.joriy.hajm }
-    static let url = URL(string: "https://cdn.mirqobilov.com/v1.0/ggml-rubaistt.bin")!
+    /// Joriy nutq tili (Sozlamalar). Model, hajm, manzil — shu tilniki.
+    static var til: NutqTili { Prefs.nutqTili }
+
+    /// Yuklanadigan model — `ModelTanlov.joriy(til)` (hajm/sha256 bitta joyda).
+    static var joriyModel: MaʼlumModel { ModelTanlov.joriy(til) }
+    static var expectedBytes: Int64 { joriyModel.hajm }
+    static var url: URL {
+        URL(string: joriyModel.url.isEmpty ? "https://cdn.mirqobilov.com/v1.0/ggml-rubaistt.bin" : joriyModel.url)!
+    }
 
     /// Yuklovchi modelni shu yerga yozadi (foydalanuvchi papkasi — admin paroli kerak emas).
-    static var downloadedURL: URL { Yollar.model }
+    /// Oʻzbek modeli uchun bu `Yollar.model` bilan bir xil.
+    static var downloadedURL: URL { Yollar.foydalanuvchiModellari.appendingPathComponent(joriyModel.fayl) }
 
     static var partURL: URL { downloadedURL.appendingPathExtension("part") }
 
     /// Yuklasa boʻladigan modellar, ustuvorlik tartibida — har biri mavjudligi
     /// va HAJMI bilan tekshirilgan (A1). Bundle — CFBundle keshi orqali EMAS,
     /// papka sifatida: kesh oʻchirilgan faylni ham «bor» deb berardi.
-    static func nomzodlar() -> [String] {
+    static func nomzodlar(_ til: NutqTili = ModelStore.til) -> [String] {
         var papkalar = [Yollar.foydalanuvchiModellari, Yollar.tizimModellari]
         // 1.1.0 dan oʻtish davri: eski .pkg modelni bundle ichiga qoʻygan.
         if let r = Bundle.main.resourceURL { papkalar.append(r) }
         papkalar.append(Yollar.eskiModellar)
-        return ModelTanlov.nomzodlar(papkalar: papkalar, hajmi: ModelTanlov.faylHajmi).map(\.path)
+        return ModelTanlov.nomzodlar(papkalar: papkalar, til: til, hajmi: ModelTanlov.faylHajmi).map(\.path)
     }
 
     static func existingPath() -> String? { nomzodlar().first }
@@ -63,11 +70,18 @@ final class ModelDownloader: NSObject, URLSessionDataDelegate {
         }
     }
 
+    // Yuklash boshlanganda tanlangan model — til yuklash oʻrtasida
+    // oʻzgarsa ham .part va sha256 bitta modelga tegishli boʻlib qoladi.
+    private let model = ModelStore.joriyModel
+    private let dest = ModelStore.downloadedURL
+    private let manzil = ModelStore.url
+    private var partURL: URL { dest.appendingPathExtension("part") }
+
     private var session: URLSession!
     private var task: URLSessionDataTask?
     private var handle: FileHandle?
     private var received: Int64 = 0
-    private var total: Int64 = ModelStore.expectedBytes
+    private lazy var total: Int64 = model.hajm
 
     // Tezlikni oʻlchash uchun
     private var lastTick = Date()
@@ -81,7 +95,7 @@ final class ModelDownloader: NSObject, URLSessionDataDelegate {
 
     func start() {
         let fm = FileManager.default
-        let dir = ModelStore.downloadedURL.deletingLastPathComponent()
+        let dir = dest.deletingLastPathComponent()
         do {
             try fm.createDirectory(at: dir, withIntermediateDirectories: true)
         } catch {
@@ -89,10 +103,10 @@ final class ModelDownloader: NSObject, URLSessionDataDelegate {
         }
 
         // Yarim yuklangan fayl bormi — oʻsha joydan davom etamiz
-        let part = ModelStore.partURL
+        let part = partURL
         var offset: Int64 = 0
         let partSize = (try? fm.attributesOfItem(atPath: part.path)[.size] as? NSNumber)??.int64Value ?? 0
-        if partSize == ModelStore.expectedBytes {
+        if partSize == model.hajm {
             // Oldingi urinishda toʻliq yuklangan, lekin yakunlanmagan (masalan
             // ilova shu paytda yopilgan). Ilgari bunday fayl oʻchirilib, 823 MB
             // qaytadan yuklanardi (F2) — endi tarmoqsiz tekshirib yakunlanadi.
@@ -100,7 +114,7 @@ final class ModelDownloader: NSObject, URLSessionDataDelegate {
             DispatchQueue.global(qos: .userInitiated).async { self.yakunla(part: part, got: partSize) }
             return
         }
-        if partSize > 0 && partSize < ModelStore.expectedBytes {
+        if partSize > 0 && partSize < model.hajm {
             offset = partSize
         } else {
             try? fm.removeItem(at: part)
@@ -117,7 +131,7 @@ final class ModelDownloader: NSObject, URLSessionDataDelegate {
         lastBytes = offset
         lastTick = Date()
 
-        var req = URLRequest(url: ModelStore.url)
+        var req = URLRequest(url: manzil)
         req.timeoutInterval = 60
         if offset > 0 {
             req.setValue("bytes=\(offset)-", forHTTPHeaderField: "Range")
@@ -210,10 +224,10 @@ final class ModelDownloader: NSObject, URLSessionDataDelegate {
         }
 
         // Hajm tekshiruvi — yarim yoki buzilgan fayl bilan ishga tushmaymiz
-        let part = ModelStore.partURL
+        let part = partURL
         let got = (try? FileManager.default.attributesOfItem(atPath: part.path)[.size] as? NSNumber)??.int64Value ?? 0
-        guard got >= ModelStore.expectedBytes else {
-            finish(.failure(Failure.shortFile(got, ModelStore.expectedBytes)))
+        guard got >= model.hajm else {
+            finish(.failure(Failure.shortFile(got, model.hajm)))
             return
         }
         yakunla(part: part, got: got)
@@ -224,7 +238,7 @@ final class ModelDownloader: NSObject, URLSessionDataDelegate {
         // Hajm toʻgʻri boʻlsa ham ichi buzilgan boʻlishi mumkin (disk, tarmoq
         // proksisi). Buzilgan model whisper'da «Model yuklanmadi» boʻlib
         // chiqardi — endi bu yerda tutiladi va .part oʻchiriladi.
-        guard ModelTanlov.faylSha256(part) == ModelTanlov.joriy.sha256 else {
+        guard ModelTanlov.faylSha256(part) == model.sha256 else {
             try? FileManager.default.removeItem(at: part)
             RubaiLog.write("model: sha256 mos emas — .part oʻchirildi")
             finish(.failure(Failure.buzilgan))
@@ -233,7 +247,6 @@ final class ModelDownloader: NSObject, URLSessionDataDelegate {
 
         // Atomik yakun: toʻliq fayl boʻlgandagina asl nomga oʻtadi
         do {
-            let dest = ModelStore.downloadedURL
             try? FileManager.default.removeItem(at: dest)
             try FileManager.default.moveItem(at: part, to: dest)
             RubaiLog.write("model: yuklab olindi (\(got) bayt) → \(dest.path)")
@@ -319,7 +332,7 @@ final class ModelDownloadWindow: NSObject {
 
         noteLabel = NSTextField(
             wrappingLabelWithString:
-                "Bu faqat bir marta bajariladi. Model ~785 MB — internet tezligiga qarab "
+                "Bu faqat bir marta bajariladi. Model ~\(ModelStore.expectedBytes / 1_048_576) MB — internet tezligiga qarab "
                 + "5–20 daqiqa olishi mumkin. Ulanish uzilsa, oʻsha joydan davom etadi.")
         noteLabel.font = .systemFont(ofSize: 11)
         noteLabel.textColor = .secondaryLabelColor

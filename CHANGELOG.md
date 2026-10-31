@@ -5,6 +5,26 @@ Format — [Keep a Changelog](https://keepachangelog.com/), versiyalar —
 
 ## [Keyingi]
 
+### Qoʻshildi
+- **Rus tili (kirill).** Sozlamalarda «Nutq tili»: rus yoki oʻzbek. Rus tili
+  oddiy Whisper large-v3-turbo (q5_0, 548 MB) bilan ishlaydi — rubaiSTT rus
+  nutqini lotin harflarida yozardi («privet, kak dela?»). Model birinchi
+  diktovkada yuklab olinadi; til almashtirilsa model oʻzi almashadi.
+- `scripts/mahalliy-yigish.sh` — Developer ID'siz yigʻishda doimiy mahalliy
+  imzo: Accessibility ruxsati har yigʻishdan keyin tushib qolmaydi.
+
+### Tezlashdi
+- Rus tilida encoder oynasi ovoz uzunligiga moslanadi (audio_ctx): 12,6 s
+  ovoz — 19,3 s → 9,8 s (i7-9750H). Takror chiqsa boʻlak kattaroq oyna bilan
+  avtomatik qayta oʻgiriladi.
+- Intel'da oqimlar soni — fizik yadrolar soni (Hyper-Threading sekinlashtirardi).
+- Intel Mac'da `setup.sh` / `build.sh` mahalliy x86_64 (AVX2) build qiladi;
+  Homebrew shart emas (cmake pip orqali).
+
+### Oʻzgardi
+- Mustaqil build'da (`RASMIY_SERVER=1` siz) avto-yangilanish va statistika
+  oʻchiq — fork muallif serveridan yangilanib ketmasligi uchun.
+
 ### Tuzatildi
 - macOS: Sozlamalar ochiq turganda «Hozir tekshirish» orqali yangilansa,
   «Oʻrnatilmoqda…» oynasi qotib qolardi. Endi ochiq oynalar yopiladi va

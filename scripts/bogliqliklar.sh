@@ -62,7 +62,10 @@ XATO
     git -C "$vaqtinchalik" fetch -q --depth 1 origin "$commit"
     git -C "$vaqtinchalik" checkout -q --detach FETCH_HEAD
     if [ "$sub" = --submodullar ]; then
-        git -C "$vaqtinchalik" submodule update -q --init --recursive --depth 1
+        # Faqat CPU build'ga keraklilari. cutlass/thrust — CUDA uchun (yuzlab MB,
+        # sekin tarmoqda klon uzilib qolardi), googletest — testlar uchun.
+        git -C "$vaqtinchalik" submodule update -q --init --recursive --depth 1 -- \
+            third_party/cpu_features third_party/spdlog third_party/ruy third_party/cxxopts
     fi
     mv "$vaqtinchalik" "$papka"
 }

@@ -7,7 +7,23 @@ import Foundation
 final class Whisper {
     static let shared = Whisper()
     private var loaded = false
+    /// Yuklangan model qaysi til uchun. Sozlamalarda til oʻzgarsa keyingi
+    /// transkripsiyada model almashtiriladi.
+    private var yuklanganTil: NutqTili?
     private let q = DispatchQueue(label: "rubai.whisper")
+
+    /// Hisoblash oqimlari soni. Intel'da Hyper-Threading'ning mantiqiy
+    /// yadrolari whisper'ni SEKINLASHTIRADI (i7-9750H, 6 yadro / 12 oqim:
+    /// 10 oqim — 21,4 s, 6 oqim — 19,3 s) — shuning uchun fizik yadrolar soni.
+    /// Apple Silicon'da avvalgidek.
+    static let oqimlar: Int32 = {
+        #if arch(x86_64)
+            var n: Int32 = 0
+            var len = MemoryLayout<Int32>.size
+            if sysctlbyname("hw.physicalcpu", &n, &len, nil, 0) == 0, n > 0 { return n }
+        #endif
+        return Int32(max(4, ProcessInfo.processInfo.activeProcessorCount - 2))
+    }()
 
     /// Modelni yuklaydi (`q` navbatida). Muvaffaqiyatda nil, aks holda xato matni.
     ///
@@ -16,8 +32,15 @@ final class Whisper {
     /// Ilgari birinchi (va tekshirilmagan) yoʻl yiqilsa diktovka shu bilan
     /// tugardi (barqarorlik spec'i, A1).
     private func modelniYukla() -> String? {
-        if loaded { return nil }
-        let nomzodlar = ModelStore.nomzodlar()
+        let til = ModelStore.til
+        if loaded, yuklanganTil == til { return nil }
+        if loaded {
+            RubaiLog.write("nutq tili oʻzgardi → \(til.kod): model almashtirilmoqda")
+            rubai_unload()
+            loaded = false
+        }
+        rubai_set_language(til.kod)
+        let nomzodlar = ModelStore.nomzodlar(til)
         guard !nomzodlar.isEmpty else {
             RubaiLog.write("XATO: model topilmadi (foydalanuvchi, tizim, bundle, eski yoʻl)")
             return "Model fayli topilmadi"
@@ -27,6 +50,7 @@ final class Whisper {
             if rc == 0 {
                 RubaiLog.write("model yuklandi: \(yol), backend=\(String(cString: rubai_backend_name()))")
                 loaded = true
+                yuklanganTil = til
                 return nil
             }
             RubaiLog.write("XATO: rubai_load(\(yol)) = \(rc): \(String(cString: rubai_last_error()))")
@@ -42,7 +66,7 @@ final class Whisper {
             if let xato = self.modelniYukla() {
                 DispatchQueue.main.async { fail(xato) }; return
             }
-            let threads = Int32(max(4, ProcessInfo.processInfo.activeProcessorCount - 2))
+            let threads = Whisper.oqimlar
             var text: String?
             samples.withUnsafeBufferPointer { buf in
                 if let c = rubai_transcribe(buf.baseAddress, Int32(buf.count), threads) {
@@ -78,7 +102,7 @@ final class Whisper {
             if let xato = self.modelniYukla() {
                 DispatchQueue.main.async { fail(xato) }; return
             }
-            let threads = Int32(max(4, ProcessInfo.processInfo.activeProcessorCount - 2))
+            let threads = Whisper.oqimlar
 
             // C callback'lar Swift closure'ni ushlay olmaydi — ularni box orqali
             // uzatamiz. Box `withExtendedLifetime` davomida tirik turadi.

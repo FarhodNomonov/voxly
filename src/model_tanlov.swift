@@ -19,6 +19,29 @@ struct MaʼlumModel: Equatable {
     let hajm: Int64
     let sha256: String
     let tur: String
+    /// Yuklab olish manzili. Boʻsh — ilovaning oʻz CDN'i (`ModelStore.url`).
+    var url: String = ""
+}
+
+/// Diktovka va fayl transkripsiyasi tili. Har til — oʻz modeli bilan:
+/// rubaiSTT faqat oʻzbekcha (rus nutqini ham lotin harflari bilan yozadi —
+/// «privet, kak dela?»), rus tili uchun esa oddiy koʻp tilli Whisper kerak.
+enum NutqTili: String, CaseIterable {
+    case rus = "ru"
+    case ozbek = "uz"
+
+    /// whisper til kodi.
+    var kod: String { rawValue }
+
+    var nomi: String {
+        switch self {
+        case .rus: return "Rus tili (kirill)"
+        case .ozbek: return "Oʻzbek tili (lotin)"
+        }
+    }
+
+    /// Yangi oʻrnatishdagi tanlov.
+    static let standart: NutqTili = .rus
 }
 
 enum ModelTanlov {
@@ -36,17 +59,41 @@ enum ModelTanlov {
             tur: "q8_0")
     ]
 
+    /// Rus tili modellari — oddiy Whisper large-v3-turbo (q5_0, ggml).
+    /// Encoder'i katta, dekoderi 4 qavatli — beam search arzon, rus tilida
+    /// medium'dan aniqroq. Manba: huggingface.co/ggerganov/whisper.cpp.
+    static let rusModellar: [MaʼlumModel] = [
+        MaʼlumModel(
+            fayl: "ggml-large-v3-turbo-q5_0.bin", hajm: 574_041_195,
+            sha256: "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2",
+            tur: "q5_0",
+            url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin")
+    ]
+
+    /// Tilning modellari, ustuvorlik tartibida (birinchisi — yuklanadigani).
+    static func malum(_ til: NutqTili) -> [MaʼlumModel] {
+        switch til {
+        case .ozbek: return malum
+        case .rus: return rusModellar
+        }
+    }
+
     /// Tarqatilayotgan model (yuklovchi shuni yuklaydi).
     static var joriy: MaʼlumModel { malum[0] }
+
+    /// Shu til uchun yuklanadigan model.
+    static func joriy(_ til: NutqTili) -> MaʼlumModel { malum(til)[0] }
 
     /// Mavjud va hajmi maʼlum modelnikiga AYNAN teng fayllar — `papkalar`
     /// tartibida (spec D2: foydalanuvchi → tizim → bundle → eski dasturchi
     /// yoʻli). Chala yuklangan, buzilgan yoki oʻchirilgan fayl tushmaydi.
     /// `hajmi` — fayl hajmi, yoʻq boʻlsa nil (sinovda soxtalashtiriladi).
-    static func nomzodlar(papkalar: [URL], hajmi: (URL) -> Int64?) -> [URL] {
+    static func nomzodlar(
+        papkalar: [URL], til: NutqTili = .ozbek, hajmi: (URL) -> Int64?
+    ) -> [URL] {
         var natija: [URL] = []
         for papka in papkalar {
-            for m in malum {
+            for m in malum(til) {
                 let yol = papka.appendingPathComponent(m.fayl)
                 if hajmi(yol) == m.hajm { natija.append(yol) }
             }

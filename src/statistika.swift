@@ -35,6 +35,12 @@ enum Statistika {
     // Server manzili. Cloudflare Worker — kodi `statistika/` papkasida.
     private static let baza = "https://stat.mirqobilov.com"
 
+    /// Mustaqil yigʻilgan nusxa (`build.sh`, `RASMIY_SERVER=1` siz) Info.plist'ga
+    /// `KotibStatistika = false` yozadi — rasmiy serverga hech narsa yuborilmaydi.
+    private static var yoqilgan: Bool {
+        (Bundle.main.object(forInfoDictionaryKey: "KotibStatistika") as? Bool) ?? true
+    }
+
     // MARK: Oʻrnatma ID
 
     /// Tasodifiy 32-belgili hex. Bir marta yasaladi va oʻzgarmaydi.
@@ -54,6 +60,7 @@ enum Statistika {
     /// Ilova ishga tushganda chaqiriladi. Kunda bir martadan koʻp soʻrov
     /// yuborilmaydi.
     static func pingYubor() {
+        guard yoqilgan else { return }
         let hozir = Date().timeIntervalSince1970
         let oxirgi = UserDefaults.standard.double(forKey: "oxirgiTekshiruv")
         // 20 soat, 24 emas: aks holda har kuni bir xil vaqtda ochadigan
@@ -93,7 +100,7 @@ enum Statistika {
         tur: String, ovoz_s: Double? = nil, belgi: Int? = nil,
         ishlov_s: Double, backend: String? = nil, natija: String = "ok"
     ) {
-        guard let url = URL(string: baza + "/v1/amal") else { return }
+        guard yoqilgan, let url = URL(string: baza + "/v1/amal") else { return }
         var soʻrov = URLRequest(url: url)
         soʻrov.httpMethod = "POST"
         soʻrov.setValue("application/json", forHTTPHeaderField: "Content-Type")

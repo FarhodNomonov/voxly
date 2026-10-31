@@ -31,10 +31,14 @@ int rubai_load_w(const wchar_t *model_path, int use_gpu);
 void rubai_set_vad_path_w(const wchar_t *path);
 #endif
 
+// Nutq tili — whisper til kodi ("uz", "ru" …). Keyingi transkripsiyadan
+// boshlab amal qiladi. Standart: "uz".
+void rubai_set_language(const char *til);
+
 // Modelni (va VAD'ni) RAM'dan boʻshatadi.
 void rubai_unload(void);
 
-// 16kHz mono float32 namunalardan lotin oʻzbek matn qaytaradi.
+// 16kHz mono float32 namunalardan matn qaytaradi (til — rubai_set_language).
 // Qaytgan satrni rubai_free_str bilan boʻshating. NULL = xato.
 char *rubai_transcribe(const float *samples, int n_samples, int n_threads);
 

@@ -42,6 +42,12 @@ enum Prefs {
         set { d.set(newValue.rawValue, forKey: "insert.mode") }
     }
 
+    /// Nutq tili — qaysi model va whisper tili ishlatiladi (model_tanlov.swift).
+    static var nutqTili: NutqTili {
+        get { d.string(forKey: "nutq.tili").flatMap(NutqTili.init(rawValue:)) ?? NutqTili.standart }
+        set { d.set(newValue.rawValue, forKey: "nutq.tili") }
+    }
+
     /// Chiqadigan matnda apostrof uslubi. Standart — oʻzbek lotin meʼyori.
     static var apostrof: Apostrof {
         get { UserDefaults.standard.bool(forKey: "oddiyApostrof") ? .oddiy : .standart }

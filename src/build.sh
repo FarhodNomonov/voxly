@@ -30,11 +30,21 @@ LIB_ARM="$WC/build-static"   # arm64 — Metal GPU
 LIB_X64="$WC/build-x64"      # x86_64 — faqat CPU (Intel)
 APP="${APP_OUT:-$HOME/Applications/Kotib.app}"
 
-if [ ! -f "$LIB_ARM/src/libwhisper.a" ]; then
+# Intel Mac'da yigʻish: arm64 kutubxonalari kerak emas — faqat x86_64
+# (setup.sh Intel'da build-x64 ni GGML_NATIVE=ON bilan — AVX2/FMA — quradi).
+INTEL_XOST=0
+[ "$(uname -m)" = "x86_64" ] && INTEL_XOST=1
+
+if [ "$INTEL_XOST" = 1 ]; then
+    if [ ! -f "$LIB_X64/src/libwhisper.a" ] || [ ! -f "$CT2_X64/libctranslate2.a" ] || [ ! -f "$SP_X64/src/libsentencepiece.a" ]; then
+        echo "Xato: x86_64 kutubxonalari topilmadi. Avval setup.sh ni ishga tushiring." >&2
+        exit 1
+    fi
+elif [ ! -f "$LIB_ARM/src/libwhisper.a" ]; then
     echo "Xato: whisper.cpp statik kutubxonalari topilmadi. Avval setup.sh ni ishga tushiring." >&2
     exit 1
 fi
-if [ ! -f "$CT2_ARM/libctranslate2.a" ] || [ ! -f "$SP_ARM/src/libsentencepiece.a" ]; then
+if [ "$INTEL_XOST" = 0 ] && { [ ! -f "$CT2_ARM/libctranslate2.a" ] || [ ! -f "$SP_ARM/src/libsentencepiece.a" ]; }; then
     echo "Xato: CTranslate2/SentencePiece kutubxonalari topilmadi. Avval setup.sh ni ishga tushiring." >&2
     exit 1
 fi
@@ -44,6 +54,7 @@ fi
 # emas, foydalanuvchining Intel mashinasida yiqilardi) — lekin endi JIMGINA
 # EMAS (I3): ishlab chiqishda ogohlantirish, relizda `make_pkg.sh` toʻxtaydi.
 ARCHS=("arm64")
+[ "$INTEL_XOST" = 1 ] && ARCHS=()
 X64_YOQ=()
 [ -f "$LIB_X64/src/libwhisper.a" ]        || X64_YOQ+=("whisper.cpp/build-x64")
 [ -f "$CT2_X64/libctranslate2.a" ]        || X64_YOQ+=("ctranslate2/build-x64")
@@ -161,6 +172,19 @@ YANGILANISH_KALITI="$(tr -d '[:space:]' < "$ROOT/scripts/yangilanish-kaliti.pub"
 [[ "$YANGILANISH_KALITI" =~ ^[A-Za-z0-9+/]{43}=$ ]] \
     || { echo "Xato: scripts/yangilanish-kaliti.pub notoʻgʻri" >&2; exit 1; }
 
+# Rasmiy server (avto-yangilanish + statistika) — faqat RASMIY_SERVER=1 bilan.
+# Mustaqil nusxa (fork) muallif serveridan yangilanmasligi SHART: aks holda
+# Sparkle uni rasmiy versiya bilan almashtirib yuborardi. Feed kaliti
+# boʻlmasa yangilovchi.swift Sparkle'ni ishga tushirmaydi.
+if [ "${RASMIY_SERVER:-0}" = "1" ]; then
+    SERVER_KALITLARI="    <key>SUFeedURL</key><string>https://stat.mirqobilov.com/v1/appcast/mac.xml</string>
+    <key>SUPublicEDKey</key><string>${YANGILANISH_KALITI}</string>
+"
+else
+    echo "  Mustaqil build: avto-yangilanish va statistika oʻchiq (rasmiy: RASMIY_SERVER=1)"
+    SERVER_KALITLARI="    <key>KotibStatistika</key><false/>
+"
+fi
 # Heredoc ataylab tirnoqsiz — faqat versiya va kalit oʻrniga qoʻyiladi.
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -186,9 +210,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <!-- Avto-yangilanish (Sparkle, S5; spec D1): ruxsat soʻralmaydi, fonda
          yuklanadi va boʻsh paytda oʻrnatiladi (yangilovchi.swift). Feed va
          yangilanishlar Ed25519 bilan imzolangan boʻlishi SHART. -->
-    <key>SUFeedURL</key><string>https://stat.mirqobilov.com/v1/appcast/mac.xml</string>
-    <key>SUPublicEDKey</key><string>${YANGILANISH_KALITI}</string>
-    <key>SUEnableAutomaticChecks</key><true/>
+${SERVER_KALITLARI}    <key>SUEnableAutomaticChecks</key><true/>
     <key>SUAutomaticallyUpdate</key><true/>
     <key>SUAllowsAutomaticUpdates</key><true/>
     <key>SUScheduledCheckInterval</key><integer>86400</integer>

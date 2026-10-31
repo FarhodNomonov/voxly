@@ -72,6 +72,76 @@ static void detect_backend(int use_gpu) {
     }
 }
 
+// Nutq tili (whisper til kodi: "uz", "ru" …). Model bilan birga tanlanadi:
+// rubaiSTT faqat oʻzbekcha, boshqa tillar uchun oddiy Whisper modeli kerak.
+static char g_til[8] = "uz";
+
+void rubai_set_language(const char *til) {
+    snprintf(g_til, sizeof(g_til), "%s", (til && til[0]) ? til : "uz");
+}
+
+// Encoder oynasini ovoz uzunligiga moslaydi. Whisper har chaqiruvda 30 s
+// oynani hisoblaydi — 4 s lik diktovkada ham. audio_ctx = kerakli kadrlar
+// (1 kadr = 320 namuna = 20 ms) + zaxira. Faqat oddiy Whisper (rus tili)
+// uchun: rubaiSTT fine-tune'i shu oynada oʻlchangan, unga tegilmaydi.
+// Oʻlchov (i7-9750H, large-v3-turbo q5_0, 12,6 s): 19,3 s → 9,8 s, matn bir xil.
+static int audio_ctx_hisobla(int n_namuna) {
+    if (strcmp(g_til, "uz") == 0) return 0;
+    if (n_namuna <= 0 || n_namuna >= 30 * 16000) return 0;
+    int ctx = n_namuna / 320 + 64;  // ~1,3 s zaxira — oxirgi soʻz kesilmasin
+    // 384 dan kichik oynada (≲ 7 s) large-v3-turbo takrorlanish halqasiga
+    // tushardi: 3,5 s lik jumla ctx=256 da 10 marta yozildi, 384 da — toza.
+    if (ctx < 384) ctx = 384;
+    return ctx >= 1500 ? 0 : ctx;
+}
+
+// Natijada takror bormi: 32 baytlik biror boʻlak matnda ikki marta uchraydi.
+// Qisqartirilgan oynada model baʼzan jumlani qayta-qayta yozadi; tabiiy
+// nutqda bunday aniq takror deyarli boʻlmaydi (boʻlsa ham — faqat qayta
+// hisoblanadi, matn buzilmaydi).
+static int takror_bormi(struct whisper_context *ctx) {
+    char t[4096];
+    size_t n = 0;
+    const int ns = whisper_full_n_segments(ctx);
+    for (int i = 0; i < ns; i++) {
+        const char *s = whisper_full_get_segment_text(ctx, i);
+        const size_t l = s ? strlen(s) : 0;
+        if (n + l >= sizeof(t)) break;
+        memcpy(t + n, s, l);
+        n += l;
+    }
+    enum { OYNA = 32 };
+    for (size_t i = 0; i + 2 * OYNA <= n; i++)
+        for (size_t j = i + OYNA; j + OYNA <= n; j++)
+            if (memcmp(t + i, t + j, OYNA) == 0) return 1;
+    return 0;
+}
+
+// whisper_full + himoya: qisqartirilgan oyna (audio_ctx) takror bersa, shu
+// boʻlak kattaroq oyna bilan qayta oʻgiriladi — avval 2 baravar, keyin toʻliq
+// 30 s. Oʻlchov (4,5 s jumla): 384 — takror, 768 — toza (5,5 s), toʻliq
+// oyna — toza, lekin 17 s. Takror boʻlmasa qoʻshimcha xarajat yoʻq.
+static int whisper_full_himoyali(struct whisper_context *ctx, struct whisper_full_params p,
+                                 const float *samples, int n) {
+    int rc = whisper_full(ctx, p, samples, n);
+    while (rc == 0 && p.audio_ctx != 0 && takror_bormi(ctx)) {
+        p.audio_ctx = p.audio_ctx * 2 >= 1500 ? 0 : p.audio_ctx * 2;
+        if (p.audio_ctx == 0) p.max_tokens = 0;
+        if (g_log) g_log(p.audio_ctx ? "audio_ctx: takror — oyna 2 baravar kattalashtirildi"
+                                     : "audio_ctx: takror — toʻliq oyna bilan qayta oʻgirilmoqda");
+        rc = whisper_full(ctx, p, samples, n);
+    }
+    return rc;
+}
+
+// Bir boʻlakdagi token chegarasi — halqadan ikkinchi himoya. Tez nutqda
+// ~6 token/s; 16 token/s + 32 — ikki baravardan ortiq zaxira. 0 — cheksiz
+// (oʻzbek modeli — avvalgidek).
+static int max_token_hisobla(int n_namuna) {
+    if (strcmp(g_til, "uz") == 0 || n_namuna <= 0) return 0;
+    return n_namuna / 16000 * 16 + 32;
+}
+
 static struct whisper_vad_context *g_vad = NULL;
 
 #ifdef _WIN32
@@ -275,7 +345,7 @@ char *rubai_transcribe(const float *samples, int n_samples, int n_threads) {
     }
 
     struct whisper_full_params p = whisper_full_default_params(WHISPER_SAMPLING_BEAM_SEARCH);
-    p.language = "uz";  // faqat o'zbek
+    p.language = g_til;  // rubai_set_language — standart "uz"
     p.translate = false;
     p.beam_search.beam_size = 5;  // maksimal aniqlik
     p.n_threads = n_threads > 0 ? n_threads : 4;
@@ -305,7 +375,9 @@ char *rubai_transcribe(const float *samples, int n_samples, int n_threads) {
     out[0] = '\0';
     size_t len = 0;
     for (int k = 0; k < n; k++) {
-        if (whisper_full(g_ctx, p, samples + o[k].boshi, o[k].oxiri - o[k].boshi) != 0) {
+        p.audio_ctx = audio_ctx_hisobla(o[k].oxiri - o[k].boshi);
+        p.max_tokens = max_token_hisobla(o[k].oxiri - o[k].boshi);
+        if (whisper_full_himoyali(g_ctx, p, samples + o[k].boshi, o[k].oxiri - o[k].boshi) != 0) {
             free(o);
             free(out);
             set_err("whisper_full failed");
@@ -413,7 +485,7 @@ int rubai_transcribe_segments(const float *samples, int n_samples, int n_threads
 
     struct whisper_full_params p = whisper_full_default_params(WHISPER_SAMPLING_BEAM_SEARCH);
     // Parametrlar rubai_transcribe bilan AYNAN bir xil — bittasidan tashqari.
-    p.language = "uz";
+    p.language = g_til;
     p.translate = false;
     p.beam_search.beam_size = 5;
     p.n_threads = n_threads > 0 ? n_threads : 4;
@@ -450,7 +522,9 @@ int rubai_transcribe_segments(const float *samples, int n_samples, int n_threads
     for (int k = 0; k < n; k++) {
         const int uzunlik = o[k].oxiri - o[k].boshi;
         pctx.joriy = uzunlik;
-        const int rc = whisper_full(g_ctx, p, samples + o[k].boshi, uzunlik);
+        p.audio_ctx = audio_ctx_hisobla(uzunlik);
+        p.max_tokens = max_token_hisobla(uzunlik);
+        const int rc = whisper_full_himoyali(g_ctx, p, samples + o[k].boshi, uzunlik);
         // Bekor qilingan bayrogʻini natija kodidan mustaqil tekshiramiz: bekor qilish
         // hisoblash allaqachon tugagandan keyin kelishi mumkin, va shunda whisper_full
         // 0 (muvaffaqiyat) qaytaradi — lekin foydalanuvchi baribir bekor qilgan.

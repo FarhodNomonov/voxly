@@ -48,6 +48,8 @@ final class SozlamalarVC: NSViewController {
     var qoshimchaOchiq = false
 
     var modePopup: NSPopUpButton!
+    private var tilPopup: NSPopUpButton!
+    private var tilIzoh: NSTextField!
     var apostrofSwitch: NSSwitch!
     var diagnostikaSwitch: NSSwitch!
     var provayderPopup: NSPopUpButton!
@@ -109,6 +111,7 @@ final class SozlamalarVC: NSViewController {
 
     private func holatniYukla() {
         reloadMics()
+        tilniYukla()
         modePopup.selectItem(at: Prefs.insertMode.rawValue)
         avtoSwitch.state = LoginItem.isEnabled ? .on : .off
         apostrofSwitch.state = Prefs.apostrof == .oddiy ? .on : .off
@@ -129,6 +132,7 @@ final class SozlamalarVC: NSViewController {
 
         kontent.addArrangedSubview(U.yozuv("Sozlamalar", 22, .bold))
         kontent.addArrangedSubview(qurHotkey())
+        kontent.addArrangedSubview(qurNutqTili())
         kontent.addArrangedSubview(qurMikrofon())
         kontent.addArrangedSubview(qurAvtoIshga())
         kontent.addArrangedSubview(qurYangilanish())
@@ -275,6 +279,55 @@ final class SozlamalarVC: NSViewController {
     }
 
     // MARK: Mikrofon
+
+    // MARK: Nutq tili
+
+    private func qurNutqTili() -> NSView {
+        tilPopup = NSPopUpButton()
+        for t in NutqTili.allCases { tilPopup.addItem(withTitle: t.nomi) }
+        tilPopup.target = self
+        tilPopup.action = #selector(tilOzgardi)
+        tilPopup.translatesAutoresizingMaskIntoConstraints = false
+        tilPopup.widthAnchor.constraint(equalToConstant: 280).isActive = true
+
+        let qator = NSStackView(views: [U.yozuv("Nutq tili", 17), tilPopup])
+        qator.orientation = .horizontal
+        qator.alignment = .centerY
+        qator.spacing = 16
+
+        tilIzoh = U.yozuv("", 13, .regular, U.matn2)
+        tilIzoh.lineBreakMode = .byWordWrapping
+        tilIzoh.maximumNumberOfLines = 3
+        tilIzoh.preferredMaxLayoutWidth = 512
+
+        let ustun = NSStackView(views: [qator, tilIzoh])
+        ustun.orientation = .vertical
+        ustun.alignment = .leading
+        ustun.spacing = 6
+        tilIzoh.widthAnchor.constraint(equalTo: ustun.widthAnchor).isActive = true
+        return ustun
+    }
+
+    private func tilniYukla() {
+        tilPopup.selectItem(at: NutqTili.allCases.firstIndex(of: Prefs.nutqTili) ?? 0)
+        tilIzohiniYangila()
+    }
+
+    private func tilIzohiniYangila() {
+        let m = ModelTanlov.joriy(Prefs.nutqTili)
+        tilIzoh.stringValue =
+            ModelStore.isReady
+            ? "Hamma narsa shu tilda yoziladi. Model: \(m.fayl)"
+            : "Bu til modeli (~\(m.hajm / 1_048_576) MB) birinchi diktovkada yuklab olinadi."
+    }
+
+    @objc private func tilOzgardi() {
+        let idx = tilPopup.indexOfSelectedItem
+        guard idx >= 0, idx < NutqTili.allCases.count else { return }
+        Prefs.nutqTili = NutqTili.allCases[idx]
+        RubaiLog.write("sozlamalar: nutq tili → \(Prefs.nutqTili.kod)")
+        tilIzohiniYangila()
+    }
 
     private func qurMikrofon() -> NSView {
         micPopup = NSPopUpButton()
