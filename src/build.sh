@@ -55,6 +55,10 @@ for ARCH in "${ARCHS[@]}"; do
     else
         LIB="$LIB_X64"; TRIPLE="x86_64-apple-macos13.0"; METAL=""
     fi
+    # Accelerate (BLAS) backend'i — Intel build'da bor boʻlsa (setup.sh).
+    BLAS=()
+    [ -f "$LIB/ggml/src/ggml-blas/libggml-blas.a" ] \
+        && BLAS=(-Xlinker -force_load -Xlinker "$LIB/ggml/src/ggml-blas/libggml-blas.a")
     echo "  -> $ARCH"
     clang -c "$SRC/whisper_bridge.c" -arch "$ARCH" -O2 -mmacosx-version-min=13.0 \
         -I"$WC/include" -I"$WC/ggml/include" -o "$SRC/whisper_bridge.$ARCH.o"
@@ -68,6 +72,7 @@ for ARCH in "${ARCHS[@]}"; do
         "$LIB/ggml/src/libggml.a" \
         "$LIB/ggml/src/libggml-base.a" \
         -Xlinker -force_load -Xlinker "$LIB/ggml/src/libggml-cpu.a" \
+        ${BLAS[@]+"${BLAS[@]}"} \
         $METAL $COMMON_FW -lc++ \
         -o "$SRC/$NOM.$ARCH"
     EXES+=("$SRC/$NOM.$ARCH")

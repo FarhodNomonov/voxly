@@ -10,6 +10,7 @@
 #include "nutq_bolaklari.h"
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>  // INFINITY
 #include <stdio.h>
 
 static struct whisper_context *g_ctx = NULL;
@@ -88,10 +89,42 @@ static int audio_ctx_hisobla(int n_namuna) {
     if (strcmp(g_til, "uz") == 0) return 0;
     if (n_namuna <= 0 || n_namuna >= 30 * 16000) return 0;
     int ctx = n_namuna / 320 + 64;  // ~1,3 s zaxira — oxirgi soʻz kesilmasin
-    // 384 dan kichik oynada (≲ 7 s) large-v3-turbo takrorlanish halqasiga
-    // tushardi: 3,5 s lik jumla ctx=256 da 10 marta yozildi, 384 da — toza.
-    if (ctx < 384) ctx = 384;
+    // 256 ga karrali qilib yaxlitlanadi. whisper.cpp kv_cross keshini 256 ga
+    // karrali uzunlikda ajratadi (GGML_PAD); oyna undan qisqa boʻlsa ortiqcha
+    // kataklar ilk chaqiruvda tozalanmagan qoladi va natija oldingi chaqiruvga
+    // bogʻliq boʻlib qoladi: 20 s jumla ctx=957 da yuklashdan keyingi birinchi
+    // marta halqaga tushdi (17 s), ikkinchi marta — toza; 1,5 s jumla ctx=384
+    // da ikki marta yozildi. 1024 / 512 da — har safar toza va tez (7 s / 3 s).
+    ctx = (ctx + 255) / 256 * 256;
+    // 256 ning oʻzida (yostiqsiz) ham 3,5 s lik jumla 10 marta yozilgan — 512 dan kam emas.
+    if (ctx < 512) ctx = 512;
     return ctx >= 1500 ? 0 : ctx;
+}
+
+// Butun matn bitta iboraning takrori: «Привет, как дела? Привет, как дела?».
+// Qisqa iboralar 32 baytlik oynadan kalta — ularni shu tekshiruv ushlaydi.
+// Soʻzlar boʻyicha: k ta soʻzdan iborat boʻlak matn boʻyi ≥ 2 marta ketma-ket.
+static int butun_takror(const char *t) {
+    const char *soz[256];
+    size_t uz[256];
+    int n = 0;
+    for (const char *p = t; *p && n < 256;) {
+        while (*p == ' ') p++;
+        if (!*p) break;
+        const char *b = p;
+        while (*p && *p != ' ') p++;
+        soz[n] = b;
+        uz[n] = (size_t)(p - b);
+        n++;
+    }
+    for (int k = 1; k <= n / 2; k++) {
+        if (n % k) continue;
+        int teng = 1;
+        for (int i = k; i < n && teng; i++)
+            teng = uz[i] == uz[i % k] && memcmp(soz[i], soz[i % k], uz[i]) == 0;
+        if (teng) return 1;
+    }
+    return 0;
 }
 
 // Natijada takror bormi: 32 baytlik biror boʻlak matnda ikki marta uchraydi.
@@ -109,11 +142,39 @@ static int takror_bormi(struct whisper_context *ctx) {
         memcpy(t + n, s, l);
         n += l;
     }
+    t[n] = '\0';
+    if (butun_takror(t)) return 1;
     enum { OYNA = 32 };
     for (size_t i = 0; i + 2 * OYNA <= n; i++)
         for (size_t j = i + OYNA; j + OYNA <= n; j++)
             if (memcmp(t + i, t + j, OYNA) == 0) return 1;
     return 0;
+}
+
+// Dekodlash paytidagi halqa toʻxtatgichi: oxirgi HALQA_N token ketma-ketligi
+// shu matnda avval ham uchragan boʻlsa — model aylanib qoldi, keyingi token
+// majburan EOT. Oʻlchov (20 s jumla, ctx=957): matn tugagach model uni boshidan
+// yana yozdi, harorat qayta urinishlari bilan 12 s ketdi. Kesilgan
+// matnda takror qoladi — takror_bormi uni koʻradi va kattaroq oyna bilan qayta
+// oʻgiradi, endi esa har urinish tez tugaydi.
+enum { HALQA_N = 10 };
+static void halqa_toxtat(struct whisper_context *ctx, struct whisper_state *st,
+                         const whisper_token_data *tk, int n, float *logits, void *ud) {
+    (void)st;
+    (void)ud;
+    if (n < 2 * HALQA_N) return;
+    const int oxir = n - HALQA_N;
+    for (int i = 0; i + HALQA_N <= oxir; i++) {
+        int k = 0;
+        while (k < HALQA_N && tk[i + k].id == tk[oxir + k].id) k++;
+        if (k == HALQA_N) {
+            const int nv = whisper_n_vocab(ctx);
+            const whisper_token eot = whisper_token_eot(ctx);
+            for (int v = 0; v < nv; v++)
+                if (v != eot) logits[v] = -INFINITY;
+            return;
+        }
+    }
 }
 
 // whisper_full + himoya: qisqartirilgan oyna (audio_ctx) takror bersa, shu
@@ -122,23 +183,15 @@ static int takror_bormi(struct whisper_context *ctx) {
 // oyna — toza, lekin 17 s. Takror boʻlmasa qoʻshimcha xarajat yoʻq.
 static int whisper_full_himoyali(struct whisper_context *ctx, struct whisper_full_params p,
                                  const float *samples, int n) {
+    if (strcmp(g_til, "uz") != 0) p.logits_filter_callback = halqa_toxtat;
     int rc = whisper_full(ctx, p, samples, n);
     while (rc == 0 && p.audio_ctx != 0 && takror_bormi(ctx)) {
         p.audio_ctx = p.audio_ctx * 2 >= 1500 ? 0 : p.audio_ctx * 2;
-        if (p.audio_ctx == 0) p.max_tokens = 0;
         if (g_log) g_log(p.audio_ctx ? "audio_ctx: takror — oyna 2 baravar kattalashtirildi"
                                      : "audio_ctx: takror — toʻliq oyna bilan qayta oʻgirilmoqda");
         rc = whisper_full(ctx, p, samples, n);
     }
     return rc;
-}
-
-// Bir boʻlakdagi token chegarasi — halqadan ikkinchi himoya. Tez nutqda
-// ~6 token/s; 16 token/s + 32 — ikki baravardan ortiq zaxira. 0 — cheksiz
-// (oʻzbek modeli — avvalgidek).
-static int max_token_hisobla(int n_namuna) {
-    if (strcmp(g_til, "uz") == 0 || n_namuna <= 0) return 0;
-    return n_namuna / 16000 * 16 + 32;
 }
 
 static struct whisper_vad_context *g_vad = NULL;
@@ -317,7 +370,6 @@ char *rubai_transcribe(const float *samples, int n_samples, int n_threads) {
     size_t len = 0;
     for (int k = 0; k < n; k++) {
         p.audio_ctx = audio_ctx_hisobla(o[k].oxiri - o[k].boshi);
-        p.max_tokens = max_token_hisobla(o[k].oxiri - o[k].boshi);
         if (whisper_full_himoyali(g_ctx, p, samples + o[k].boshi, o[k].oxiri - o[k].boshi) != 0) {
             free(o);
             free(out);
@@ -464,7 +516,6 @@ int rubai_transcribe_segments(const float *samples, int n_samples, int n_threads
         const int uzunlik = o[k].oxiri - o[k].boshi;
         pctx.joriy = uzunlik;
         p.audio_ctx = audio_ctx_hisobla(uzunlik);
-        p.max_tokens = max_token_hisobla(uzunlik);
         const int rc = whisper_full_himoyali(g_ctx, p, samples + o[k].boshi, uzunlik);
         // Bekor qilingan bayrogʻini natija kodidan mustaqil tekshiramiz: bekor qilish
         // hisoblash allaqachon tugagandan keyin kelishi mumkin, va shunda whisper_full

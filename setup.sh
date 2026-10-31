@@ -35,7 +35,8 @@ if ! command -v cmake >/dev/null 2>&1; then
     fi
 fi
 
-# Intel Mac'da: faqat x86_64, shu protsessor uchun (GGML_NATIVE=ON — AVX2/FMA;
+# Intel Mac'da: faqat x86_64, shu protsessor uchun (GGML_NATIVE=ON — AVX2/FMA,
+# GGML_BLAS — Accelerate: encoder 2 baravar tez, i7-9750H da 7,6 s → 4,0 s;
 # rasmiy universal build'dagi x86_64 qismi NATIVE=OFF, ancha sekin). arm64
 # kutubxonalari bu mashinada kerak emas.
 INTEL_XOST=0
@@ -50,7 +51,8 @@ if [ "$INTEL_XOST" = 1 ] && [ ! -f "$WC/build-x64/src/libwhisper.a" ]; then
     cmake -S "$WC" -B "$WC/build-x64" \
         -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DCMAKE_BUILD_TYPE=Release \
         -DGGML_NATIVE=ON -DGGML_METAL=OFF -DBUILD_SHARED_LIBS=OFF \
-        -DWHISPER_BUILD_EXAMPLES=OFF -DWHISPER_BUILD_TESTS=OFF -DGGML_BLAS=OFF
+        -DWHISPER_BUILD_EXAMPLES=OFF -DWHISPER_BUILD_TESTS=OFF \
+        -DGGML_BLAS=ON -DGGML_BLAS_VENDOR=Apple
     nice -n 10 cmake --build "$WC/build-x64" --config Release -j4 --target whisper
 fi
 if [ "$INTEL_XOST" = 0 ] && [ ! -f "$WC/build-static/src/libwhisper.a" ]; then
