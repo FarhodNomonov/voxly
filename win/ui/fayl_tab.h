@@ -9,9 +9,6 @@
 //   • LLM amallari bitta «Matnni yaxshilash ⌄» menyusiga yigʻilgan.
 //   • Tayyor/xom matn almashtirgichi matn maydonining oʻng tugma menyusida —
 //     LLM sozlanmagan foydalanuvchi ham xom matnga yeta olishi kerak.
-//
-// «Tarjima qilish ⌄» ALOHIDA tugma: yaxshilash API kalitisiz butunlay
-// yashiriladi, tarjima esa oflayn ishlaydi va kalit talab qilmaydi.
 #pragma once
 
 #include "tab.h"
@@ -56,10 +53,6 @@ public:
 
     // Sudrab tashlangan yoki «Fayl tanlash» bilan tanlangan fayl.
     void faylniQabulQil(const std::wstring& yol);
-
-    // Transkriptni «Tarjima» tabiga uzatadi. `tilKodi` boʻsh — foydalanuvchi
-    // tilni oʻsha tabda oʻzi tanlaydi.
-    std::function<void(const std::wstring& matn, const std::string& tilKodi)> onTarjima;
 
     // Fon oqimidan kelgan xabar. Asosiy oyna `FaylXabar` oraligʻidagi
     // hammasini shu yerga uzatadi.

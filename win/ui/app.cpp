@@ -1,4 +1,4 @@
-// Kotib — Windows ilovasi: yashirin oyna va xabarlar, tray, hotkey,
+// Voxly — Windows ilovasi: yashirin oyna va xabarlar, tray, hotkey,
 // sozlamalarni qoʻllash, ishga tushish va yopilish, `wWinMain`.
 //
 // Klass va doimiylar — `app.h`; diktovka oqimi va saqlanmagan ovoz —
@@ -8,9 +8,6 @@
 
 #include "app.h"
 
-#if KOTIB_TARJIMA
-#include "../core/tarjimon.h"
-#endif
 
 namespace rubai {
 namespace {
@@ -93,7 +90,6 @@ LRESULT App::handle(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
         // Yozib olish davomida signal darajasini oynaga uzatamiz.
         case WM_TIMER:
-            if (yangilovchi_.taymer(wp)) return 0;
             if (wp == kDarajaTaymer) {
                 if (recording_ && asosiy_.korinadimi()) { asosiy_.darajaniQoy(capture_.daraja()); }
                 return 0;
@@ -134,7 +130,7 @@ LRESULT App::handle(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 // boʻldi, lekin mikrofon ogohlantirishi qolgan boʻlishi
                 // mumkin. Ilgari u keyingi ochilishgacha koʻrinmasdi.
                 mikrofonBanneri();
-                notify(L"Kotib", L"Nutq modeli yuklandi — diktovka tayyor.", NIIF_INFO);
+                notify(kAppName, L"Nutq modeli yuklandi — diktovka tayyor.", NIIF_INFO);
                 SetTimer(hwnd_, kQaytaTaymer, kQaytaKutishMs, nullptr);
             } else {
                 asosiy_.banner(L"Model yuklanmadi: " + *xato, L"Qayta urinish",
@@ -157,15 +153,6 @@ LRESULT App::handle(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             }
             return 0;
 
-        // Avto-yangilovchining fon natijasi (tekshiruv, yuklash jarayoni).
-        case WM_RUBAI_YANGILANISH: yangilovchi_.xabar(wp, lp); return 0;
-
-        // Uyqudan uygʻonish: oxirgi muvaffaqiyatli tekshiruvdan 24 soat
-        // oʻtgan boʻlsa — tekshiruv (macOS'dagi `didWakeNotification`).
-        case WM_POWERBROADCAST:
-            if (wp == PBT_APMRESUMEAUTOMATIC) yangilovchi_.uygondi();
-            return TRUE;
-
         case WM_COMMAND:
             switch (LOWORD(wp)) {
                 case kMenuDictate: toggleDictation(); return 0;
@@ -181,7 +168,6 @@ LRESULT App::handle(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                     return 0;
                 }
                 case kMenuOyna: oynaniOch(); return 0;
-                case kMenuYangilanish: yangilovchi_.tugmaBosildi(); return 0;
                 case kMenuSettings:
                     settingsWindow_.show(instance_, settings_, asosiy_.deskriptor());
                     return 0;
@@ -190,7 +176,7 @@ LRESULT App::handle(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             return 0;
 
         case WM_ENDSESSION:
-            // wParam FALSE — oʻchirish/chiqish BEKOR qilindi: Kotib ishlashda
+            // wParam FALSE — oʻchirish/chiqish BEKOR qilindi: Voxly ishlashda
             // davom etadi (E4). Ilgari bu ham yopilish deb olinardi va
             // foydalanuvchi bekor qilgan oʻchirishdan keyin ilovasiz qolardi.
             if (!wp) {
@@ -280,13 +266,6 @@ void App::showMenu() {
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING, kMenuOyna, L"Oynani ochish");
     AppendMenuW(menu, MF_STRING, kMenuSettings, L"Sozlamalar…");
-    if (yangilovchi_.faolmi()) {
-        AppendMenuW(menu, MF_STRING, kMenuYangilanish,
-                    yangilovchi_.tayyormi() ? (L"Kotib " + yangilovchi_.tayyorVersiya() +
-                                               L" ni oʻrnatish va qayta ochish")
-                                                  .c_str()
-                                            : L"Yangilanishni tekshirish");
-    }
     AppendMenuW(menu, MF_STRING, kMenuLog, L"Log faylini ochish…");
     AppendMenuW(menu, MF_STRING, kMenuLitsenziya, L"Litsenziyalar…");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
@@ -513,8 +492,8 @@ bool App::init(HINSTANCE instance) {
             Settings s = loadSettings();
             s.useGpu = false;
             saveSettings(s);
-            notify(L"Kotib — protsessor rejimi",
-                   L"Oldingi safar videokarta drayveri Kotib'ni yopib yubordi.\n"
+            notify(L"Voxly — protsessor rejimi",
+                   L"Oldingi safar videokarta drayveri Voxly'ni yopib yubordi.\n"
                    L"Ovoz tanish endi protsessorda ishlaydi. Sozlamalarda\n"
                    L"«Videokartadan foydalanish» ni qayta yoqish mumkin.",
                    NIIF_WARNING);
@@ -531,69 +510,10 @@ bool App::init(HINSTANCE instance) {
 
     updateTrayTip(kAppName);
 
-    // Statistika va yangilanish — alohida (spec: biri yiqilsa ikkinchisi
-    // ishlayveradi). Ikkalasi ham fon oqimida, tarmoq yoʻq boʻlsa jim.
-    pingYubor();
-    yangilovchiniUla();
+    // Voxly'da statistika va avto-yangilanish YOʻQ: tarmoqqa faqat model
+    // yuklash va foydalanuvchining oʻz AI kaliti bilan soʻrovlar chiqadi.
 
     return true;
-}
-
-// Avto-yangilovchi ilova holatini shu funksiyalar orqali soʻraydi —
-// `yangilovchi.h` ga qarang. Hammasi UI oqimida.
-void App::yangilovchiniUla() {
-    // Boʻsh payt: yozuv, diktovka natijasi, fayl ishi, saqlangan ovozni
-    // oʻgirish, model yuklash va tarjima — hech biri ketmayotgan boʻlsin.
-    yangilovchi_.bandmi = [this] {
-        bool tarjima = false;
-#if KOTIB_TARJIMA
-        tarjima = Tarjimon::birgalik().bandmi();
-#endif
-        return DiktovkaBand::faol() || busy_ || TranskripsiyaIshi::ishlayapti() ||
-               qaytaIshlanyapti_ || modelYuklovchi_.ketyaptimi() || tarjima;
-    };
-    // Majburiy yangilanish faqat diktovkani kutadi (spec «Majburiy yangilanish»).
-    yangilovchi_.yozilyaptimi = [this] { return DiktovkaBand::faol() || busy_; };
-    yangilovchi_.oxirgiFaollik = [this] { return oxirgiFaollik_; };
-    yangilovchi_.bildir = [this](const std::wstring& s, const std::wstring& m) {
-        notify(s, m, NIIF_INFO);
-    };
-    yangilovchi_.yangilandi = [this](const std::wstring& m, const std::wstring& kalit) {
-        asosiy_.yangilanishBanneri(m, kalit);
-    };
-    // Oʻrnatuvchi ishga tushdi: odatdagi yopilish (shutdown) — Inno fayllarni
-    // almashtirib, Kotib'ni qayta ochadi.
-    yangilovchi_.chiqish = [this] { DestroyWindow(hwnd_); };
-    yangilovchi_.ozgardi = [this] {
-        settingsWindow_.yangilanishniYangila();
-        majburiyBanneri();
-    };
-    settingsWindow_.setYangilanish([this] { return yangilovchi_.korinish(); },
-                                   [this] { yangilovchi_.tugmaBosildi(); });
-    yangilovchi_.boshla(hwnd_, WM_RUBAI_YANGILANISH);
-}
-
-// Majburiy yangilanish (S9): muhlat ichida — «Muhim yangilanish …» (yopilmaydi),
-// muhlat tugagach — «Yangilanish majburiy — diktovka toʻxtatildi»; zaxira
-// «Saytdan yuklab olish» faqat avtomatik yuklash xatosidan keyin. Dizayndagi alohida karta oʻrniga oyna banneri:
-// koʻrinish soddalashdi, imkoniyat (holat, qayta urinish, sayt) qoldi.
-void App::majburiyBanneri() {
-    const Yangilovchi::MajburiyKorinish k = yangilovchi_.majburiyKorinish();
-    if (!k.bor) {
-        if (majburiyBannerKorinadi_) asosiy_.yangilanishBanneriniYashir();
-        majburiyBannerKorinadi_ = false;
-        return;
-    }
-    majburiyBannerKorinadi_ = true;
-    // Sayt manzili QATTIQ yozilgan — serverdan kelgan URL ochilmaydi (1.1.0
-    // dagi xato qaytmasin).
-    asosiy_.yangilanishBanneri(
-        k.matn, L"", k.tugma, [this] { yangilovchi_.majburiyTugma(); },
-        k.sayt ? L"Saytdan yuklab olish" : L"",
-        [] {
-            ShellExecuteW(nullptr, L"open", L"https://uzb.mirqobilov.com", nullptr, nullptr,
-                          SW_SHOWNORMAL);
-        });
 }
 
 void App::run() {
@@ -622,7 +542,6 @@ void App::shutdown() {
     // Ikki joydan chaqiriladi: WM_ENDSESSION va xabar halqasidan keyin.
     if (yopildi_) return;
     yopildi_ = true;
-    yangilovchi_.toxtat();
     if (recording_) capture_.stop();
     UnregisterHotKey(hwnd_, kHotkeyId);
     removeTrayIcon();
@@ -636,7 +555,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
     using namespace rubai;
 
     g_taskbarCreated = RegisterWindowMessageW(L"TaskbarCreated");
-    g_showSettings = RegisterWindowMessageW(L"KotibShowSettings");
+    g_showSettings = RegisterWindowMessageW(L"VoxlyShowSettings");
 
     // Ikkinchi nusxa ishga tushmasin — ikkita ilova bitta hotkey'ni
     // ushlab, kutilmagan xatti-harakat beradi.
@@ -652,7 +571,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
         } else {
             // Oyna topilmadi (ilova yopilish jarayonida boʻlishi mumkin).
             MessageBoxW(nullptr,
-                        L"Kotib allaqachon ishlayapti.\n"
+                        L"Voxly allaqachon ishlayapti.\n"
                         L"Sozlamalar uchun vazifalar panelidagi 🎙 ikonkasini bosing.",
                         kAppName, MB_OK | MB_ICONINFORMATION);
         }

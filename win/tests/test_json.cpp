@@ -34,7 +34,7 @@ bool vergulliLokal() {
 }
 
 void lokalTestlari() {
-    // Barqarorlik E2: tarjimon `setlocale` chaqirgach ru/uz Windows'da kasr
+    // Barqarorlik E2: biror kutubxona `setlocale` chaqirsa ru/uz Windows'da kasr
     // sonlar «12,5» boʻlib yozilar va «12.5» → 12 oʻqilardi.
     const bool bor = vergulliLokal();
     tekshir(L"lokal: vergulli lokal oʻrnatildi", bor);

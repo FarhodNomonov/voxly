@@ -1,7 +1,7 @@
 // Tab koʻrinishining umumiy interfeysi.
 //
-// macOS'da bu rolni `NSViewController` bajaradi (`DiktovkaVC`, `StudiyaVC`,
-// `TarjimaVC`). Windows'da alohida oyna sinfi shart emas: uchala tab ham bitta
+// macOS'da bu rolni `NSViewController` bajaradi (`DiktovkaVC`, `StudiyaVC`).
+// Windows'da alohida oyna sinfi shart emas: ikkala tab ham bitta
 // asosiy oynaning ichida chiziladi, chunki ular hech qachon bir vaqtda
 // koʻrinmaydi va har biriga alohida HWND berish faqat DPI, fokus va chizish
 // muammolarini koʻpaytirardi.

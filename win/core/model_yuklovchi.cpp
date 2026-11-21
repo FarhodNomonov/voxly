@@ -15,6 +15,9 @@
 
 namespace rubai {
 
+// TODO(voxly): rehost — model hozircha asl muallif (Kotib) CDN'idan olinadi;
+// macOS ham shu manzilni ishlatadi (`src/model_download.swift`). Oʻz
+// hostingimizga koʻchirilganda ikkala platformada birga almashtiriladi.
 const wchar_t* ModelYuklovchi::kUrl = L"https://cdn.mirqobilov.com/v1.0/ggml-rubaistt.bin";
 
 namespace {

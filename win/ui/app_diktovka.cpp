@@ -21,15 +21,6 @@ void App::toggleDictation() {
 }
 
 void App::startRecording() {
-    // Majburiy yangilanish muhlati tugagan (S9): yangi yozuv boshlanmaydi —
-    // ketayotganini toʻxtatish esa doim mumkin (`stopAndTranscribe`). Sabab va
-    // «Qayta urinish» / «Saytdan yuklab olish» oynadagi bannerda.
-    if (yangilovchi_.bloklanganmi()) {
-        logWrite(L"yozish boshlanmadi: majburiy yangilanish muhlati tugagan");
-        overlay_.show(OverlayIcon::Warning, L"Yangilanish majburiy — oynada batafsil", 4000);
-        oynaniOch();
-        return;
-    }
     // Fayl ishi ketayotganda diktovka BOSHLANMAYDI (D1): navbat bitta, matn
     // fayl tugaguncha kutib, keyin boshqa oynaga tushardi. macOS bilan bir xil.
     if (TranskripsiyaIshi::ishlayapti()) {
@@ -58,19 +49,18 @@ void App::startRecording() {
     }
     recording_ = true;
     DiktovkaBand::mikrofon = true;
-    faollikBoldi();
     yozishBoshlandi_ = GetTickCount64();
     updateTrayTip(L"Yozilmoqda…  (" + settings_.hotkeyDisplay() + L" — toʻxtatish)");
     asosiy_.diktovkaHolati(true);
     SetTimer(hwnd_, kDarajaTaymer, kDarajaOraligi, nullptr);
     SetTimer(hwnd_, kMaxYozishTaymer, kMaxYozishMs, nullptr);
-    // Suzuvchi koʻrsatkich foydalanuvchi Kotib oynasiga QARAB turmagan
+    // Suzuvchi koʻrsatkich foydalanuvchi Voxly oynasiga QARAB turmagan
     // paytdagina kerak: oyna oldinda boʻlsa u holatni allaqachon kartada
     // koʻrib turibdi. Ilgari bu yerda «oyna koʻrinadimi» tekshiruvi turardi
     // va u ikki holatda yanglishardi — `IsWindowVisible` yigʻilgan oyna
     // uchun ham, boshqa ilova ostida qolgan oyna uchun ham TRUE qaytaradi.
     // Ikkalasi ham ilovaning ODATDAGI ishlatilishi: matn boshqa ilovaga
-    // yoziladi, demak Kotib oynasi deyarli har doim orqada boʻladi.
+    // yoziladi, demak Voxly oynasi deyarli har doim orqada boʻladi.
     if (GetForegroundWindow() != asosiy_.deskriptor()) {
         overlay_.show(OverlayIcon::Recording, L"Yozilmoqda…  (" + settings_.hotkeyDisplay() + L")");
     }
@@ -80,7 +70,6 @@ void App::startRecording() {
 void App::stopAndTranscribe() {
     recording_ = false;
     DiktovkaBand::mikrofon = false;
-    faollikBoldi();
     KillTimer(hwnd_, kDarajaTaymer);
     KillTimer(hwnd_, kMaxYozishTaymer);
     asosiy_.diktovkaHolati(false);
@@ -137,7 +126,6 @@ void App::stopAndTranscribe() {
 
 void App::onResult(const TranscribeResult& r) {
     busy_ = false;
-    faollikBoldi();
     if (DiktovkaBand::transkripsiya > 0) --DiktovkaBand::transkripsiya;
     updateTrayTip(kAppName);
     std::vector<float> ovoz;
@@ -326,7 +314,7 @@ void App::qaytaTugadi() {
     } else if (!qaytaMatnlar_.empty() && !recording_) {
         overlay_.show(OverlayIcon::Done,
                       L"Saqlangan " + std::to_wstring(qaytaMatnlar_.size()) +
-                          L" ta ovoz matnga oʻgirildi — Kotib oynasida",
+                          L" ta ovoz matnga oʻgirildi — Voxly oynasida",
                       4000);
     }
 }

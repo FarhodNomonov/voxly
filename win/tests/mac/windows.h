@@ -1,14 +1,14 @@
 // macOS'dagi sinov quvuri uchun `windows.h` ning eng kichik oʻrnini bosuvchisi.
 //
 // Nega bor: Windows tomonining sof mantiq fayllari (`matn_format.cpp`,
-// `matn_boluvchi.cpp`, `vaqt_format.cpp`) faqat bir necha Win32 chaqiruviga
+// `vaqt_format.cpp`) faqat bir necha Win32 chaqiruviga
 // bogʻlangan. Ular uchun shu qalqonni yozib, testlarni **macOS'da darhol
 // ishga tushirish** mumkin boʻladi — Windows mashinasi yoki VM kutmasdan.
 //
 // Bu RELIZGA kirmaydi va faqat `win/tests/mac/sinov.sh` ichida ishlatiladi.
 // U yerda tekshirilmaydigan yagona narsa — ICU orqali jumlalarga boʻlish
 // (bu yerda zaxira qoida ishlaydi) va UTF-16 surrogat juftliklari
-// (macOS'da `wchar_t` 32-bitli). Ularni VM'dagi `kotib-testlar.exe` qamraydi.
+// (macOS'da `wchar_t` 32-bitli). Ularni VM'dagi `voxly-testlar.exe` qamraydi.
 #pragma once
 
 #include <cstdint>
@@ -52,12 +52,9 @@ inline void localtime_s(std::tm* chiqish, const std::time_t* t) {
 inline BOOL IsCharAlphaW(wchar_t c) { return iswalpha(c) ? 1 : 0; }
 inline BOOL IsCharAlphaNumericW(wchar_t c) { return iswalnum(c) ? 1 : 0; }
 
-// ---- Yoʻl va kodlash (faqat `tarjima_bridge.cpp` uchun) -------------------
+// ---- Yoʻl va kodlash ------------------------------------------------------
 //
-// Windows koʻprigi model yoʻlini ANSI muammosidan qutqarish uchun qisqa (8.3)
-// yoʻlga oʻgiradi. macOS'da bunday narsa yoʻq va kerak ham emas: bu yerda
-// yoʻllar UTF-8 va toʻgʻridan-toʻgʻri ishlaydi. `GetShortPathNameW` nol
-// qaytarganda koʻprik oʻzi UTF-8 yoʻlni ishlatadi — aynan shu kerak.
+// macOS'da yoʻllar UTF-8 va toʻgʻridan-toʻgʻri ishlaydi (`util_shim.cpp`).
 #ifndef CP_UTF8
 #define CP_UTF8 65001
 #endif

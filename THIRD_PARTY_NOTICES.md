@@ -29,15 +29,11 @@ non-commercial only) was **removed** from Voxly together with its engine
 
 ## Windows port (`win/`)
 
-The `win/` folder is the untouched upstream Kotib Windows port. It still contains
-the translator and links CTranslate2 (MIT), ruy (Apache-2.0), cpuinfo
-(BSD-2-Clause), cpu_features (Apache-2.0), spdlog (MIT), BS::thread_pool (MIT),
-avx/neon_mathfun (zlib/MIT), SentencePiece (Apache-2.0), Abseil (Apache-2.0),
-protobuf-lite (BSD-3-Clause), darts-clone (BSD-2-Clause), esaxx (MIT),
-Monocypher (CC0-1.0 or BSD-2-Clause), LLVM libc++/libunwind/OpenMP
-(Apache-2.0 WITH LLVM-exception), the mingw-w64 runtime (ZPL-2.1) and Inno Setup.
-Its full license file is built with `scripts/litsenziyalar.sh <file> win`.
-It must not be sold with the NLLB model.
+The Windows port (`win/`, work in progress) has the same feature set minus the
+translator, auto-updater and statistics. In addition to whisper.cpp it ships
+LLVM libc++/libunwind/OpenMP (Apache-2.0 WITH LLVM-exception), the mingw-w64
+runtime (ZPL-2.1) and is packaged with Inno Setup. Its full license file is
+built with `scripts/litsenziyalar.sh <file> win`.
 
 ## Voxly itself
 

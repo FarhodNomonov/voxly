@@ -1,4 +1,4 @@
-// Kotib — Windows ilovasining asosiy klassi (`App`) va umumiy doimiylar.
+// Voxly — Windows ilovasining asosiy klassi (`App`) va umumiy doimiylar.
 //
 // Ilova ikki faylda: `app.cpp` — oyna, tray, hotkey, sozlamalar, ishga
 // tushish/yopilish; `app_diktovka.cpp` — diktovka oqimi (yozish → whisper →
@@ -25,8 +25,7 @@
 #include "../core/util.h"
 #include "../core/model_yuklovchi.h"
 #include "../core/tarix.h"
-#include "../core/statistika.h"
-#include "../core/yangilovchi.h"
+#include "../core/versiya.h"
 #include "asosiy_oyna.h"
 #include "autostart.h"
 #include "inserter.h"
@@ -38,14 +37,13 @@ namespace rubai {
 
 // ---------------------------------------------------------------- doimiylar
 
-constexpr wchar_t kWindowClass[] = L"KotibHiddenWindow";
-constexpr wchar_t kMutexName[] = L"Global\\KotibSingleInstance";
-constexpr wchar_t kAppName[] = L"Kotib";
+constexpr wchar_t kWindowClass[] = L"VoxlyHiddenWindow";
+constexpr wchar_t kMutexName[] = L"Global\\VoxlySingleInstance";
+constexpr wchar_t kAppName[] = L"Voxly";
 
 constexpr UINT WM_RUBAI_TRAY = WM_APP + 1;
 constexpr UINT WM_RUBAI_RESULT = WM_APP + 2;
-// Avto-yangilovchining fon natijalari (`yangilovchi.h`): wp — hodisa, lp — maʼlumot.
-constexpr UINT WM_RUBAI_YANGILANISH = WM_APP + 3;
+// WM_APP + 3 — Kotib'da avto-yangilovchi xabari edi; Voxly'da yoʻq.
 // Nutq modelini yuklab olish (`model_yuklovchi.h`). Fon oqimidan keladi.
 constexpr UINT WM_RUBAI_MODEL = WM_APP + 4;         // wp: olingan MB, lp: jami MB
 constexpr UINT WM_RUBAI_MODEL_TUGADI = WM_APP + 5;  // wp: ok, lp: new wstring*
@@ -62,7 +60,6 @@ enum MenuId : UINT {
     kMenuOyna = 104,
     kMenuQayta = 105,        // «Saqlangan ovozni matnga oʻgirish (N)»
     kMenuLitsenziya = 106,   // «Litsenziyalar…» — exe yonidagi Litsenziyalar.txt
-    kMenuYangilanish = 107,  // «Yangilanishni tekshirish» / «… oʻrnatish va qayta ochish»
 };
 
 // Yozib olish paytida toʻlqin chizigʻini yangilab turadigan taymer.
@@ -176,16 +173,6 @@ private:
     // shuning uchun natijani shu yerga qoʻyib, oynaga xabar yuboramiz.
     std::unique_ptr<TranscribeResult> pending_;
 
-    // Avto-yangilanish (S8). Boʻsh paytni shu klassdagi holatdan soʻraydi.
-    Yangilovchi yangilovchi_;
-    void yangilovchiniUla();
-    // Majburiy yangilanish banneri (S9): holat oʻzgarganda qayta chiziladi.
-    void majburiyBanneri();
-    bool majburiyBannerKorinadi_ = false;
-    // Oxirgi diktovka faolligi (yozuv boshlangan/tugagan, natija) — monoton
-    // soniya, -1: hali yoʻq. Yangilanish undan ≥ 2 daqiqa keyin oʻrnatiladi.
-    long long oxirgiFaollik_ = -1;
-    void faollikBoldi() { oxirgiFaollik_ = static_cast<long long>(GetTickCount64() / 1000); }
 };
 
 }  // namespace rubai

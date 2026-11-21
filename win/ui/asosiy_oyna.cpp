@@ -5,7 +5,6 @@
 
 #include "tab.h"
 #include "fayl_tab.h"
-#include "tarjima_tab.h"
 #include "matn_maydon.h"
 #include "yozish_tab.h"
 #include "uslub.h"
@@ -26,12 +25,11 @@ namespace rubai {
 
 namespace {
 
-constexpr wchar_t kSinfNomi[] = L"KotibAsosiyOyna";
-constexpr wchar_t kSarlavha[] = L"Kotib";
+constexpr wchar_t kSinfNomi[] = L"VoxlyAsosiyOyna";
+constexpr wchar_t kSarlavha[] = L"Voxly";
 
 // Dizayndagi oʻlchamlar (DIP).
 constexpr float kToolbarBalandligi = 52.0f;
-constexpr float kYangiBannerBalandligi = 34.0f;
 constexpr int kBoshlangichKenglik = 720;
 constexpr int kBoshlangichBalandlik = 560;
 constexpr int kEngKichikKenglik = 560;
@@ -107,18 +105,7 @@ struct AsosiyOyna::Ichki {
     std::shared_ptr<Tanlagich> segment;
     std::shared_ptr<SozlamaTugmasi> sozlamalarTugmasi;
 
-    // Yangilanish banneri.
-    std::shared_ptr<Tugma> yangiAmal;
-    std::shared_ptr<Tugma> yangiIkkinchi;
-    std::shared_ptr<Tugma> yangiYopish;
-    std::wstring yangiMatn, yangiKalit;
-    std::function<void()> yangiAmalBosildi, yangiIkkinchiBosildi;
-    float yangiMatnOngi = 0;  // matn shu x gacha (tugmalar chapi)
-    bool yangiBannerKorinadi = false;
-
-    float bannerBalandligi() const { return yangiBannerKorinadi ? kYangiBannerBalandligi : 0.0f; }
-
-    std::array<std::unique_ptr<Tab>, 3> tablar{};
+    std::array<std::unique_ptr<Tab>, 2> tablar{};
     int joriyTab = 0;
 
     // Oxirgi berilgan diktovka holati. Tab keyin yaratilsa ham shu qiymatni
@@ -139,7 +126,7 @@ struct AsosiyOyna::Ichki {
 
     D2D1_RECT_F tabHududi() const {
         const auto o = chizgich.olcham();
-        return D2D1::RectF(0, bannerBalandligi() + kToolbarBalandligi, o.width, o.height);
+        return D2D1::RectF(0, kToolbarBalandligi, o.width, o.height);
     }
 
     Tab* tab() {
@@ -149,7 +136,6 @@ struct AsosiyOyna::Ichki {
     }
 
     FaylTab* faylTab() { return static_cast<FaylTab*>(tablar[1].get()); }
-    TarjimaTab* tarjimaTab() { return static_cast<TarjimaTab*>(tablar[2].get()); }
 
     void qaytaChiz() {
         if (oyna) InvalidateRect(oyna, nullptr, FALSE);
@@ -167,36 +153,17 @@ void AsosiyOyna::Ichki::joylashtir() {
 
     // Tanlagich toolbar'ning aynan oʻrtasida — dizaynda shunday. Kengligi
     // matnga qarab emas, qatʼiy: bandlar bir xil kenglikda boʻlishi kerak.
-    constexpr float kSegmentKengligi = 260.0f;
+    constexpr float kSegmentKengligi = 180.0f;
     constexpr float kSegmentBalandligi = 30.0f;
-    const float ust = bannerBalandligi();
-
     segment->ramka = ramkaYasa((o.width - kSegmentKengligi) / 2,
-                               ust + (kToolbarBalandligi - kSegmentBalandligi) / 2,
+                               (kToolbarBalandligi - kSegmentBalandligi) / 2,
                                kSegmentKengligi, kSegmentBalandligi);
 
-    sozlamalarTugmasi->ramka = ramkaYasa(o.width - 46, ust + (kToolbarBalandligi - 30) / 2, 30, 30);
-
-    if (yangiBannerKorinadi) {
-        // Oʻngdan chapga: ✕ (boʻlsa), asosiy tugma, ikkinchi tugma; matn qolgan joyda.
-        float x = o.width - 14;
-        if (yangiYopish->korinadi) {
-            yangiYopish->ramka = ramkaYasa(x - 22, (kYangiBannerBalandligi - 22) / 2, 22, 22);
-            x -= 22 + 10;
-        }
-        for (Tugma* t : {yangiAmal.get(), yangiIkkinchi.get()}) {
-            if (!t->korinadi) continue;
-            const float w = t->kerakliKenglik(chizgich);
-            t->ramka = ramkaYasa(x - w, (kYangiBannerBalandligi - 24) / 2, w, 24);
-            x -= w + 8;
-        }
-        yangiMatnOngi = x - 4;
-    }
+    sozlamalarTugmasi->ramka = ramkaYasa(o.width - 46, (kToolbarBalandligi - 30) / 2, 30, 30);
 
     // Matn maydoni bola oyna va u pikselda joylashadi — tab oʻlchamni
     // hisoblashdan OLDIN joriy masshtabni bilishi kerak.
     if (auto* f = faylTab()) f->dpiNisbat(dpiNisbat());
-    if (auto* t = tarjimaTab()) t->dpiNisbat(dpiNisbat());
     if (auto* t = tab()) t->joylashtir(tabHududi());
 }
 
@@ -205,19 +172,9 @@ void AsosiyOyna::Ichki::chiz() {
 
     const auto o = chizgich.olcham();
 
-    // Yangilanish banneri
-    const float ust = bannerBalandligi();
-    if (yangiBannerKorinadi) {
-        chizgich.toldir(D2D1::RectF(0, 0, o.width, kYangiBannerBalandligi), U::bannerFon);
-        chizgich.chiziq(0, kYangiBannerBalandligi, o.width, kYangiBannerBalandligi, U::bannerChet);
-        const float matnKengligi = std::max(40.0f, yangiMatnOngi - 20);
-        chizgich.matn(yangiMatn, ramkaYasa(20, 0, matnKengligi, kYangiBannerBalandligi),
-                      U::bannerMatn, 13.0f, Ogirlik::Oddiy, Hizalash::Chap, true);
-    }
-
     // Toolbar
-    chizgich.toldir(D2D1::RectF(0, ust, o.width, ust + kToolbarBalandligi), U::panel);
-    chizgich.chiziq(0, ust + kToolbarBalandligi, o.width, ust + kToolbarBalandligi, U::ajratgich);
+    chizgich.toldir(D2D1::RectF(0, 0, o.width, kToolbarBalandligi), U::panel);
+    chizgich.chiziq(0, kToolbarBalandligi, o.width, kToolbarBalandligi, U::ajratgich);
     toolbar.chiz(chizgich);
 
     // Tab hududi
@@ -250,10 +207,6 @@ LRESULT AsosiyOyna::Ichki::hodisa(UINT xabar, WPARAM wp, LPARAM lp) {
     // kelgan xabarlar. Ular oynaga faqat shu yoʻl bilan tegadi.
     if (xabar >= FaylXabar::kBirinchi && xabar <= FaylXabar::kOxirgi) {
         if (auto* f = faylTab()) f->xabarKeldi(xabar, wp, lp);
-        return 0;
-    }
-    if (xabar >= TarjimaXabar::kBirinchi && xabar <= TarjimaXabar::kOxirgi) {
-        if (auto* t = tarjimaTab()) t->xabarKeldi(xabar, wp, lp);
         return 0;
     }
 
@@ -393,8 +346,8 @@ LRESULT AsosiyOyna::Ichki::hodisa(UINT xabar, WPARAM wp, LPARAM lp) {
                 return 0;
             }
 
-            // Ctrl+1/2/3 — tab almashtirish (macOS'da ⌘1/⌘2/⌘3).
-            if ((GetKeyState(VK_CONTROL) & 0x8000) && wp >= '1' && wp <= '3') {
+            // Ctrl+1/2 — tab almashtirish (macOS'da ⌘1/⌘2).
+            if ((GetKeyState(VK_CONTROL) & 0x8000) && wp >= '1' && wp <= '2') {
                 const int i = static_cast<int>(wp - '1');
                 segment->tanlangan = i;
                 tabniOzgartir(i);
@@ -411,7 +364,6 @@ LRESULT AsosiyOyna::Ichki::hodisa(UINT xabar, WPARAM wp, LPARAM lp) {
         // keladi. `matnMaydonXabari` uni tegishli maydonga ulaydi.
         case WM_COMMAND:
             matnMaydonXabari(wp, lp);
-            if (auto* t = tarjimaTab()) t->buyruq(wp, lp);
             return 0;
 
         // Fayl sudrab tashlandi. macOS'da bu `DropView` (studiya_view.swift).
@@ -517,7 +469,7 @@ bool AsosiyOyna::qur(HINSTANCE instance) {
 
     // Toolbar
     ichki_->segment =
-        std::make_shared<Tanlagich>(std::vector<std::wstring>{L"Yozish", L"Fayl", L"Tarjima"});
+        std::make_shared<Tanlagich>(std::vector<std::wstring>{L"Yozish", L"Fayl"});
     ichki_->segment->ozgarganda = [this](int i) { ichki_->tabniOzgartir(i); };
     ichki_->toolbar.qosh(ichki_->segment);
 
@@ -527,42 +479,7 @@ bool AsosiyOyna::qur(HINSTANCE instance) {
     };
     ichki_->toolbar.qosh(ichki_->sozlamalarTugmasi);
 
-    // 1.1.0 dagi «Yuklab olish» (serverdan kelgan URL'ni `ShellExecuteW` bilan
-    // ochardi) olib tashlandi: yangilanishni endi yangilovchi oʻzi oʻrnatadi.
-    ichki_->yangiAmal = std::make_shared<Tugma>(L"", Tugma::Kor::Ikkilamchi);
-    ichki_->yangiAmal->shriftOlchami = 12.0f;
-    ichki_->yangiAmal->korinadi = false;
-    ichki_->yangiAmal->bosilganda = [this] {
-        if (ichki_->yangiAmalBosildi) ichki_->yangiAmalBosildi();
-    };
-    ichki_->toolbar.qosh(ichki_->yangiAmal);
-
-    ichki_->yangiIkkinchi = std::make_shared<Tugma>(L"", Tugma::Kor::Matnli);
-    ichki_->yangiIkkinchi->shriftOlchami = 12.0f;
-    ichki_->yangiIkkinchi->korinadi = false;
-    ichki_->yangiIkkinchi->bosilganda = [this] {
-        if (ichki_->yangiIkkinchiBosildi) ichki_->yangiIkkinchiBosildi();
-    };
-    ichki_->toolbar.qosh(ichki_->yangiIkkinchi);
-
-    ichki_->yangiYopish = std::make_shared<Tugma>(L"✕", Tugma::Kor::Matnli);
-    ichki_->yangiYopish->shriftOlchami = 13.0f;
-    ichki_->yangiYopish->korinadi = false;
-    ichki_->yangiYopish->bosilganda = [this] {
-        Settings s = loadSettings();
-        s.yangilanishYopildi = ichki_->yangiKalit;
-        saveSettings(s);
-        ichki_->yangiBannerKorinadi = false;
-        ichki_->yangiAmal->korinadi = false;
-        ichki_->yangiIkkinchi->korinadi = false;
-        ichki_->yangiYopish->korinadi = false;
-        ichki_->joylashtir();
-        ichki_->qaytaChiz();
-    };
-    ichki_->toolbar.qosh(ichki_->yangiYopish);
-
-    // Tablar. «Tarjima» hali qoʻshilmagan — segment unga oʻtsa boʻsh sahifa
-    // koʻrsatiladi.
+    // Tablar: «Yozish» va «Fayl» (Voxly'da oflayn tarjimon yoʻq).
     auto yozish = std::make_unique<YozishTab>();
     yozish->onDiktovka = [this] {
         if (onDiktovka) onDiktovka();
@@ -580,17 +497,7 @@ bool AsosiyOyna::qur(HINSTANCE instance) {
     yozish->hotkeyMatni(loadSettings().hotkeyDisplay());
     ichki_->tablar[0] = std::move(yozish);
 
-    auto fayl = std::make_unique<FaylTab>(ichki_->oyna);
-    fayl->onTarjima = [this](const std::wstring& m, const std::string& kod) {
-        // «Fayl» tabidan matn «Tarjima» tabiga oʻtadi va tab almashadi.
-        ichki_->segment->tanlangan = 2;
-        ichki_->tabniOzgartir(2);
-        if (auto* t = ichki_->tarjimaTab()) t->matnniQabulQil(m, kod);
-        if (onTarjima) onTarjima(m, kod);
-    };
-    ichki_->tablar[1] = std::move(fayl);
-
-    ichki_->tablar[2] = std::make_unique<TarjimaTab>(ichki_->oyna);
+    ichki_->tablar[1] = std::make_unique<FaylTab>(ichki_->oyna);
 
     // Sudrab tashlashni butun oyna qabul qiladi — foydalanuvchi «Fayl»
     // tabiga oʻtishi shart emas, tashlagan zahoti oʻzi oʻtadi.
@@ -602,42 +509,7 @@ bool AsosiyOyna::qur(HINSTANCE instance) {
 
 YozishTab* AsosiyOyna::yozishTabi() { return static_cast<YozishTab*>(ichki_->tablar[0].get()); }
 
-void AsosiyOyna::yangilanishBanneri(const std::wstring& matn, const std::wstring& kalit,
-                                    const std::wstring& tugma, std::function<void()> amal,
-                                    const std::wstring& ikkinchiTugma,
-                                    std::function<void()> ikkinchiAmal) {
-    // Foydalanuvchi shu bannerni allaqachon yopgan boʻlsa — koʻrsatmaymiz.
-    if (!kalit.empty() && loadSettings().yangilanishYopildi == kalit) return;
-
-    ichki_->yangiMatn = matn;
-    ichki_->yangiKalit = kalit;
-    ichki_->yangiAmalBosildi = std::move(amal);
-    ichki_->yangiIkkinchiBosildi = std::move(ikkinchiAmal);
-    ichki_->yangiAmal->nom = tugma;
-    ichki_->yangiIkkinchi->nom = ikkinchiTugma;
-    ichki_->yangiBannerKorinadi = true;
-    ichki_->yangiAmal->korinadi = !tugma.empty();
-    ichki_->yangiIkkinchi->korinadi = !ikkinchiTugma.empty();
-    // Kalitsiz banner (majburiy yangilanish) yopilmaydi — u holat oʻzgarganda
-    // `yangilanishBanneriniYashir` bilan yoʻqoladi.
-    ichki_->yangiYopish->korinadi = !kalit.empty();
-    ichki_->joylashtir();
-    ichki_->qaytaChiz();
-}
-
-void AsosiyOyna::yangilanishBanneriniYashir() {
-    if (!ichki_->yangiBannerKorinadi) return;
-    ichki_->yangiBannerKorinadi = false;
-    ichki_->yangiAmal->korinadi = false;
-    ichki_->yangiIkkinchi->korinadi = false;
-    ichki_->yangiYopish->korinadi = false;
-    ichki_->joylashtir();
-    ichki_->qaytaChiz();
-}
-
 FaylTab* AsosiyOyna::faylTabi() { return ichki_->faylTab(); }
-
-TarjimaTab* AsosiyOyna::tarjimaTabi() { return ichki_->tarjimaTab(); }
 
 void AsosiyOyna::korsat() {
     ShowWindow(ichki_->oyna, SW_SHOW);

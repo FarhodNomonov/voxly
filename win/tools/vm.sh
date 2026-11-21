@@ -140,21 +140,17 @@ ishga() {
 # sinov audiolari. Windows uni FAT32 disk sifatida koʻradi.
 diskYasa() {
     local model="$ROOT/.model-cache/ggml-rubaistt.bin"
-    # Tarjima modeli macOS ilovasi yuklab olgan joyda turadi. Bor boʻlsa
-    # diskka qoʻshamiz va VM'da tarjimani ham sinash mumkin boʻladi —
-    # VM'da tarmoq yoʻq, uni u yerda yuklab boʻlmaydi.
-    local tarjima="$HOME/Library/Application Support/Kotib/tarjima-model-33b"
     local qurilgan="$ROOT/win/build-$ARCH"
     local dllar="$ROOT/whisper.cpp/build-win-$ARCH-dl/bin"
+    # `build-mac.sh --cpu` bilan yigʻilgan boʻlsa — `-cpu` papka.
+    [ -d "$dllar" ] || dllar="$ROOT/whisper.cpp/build-win-$ARCH-cpu/bin"
 
-    for y in "$qurilgan/Kotib.exe" "$qurilgan/kotib-testlar.exe" "$dllar"; do
+    for y in "$qurilgan/Voxly.exe" "$qurilgan/voxly-testlar.exe" "$dllar"; do
         [ -e "$y" ] || { echo "topilmadi: $y (avval ./win/build-mac.sh $ARCH)" >&2; exit 1; }
     done
 
-    # Hajm: binarlar + nutq modeli (0,8 GB) + tarjima modeli (3,4 GB) + zaxira.
-    # FAT32 bitta faylni 4 GB gacha koʻtaradi — `model.bin` 3,4 GB, sigʻadi.
+    # Hajm: binarlar + nutq modeli (0,8 GB) + zaxira.
     local hajm=2500
-    [ -d "$tarjima" ] && hajm=5500
 
     echo "Sinov diski yasalmoqda (${hajm} MB)…"
     rm -f "$YANGI_DISK"
@@ -175,10 +171,6 @@ diskYasa() {
     cp "$qurilgan"/*.dll "$v/" 2>/dev/null || true
     cp "$dllar"/*.dll "$v/" 2>/dev/null || true
     [ -f "$model" ] && cp "$model" "$v/models/"
-    if [ -d "$tarjima" ]; then
-        mkdir -p "$v/tarjima-model-33b"
-        cp "$tarjima"/* "$v/tarjima-model-33b/"
-    fi
     cp "$ROOT/whisper.cpp/samples/jfk.wav" "$ROOT/whisper.cpp/samples/jfk.mp3" "$v/" 2>/dev/null || true
     # virtio drayverlari: ularsiz VM'da tarmoq ham, mehmon agenti ham yoʻq —
     # har bir sinov uchun diskni almashtirib qayta yuklashga toʻgʻri keladi.

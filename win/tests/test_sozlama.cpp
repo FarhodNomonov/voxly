@@ -11,8 +11,8 @@ using kotib_test::tekshir;
 using namespace rubai;
 
 void sozlamaTestlari() {
-    // Birinchi ishga tushish: oyna ochilganda nusxa olindi (ID hali yoʻq),
-    // shu orada statistika ID yasab faylga yozdi, keyin «Saqlash» bosildi.
+    // Oyna ochilganda nusxa olindi, shu orada boshqa modul faylga yozdi,
+    // keyin «Saqlash» bosildi.
     Settings oyna;  // ochilgandagi nusxa
     oyna.vkCode = 'K';
     oyna.modifiers = 3;
@@ -29,36 +29,12 @@ void sozlamaTestlari() {
     oyna.diagnostikaTugash = 1791086400;
 
     Settings fayl;  // diskdagi, boshqa modullar yozgan
-    fayl.ornatmaId = L"0123456789abcdef0123456789abcdef";
-    fayl.oxirgiTekshiruv = 1791000000;
-    fayl.yangilanishYopildi = L"1.2.0";
-    fayl.tarjimaManba = "rus_Cyrl";
-    fayl.tarjimaMaqsad = "eng_Latn";
     fayl.didOnboard = true;
     fayl.idleUnloadSeconds = 60;
-    fayl.yangilanishMuvaffaqiyat = 1790990000;
-    fayl.yangilanishChelak = 42;
-    fayl.majburiyMin = L"1.2.1";
-    fayl.majburiyMuhlat = 48;
-    fayl.majburiyKorilgan = 1790900000;
-    fayl.kutilganVersiya = L"1.2.1";
-    fayl.yangilanishKanali = L"sinov";
 
     const Settings r = sozlamaOynasidan(fayl, oyna);
-    tekshir(L"sozlama: ID saqlanadi", r.ornatmaId == fayl.ornatmaId);
-    tekshir(L"sozlama: tekshiruv vaqti saqlanadi", r.oxirgiTekshiruv == 1791000000);
-    tekshir(L"sozlama: yopilgan banner saqlanadi", r.yangilanishYopildi == L"1.2.0");
-    tekshir(L"sozlama: tarjima tillari saqlanadi",
-            r.tarjimaManba == "rus_Cyrl" && r.tarjimaMaqsad == "eng_Latn");
     tekshir(L"sozlama: onboarding belgisi saqlanadi", r.didOnboard);
     tekshir(L"sozlama: boʻsh turish vaqti saqlanadi", r.idleUnloadSeconds == 60);
-    // Yangilovchi yozgan holat (S8/S9) — oyna uni hech qachon eskisiga qaytarmasin:
-    // majburiy muhlat boshidan boshlanib qolardi.
-    tekshir(L"sozlama: yangilanish holati saqlanadi",
-            r.yangilanishMuvaffaqiyat == 1790990000 && r.yangilanishChelak == 42 &&
-                r.majburiyMin == L"1.2.1" && r.majburiyMuhlat == 48 &&
-                r.majburiyKorilgan == 1790900000 && r.kutilganVersiya == L"1.2.1" &&
-                r.yangilanishKanali == L"sinov");
     tekshir(L"sozlama: diagnostika oynadan", r.diagnostikaTugash == 1791086400);
 
     // Diagnostika muddati (macOS'dagi log siyosati testlari bilan bir xil holatlar).

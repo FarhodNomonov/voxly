@@ -23,7 +23,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
 
     rubai::AsosiyOyna oyna;
     if (!oyna.qur(instance)) {
-        MessageBoxW(nullptr, L"Oyna ochilmadi", L"Kotib — sinov", MB_ICONERROR);
+        MessageBoxW(nullptr, L"Oyna ochilmadi", L"Voxly — sinov", MB_ICONERROR);
         return 1;
     }
 
@@ -37,7 +37,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
     // qisqartirish qanday koʻrinishini shusiz tekshirib boʻlmaydi.
     const long long hozir = static_cast<long long>(std::time(nullptr));
     std::vector<rubai::TarixYozuvi> tarix = {
-        {L"1", L"Salom, bu Kotib ilovasining Windows uchun birinchi native oynasi.", hozir - 60},
+        {L"1", L"Salom, bu Voxly ilovasining Windows uchun birinchi native oynasi.", hozir - 60},
         {L"2", L"Oʻzbek tilida gapirasiz, matn kursor turgan joyga oʻzi yoziladi.", hozir - 3600},
         {L"3", L"Ertaga soat oʻnda yigʻilish bor, hujjatlarni tayyorlab qoʻying.", hozir - 86400},
         {L"4",
@@ -52,11 +52,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
     // uchun uni koʻrishning boshqa yoʻli yoʻq.
     oyna.banner(L"Mikrofon tanlanmagan — Windows standart qurilmani beradi.", L"Tanlash", [] {});
 
-    // Yangilanish banneri — u faqat yangi versiya chiqqanda koʻrinadi.
-    oyna.yangilanishBanneri(L"Kotib 1.2.0 ga yangilandi — Tarjimon tezlashdi.", L"");
-
     oyna.onSozlamalar = [&] {
-        MessageBoxW(oyna.deskriptor(), L"Sinov dasturida sozlamalar oynasi yoʻq.", L"Kotib — sinov",
+        MessageBoxW(oyna.deskriptor(), L"Sinov dasturida sozlamalar oynasi yoʻq.", L"Voxly — sinov",
                     MB_OK | MB_ICONINFORMATION);
     };
 

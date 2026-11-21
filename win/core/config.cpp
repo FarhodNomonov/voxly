@@ -1,4 +1,4 @@
-// Foydalanuvchi sozlamalari — %APPDATA%\Kotib\settings.ini ni oʻqish va yozish.
+// Foydalanuvchi sozlamalari — %LOCALAPPDATA%\Voxly\settings.ini ni oʻqish va yozish.
 // Interfeys va izohlar — `config.h`.
 
 #include "config.h"
@@ -92,40 +92,12 @@ Settings loadSettings() {
                 s.oddiyApostrof = (val == L"1");
             else if (key == L"diagnostikaTugash")
                 s.diagnostikaTugash = std::stoll(val);
-            else if (key == L"ornatmaId")
-                s.ornatmaId = val;
-            else if (key == L"oxirgiTekshiruv")
-                s.oxirgiTekshiruv = std::stoll(val);
-            else if (key == L"yangilanishYopildi")
-                s.yangilanishYopildi = val;
-            else if (key == L"yangilanish.oxirgiMuvaffaqiyat")
-                s.yangilanishMuvaffaqiyat = std::stoll(val);
-            else if (key == L"yangilanish.chelak")
-                s.yangilanishChelak = std::stoi(val);
-            else if (key == L"yangilanish.majburiyMin")
-                s.majburiyMin = val;
-            else if (key == L"yangilanish.majburiyMuhlat")
-                s.majburiyMuhlat = std::stoi(val);
-            else if (key == L"yangilanish.majburiyKorilgan")
-                s.majburiyKorilgan = std::stoll(val);
-            else if (key == L"yangilanish.oxirgiIshlagan")
-                s.oxirgiIshlaganVersiya = val;
-            else if (key == L"yangilanish.kutilgan")
-                s.kutilganVersiya = val;
-            else if (key == L"yangilanish.kutilganIzoh")
-                s.kutilganIzoh = val;
-            else if (key == L"yangilanish.kanal")
-                s.yangilanishKanali = val;
             else if (key == L"llm.provayder")
                 s.llmProvayder = toUtf8(val);
             else if (key == L"llm.baseURL")
                 s.llmBaseURL = val;
             else if (key == L"llm.model")
                 s.llmModel = val;
-            else if (key == L"tr.manba")
-                s.tarjimaManba = toUtf8(val);
-            else if (key == L"tr.maqsad")
-                s.tarjimaMaqsad = toUtf8(val);
         } catch (...) {
             // buzuq qiymat — standartda qoldiramiz
         }
@@ -144,7 +116,7 @@ bool saveSettings(const Settings& s) {
     if (path.empty()) return false;
 
     std::wostringstream o;
-    o << L"# Kotib sozlamalari\n"
+    o << L"# Voxly sozlamalari\n"
       << L"# Bu faylni qoʻlda tahrirlash mumkin. Ilovani qayta ishga tushiring.\n\n"
       << L"hotkey.vk=" << s.vkCode << L"\n"
       << L"hotkey.modifiers=" << s.modifiers << L"\n"
@@ -158,23 +130,9 @@ bool saveSettings(const Settings& s) {
       << L"didOnboard=" << (s.didOnboard ? 1 : 0) << L"\n"
       << L"oddiyApostrof=" << (s.oddiyApostrof ? 1 : 0) << L"\n"
       << L"diagnostikaTugash=" << s.diagnostikaTugash << L"\n"
-      << L"ornatmaId=" << s.ornatmaId << L"\n"
-      << L"oxirgiTekshiruv=" << s.oxirgiTekshiruv << L"\n"
-      << L"yangilanishYopildi=" << s.yangilanishYopildi << L"\n"
-      << L"yangilanish.oxirgiMuvaffaqiyat=" << s.yangilanishMuvaffaqiyat << L"\n"
-      << L"yangilanish.chelak=" << s.yangilanishChelak << L"\n"
-      << L"yangilanish.majburiyMin=" << s.majburiyMin << L"\n"
-      << L"yangilanish.majburiyMuhlat=" << s.majburiyMuhlat << L"\n"
-      << L"yangilanish.majburiyKorilgan=" << s.majburiyKorilgan << L"\n"
-      << L"yangilanish.oxirgiIshlagan=" << s.oxirgiIshlaganVersiya << L"\n"
-      << L"yangilanish.kutilgan=" << s.kutilganVersiya << L"\n"
-      << L"yangilanish.kutilganIzoh=" << s.kutilganIzoh << L"\n"
-      << L"yangilanish.kanal=" << s.yangilanishKanali << L"\n"
       << L"llm.provayder=" << toWide(s.llmProvayder) << L"\n"
       << L"llm.baseURL=" << s.llmBaseURL << L"\n"
-      << L"llm.model=" << s.llmModel << L"\n"
-      << L"tr.manba=" << toWide(s.tarjimaManba) << L"\n"
-      << L"tr.maqsad=" << toWide(s.tarjimaMaqsad) << L"\n";
+      << L"llm.model=" << s.llmModel << L"\n";
 
     std::string utf8 = toUtf8(o.str());
 

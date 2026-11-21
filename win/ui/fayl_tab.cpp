@@ -12,7 +12,6 @@
 #include "../core/ish.h"
 #include "../core/config.h"
 #include "../core/llm.h"
-#include "../core/tillar.h"
 #include "../core/util.h"
 #include "../core/vaqt_format.h"
 
@@ -38,12 +37,10 @@ constexpr float kProgressBalandligi = 48.0f;
 // Menyu identifikatorlari. TrackPopupMenu TPM_RETURNCMD bilan shuni qaytaradi,
 // shuning uchun WM_COMMAND yoʻnaltirish kerak emas.
 constexpr UINT kMenyuErkin = 1000;
-constexpr UINT kMenyuBoshqaTil = 1001;
 constexpr UINT kMenyuChiroyli = 1002;
 constexpr UINT kMenyuXom = 1003;
 constexpr UINT kMenyuNusxa = 1004;
 constexpr UINT kMenyuAmalBoshi = 1100;  // + amal indeksi
-constexpr UINT kMenyuTilBoshi = 1200;   // + til indeksi
 
 // Fayl nomidan kengaytmani olib tashlaydi — «Saqlash…» tavsiya nomi uchun.
 std::wstring kengaytmasiz(const std::wstring& nom) {
@@ -163,7 +160,6 @@ struct FaylTab::Ichki {
     std::shared_ptr<Tugma> orqaga;
     std::shared_ptr<Tugma> nusxa;
     std::shared_ptr<Tugma> saqla;
-    std::shared_ptr<Tugma> tarjima;
     std::shared_ptr<Tugma> yaxshilash;
 
     // Progress paneli (ikkala koʻrinish ustida)
@@ -195,10 +191,6 @@ struct FaylTab::Ichki {
     // yozilmaydi (macOS'dagi `oqimToken` bilan bir xil).
     unsigned oqimToken = 0;
 
-    // «Tarjima qilish» tugmasi natijani tashqariga uzatadi. Ichki tuzilma
-    // FaylTab'ning ommaviy maydoniga toʻgʻridan-toʻgʻri tegmasin.
-    std::function<void(const std::wstring&, const std::string&)> onTarjimaUzat;
-
     void qaytaChiz() {
         if (ota) InvalidateRect(ota, nullptr, FALSE);
     }
@@ -213,7 +205,6 @@ struct FaylTab::Ichki {
     void ishTugadi();
 
     void yaxshilashMenyusi();
-    void tarjimaMenyusi();
     void matnMenyusi(POINT ekran);
     void amalniBajar(const Amal& amal);
     void eksport();
@@ -230,7 +221,6 @@ void FaylTab::Ichki::matnniKorsat(bool v) {
     orqaga->korinadi = v;
     nusxa->korinadi = v;
     saqla->korinadi = v;
-    tarjima->korinadi = v;
     // «Matnni yaxshilash» LLM sozlanmagan boʻlsa umuman koʻrinmaydi.
     yaxshilash->korinadi = v && LLMSozlama::sozlanganmi();
     maydon.korsat(v && tabKorinadi);
@@ -269,7 +259,6 @@ void FaylTab::Ichki::tugmalarniYangila() {
     const bool bor = joriyBor && !bandmi;
     nusxa->yoqilgan = bor;
     saqla->yoqilgan = bor;
-    tarjima->yoqilgan = bor;
     yaxshilash->yoqilgan = bor;
     if (matnKorinishi) yaxshilash->korinadi = LLMSozlama::sozlanganmi();
 }
@@ -312,52 +301,6 @@ void FaylTab::Ichki::yaxshilashMenyusi() {
     }
     const size_t i = tanlov - kMenyuAmalBoshi;
     if (i < royxatAmallar.size()) amalniBajar(royxatAmallar[i]);
-}
-
-void FaylTab::Ichki::tarjimaMenyusi() {
-    // Tepada «Tarjima» tabida oxirgi ishlatilgan til, keyin eng koʻp
-    // soʻraladigan uchtasi, oxirida toʻliq tanlagichga oʻtish. 202 tani
-    // menyuga solish oʻrniga «Tarjima» tabidagi qidiruvli roʻyxat
-    // ishlatiladi — u allaqachon oʻsha yerda (macOS bilan bir xil qaror).
-    //
-    // Nomlar `tillar.cpp` dan olinadi, qoʻlda yozilmaydi: aks holda menyuda
-    // «Rus tili», roʻyxatda «Ruscha» turib, ikkitasi boshqa narsadek
-    // koʻrinardi.
-    std::vector<std::string> kodlar;
-    auto qosh = [&](const std::string& kod) {
-        // Oʻzbekchaga tarjima qilishning maʼnosi yoʻq — manba oʻzbekcha.
-        if (kod.empty() || kod == Tillar::kUz) return;
-        if (std::find(kodlar.begin(), kodlar.end(), kod) != kodlar.end()) return;
-        if (!Tillar::top(kod)) return;
-        kodlar.push_back(kod);
-    };
-
-    qosh(loadSettings().tarjimaMaqsad);
-    qosh(Tillar::kRu);
-    qosh(Tillar::kEn);
-    qosh("tur_Latn");
-
-    HMENU m = CreatePopupMenu();
-    for (size_t i = 0; i < kodlar.size(); ++i) {
-        const Til* t = Tillar::top(kodlar[i]);
-        AppendMenuW(m, MF_STRING, kMenyuTilBoshi + static_cast<UINT>(i), t->nom.c_str());
-    }
-    AppendMenuW(m, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(m, MF_STRING, kMenyuBoshqaTil, L"Boshqa til…");
-
-    const UINT tanlov = menyuniOch(ota, m, tarjima->ramka, dpi);
-    DestroyMenu(m);
-    if (tanlov == 0) return;
-
-    const std::wstring matn = maydon.matn();
-    if (matn.find_first_not_of(L" \t\r\n") == std::wstring::npos) return;
-
-    std::string kod;
-    if (tanlov != kMenyuBoshqaTil) {
-        const size_t i = tanlov - kMenyuTilBoshi;
-        if (i < kodlar.size()) kod = kodlar[i];
-    }
-    if (onTarjimaUzat) onTarjimaUzat(matn, kod);
 }
 
 void FaylTab::Ichki::matnMenyusi(POINT ekran) {
@@ -518,12 +461,6 @@ FaylTab::FaylTab(HWND ota) : ichki_(std::make_unique<Ichki>()) {
     ichki_->saqla->bosilganda = [this] { ichki_->eksport(); };
     vidjetlar.qosh(ichki_->saqla);
 
-    ichki_->tarjima = std::make_shared<Tugma>(L"Tarjima qilish", Tugma::Kor::Ikkilamchi);
-    ichki_->tarjima->shriftOlchami = 16.0f;
-    ichki_->tarjima->chevron = true;
-    ichki_->tarjima->bosilganda = [this] { ichki_->tarjimaMenyusi(); };
-    vidjetlar.qosh(ichki_->tarjima);
-
     ichki_->yaxshilash = std::make_shared<Tugma>(L"Matnni yaxshilash", Tugma::Kor::Ikkilamchi);
     ichki_->yaxshilash->shriftOlchami = 16.0f;
     ichki_->yaxshilash->chevron = true;
@@ -545,10 +482,6 @@ FaylTab::FaylTab(HWND ota) : ichki_(std::make_unique<Ichki>()) {
     ichki_->maydon.qur(ota, 17.0f);
     ichki_->maydon.onOzgardi = [this] { matnOzgardi(); };
     ichki_->maydon.onOngTugma = [this](POINT p) { ichki_->matnMenyusi(p); };
-
-    ichki_->onTarjimaUzat = [this](const std::wstring& m, const std::string& kod) {
-        if (onTarjima) onTarjima(m, kod);
-    };
 
     ichki_->matnniKorsat(false);
     ichki_->progressniKorsat(false);
@@ -599,8 +532,6 @@ void FaylTab::joylashtir(const D2D1_RECT_F& hudud) {
     i.nusxa->ramka = ramkaYasa(x, tugmaY, 130, 44);
     x += 130 + 10;
     i.saqla->ramka = ramkaYasa(x, tugmaY, 110, 44);
-    x += 110 + 10;
-    i.tarjima->ramka = ramkaYasa(x, tugmaY, 160, 44);
 
     i.yaxshilash->ramka = ramkaYasa(hudud.right - 20 - 190, tugmaY, 190, 44);
 

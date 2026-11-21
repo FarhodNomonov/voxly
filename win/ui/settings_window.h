@@ -11,7 +11,6 @@
 #include <functional>
 
 #include "../core/config.h"
-#include "../core/yangilovchi.h"
 
 namespace rubai {
 
@@ -25,12 +24,6 @@ public:
     // Sozlamalar saqlanganda chaqiriladi (hotkey qayta roʻyxatdan
     // oʻtkazilishi va h.k. uchun).
     void setOnSaved(std::function<void(const Settings&)> cb);
-
-    // «Yangilanishlar» qatori: holat matni va tugma (`Yangilovchi::korinish`),
-    // tugma bosilganda — `bosildi`. Holat oʻzgarganda `yangilanishniYangila`.
-    void setYangilanish(std::function<Yangilovchi::Korinish()> holat,
-                        std::function<void()> bosildi);
-    void yangilanishniYangila();
 
     // Oynani ochadi (allaqachon ochiq boʻlsa oldinga chiqaradi).
     //

@@ -1,4 +1,4 @@
-// Foydalanuvchi sozlamalari — %APPDATA%\Kotib\settings.ini
+// Foydalanuvchi sozlamalari — %LOCALAPPDATA%\Voxly\settings.ini
 //
 // macOS versiyasida bu UserDefaults edi. Windows'da oddiy `kalit=qiymat`
 // UTF-8 matn fayli ishlatiladi: qoʻlda tahrirlash oson, parser xatolari yoʻq,
@@ -43,41 +43,6 @@ struct Settings {
     // `Prefs.diagnostika`). Standart holatda logda matn YOʻQ, faqat uzunligi.
     long long diagnostikaTugash = 0;
 
-    // ---- Statistika va yangilanish (`statistika.h`, `yangilovchi.h`) ----
-    // Statistika doim yoqiq (Q2) — sozlama maydoni yoʻq. Ilgari bu yerda
-    // hech narsaga taʼsir qilmaydigan `statistika` maydoni bor edi (E9).
-    // Tasodifiy 32-belgili hex. Ilova birinchi ochilganda yasaladi va
-    // oʻzgarmaydi. Bu QURILMA identifikatori emas: ilova oʻchirib qayta
-    // oʻrnatilsa yangisi paydo boʻladi.
-    std::wstring ornatmaId;
-    // Oxirgi tekshiruv vaqti (Unix soniya). Kuniga bir marta soʻrov uchun.
-    long long oxirgiTekshiruv = 0;
-    // Foydalanuvchi yopgan banner kaliti (masalan «yangilandi-1.2.1») —
-    // shu banner boshqa koʻrsatilmaydi.
-    std::wstring yangilanishYopildi;
-
-    // ---- Avto-yangilanish (`yangilovchi.h`) ----
-    // Oxirgi MUVAFFAQIYATLI tekshiruv (unix soniya, 0 — hali yoʻq). Tarmoqsiz
-    // urinish uni yangilamaydi — `oxirgiTekshiruv` dan farqi shu (u ping uchun).
-    long long yangilanishMuvaffaqiyat = 0;
-    // Bosqichli tarqatish chelagi, 0–99; -1 — hali tanlanmagan. Serverga
-    // yuborilmaydi.
-    int yangilanishChelak = -1;
-    // Majburiy talab (S9): oxirgi imzosi toʻgʻri manifestdagi min_versiya, uning
-    // muhlati va birinchi koʻrilgan vaqti (-1 — yoʻq). Diskda turadi: ilova qayta
-    // ochilganda internetsiz ham blok holatini bilsin, muhlat esa boshidan
-    // boshlanmasin. Hech qachon internetga chiqmagan ilovada boʻsh — u bloklanmaydi.
-    std::wstring majburiyMin;
-    int majburiyMuhlat = 72;
-    long long majburiyKorilgan = -1;
-    // «Kotib X ga yangilandi» xabari uchun: oxirgi ishlagan versiya va
-    // oʻrnatishga yuborilgan versiya bilan uning izohi.
-    std::wstring oxirgiIshlaganVersiya;
-    std::wstring kutilganVersiya;
-    std::wstring kutilganIzoh;
-    // Boʻsh — asosiy kanal; "sinov" — sinov manifesti (faqat qoʻlda yoziladi).
-    std::wstring yangilanishKanali;
-
     // ---- LLM (Studiya «amallari») ----
     // macOS'da bular UserDefaults'dagi `llm.*` kalitlari (`llm_providers.swift`).
     // API kalitning OʻZI bu yerda EMAS — u Credential Manager'da (`llm.h`).
@@ -85,25 +50,17 @@ struct Settings {
     std::wstring llmBaseURL;   // boʻsh — provayderning oʻz manzili
     std::wstring llmModel;     // boʻsh — provayderning standart modeli
 
-    // ---- Tarjimon ----
-    // Oxirgi tanlangan tillar (NLLB kodlari). macOS'da bular UserDefaults
-    // dagi `tr.manba` va `tr.maqsad`.
-    std::string tarjimaManba;   // boʻsh — oʻzbekcha
-    std::string tarjimaMaqsad;  // boʻsh — ruscha
-
     // Ekranda koʻrinishi, masalan "Ctrl+Alt+D"
     std::wstring hotkeyDisplay() const;
 };
 
 // Sozlamalar oynasi tahrirlaydigan maydonlarni `oyna` dan `fayl` ga koʻchiradi,
-// qolganini (ornatmaId, oxirgiTekshiruv, yangilanish holati, tarjima tillari,
-// didOnboard, idleUnloadSeconds) fayldagidek qoldiradi (barqarorlik E1).
+// qolganini (didOnboard, idleUnloadSeconds) fayldagidek qoldiradi
+// (barqarorlik E1).
 //
 // Nega kerak: oyna ochilganda sozlamalar NUSXASINI oladi va saqlashda butun
 // faylni yozardi. Oraliqda boshqa modul yozgan maydonlar nusxadagi eski
-// qiymatga qaytardi — birinchi ishga tushishda statistika yasagan `ornatmaId`
-// oʻchib ketar, keyingi tekshiruv yangisini yasar va bitta oʻrnatma
-// statistikada ikkita boʻlib koʻrinardi.
+// qiymatga qaytardi.
 //
 // Yangi maydon qoʻshilsa va uni sozlamalar oynasi tahrirlasa — shu yerga ham.
 inline Settings sozlamaOynasidan(Settings fayl, const Settings& oyna) {

@@ -15,7 +15,6 @@
 
 #include "samples.h"
 #include "util.h"
-#include "statistika.h"
 #include "whisper_bridge.h"
 
 namespace rubai {
@@ -255,21 +254,6 @@ TranscribeResult Engine::Impl::doTranscribe(const std::vector<float>& samples) {
     const auto t0 = std::chrono::steady_clock::now();
     char* c = rubai_transcribe(samples.data(), (int)samples.size(), defaultThreads());
     r.seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
-
-    // Anonim oʻlchov (kontentsiz): ovoz uzunligi, ishlov vaqti, backend.
-    // Backend nomini kichik harfga oʻtkazamiz (server 'vulkan'/'cpu'/'cuda' kutadi).
-    {
-        std::wstring bw;
-        {
-            std::lock_guard<std::mutex> lk(backendMu);
-            bw = backend;
-        }
-        std::string b;
-        for (wchar_t ch : bw) b += (char)std::tolower((unsigned char)ch);
-        const double ovoz_s = (double)samples.size() / 16000.0;
-        amalYubor("stt", ovoz_s, 0, r.seconds, b.empty() ? "cpu" : b.c_str(),
-                  c ? "ok" : "xato:transkripsiya");
-    }
 
     if (!c) {
         r.error = L"Transkripsiya bajarilmadi";

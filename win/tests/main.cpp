@@ -8,7 +8,7 @@
 // turadi — ikkala tarafni qoʻlda solishtirish uzoq va ishonchsiz.
 //
 // Ishga tushirish:
-//   • Windows'da yoki UTM'dagi VM'da — `kotib-testlar.exe` (hamma testlar);
+//   • Windows'da yoki UTM'dagi VM'da — `voxly-testlar.exe` (hamma testlar);
 //   • macOS'da — `win/tests/mac/sinov.sh` (sof mantiq testlarining qismi,
 //     Win32 API'ga bogʻlanmagani). Ikkinchisi kundalik ish uchun: Windows
 //     mashinasini kutmasdan darhol javob beradi.
@@ -94,10 +94,8 @@ void tengmi(const std::wstring& nom, const std::wstring& olingan, const std::wst
 // Har bir test fayli oʻz funksiyasini shu yerga qoʻshadi.
 void matnFormatTestlari();
 void vaqtFormatTestlari();
-void tarjimaTestlari();
 void jsonTestlari();
 void llmTestlari();
-void yangilanishTestlari();
 void saqlanmaganTestlari();
 void sozlamaTestlari();
 void nutqTestlari();
@@ -121,10 +119,8 @@ int main() {
     } testlar[] = {
         {L"matn_format", matnFormatTestlari},
         {L"vaqt_format", vaqtFormatTestlari},
-        {L"tarjima", tarjimaTestlari},
         {L"json", jsonTestlari},
         {L"llm", llmTestlari},
-        {L"yangilanish", yangilanishTestlari},
         {L"saqlanmagan", saqlanmaganTestlari},
         {L"sozlama", sozlamaTestlari},
         {L"nutq", nutqTestlari},

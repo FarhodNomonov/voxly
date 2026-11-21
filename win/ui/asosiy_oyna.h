@@ -1,8 +1,8 @@
-// Kotib — asosiy oyna.
+// Voxly — asosiy oyna.
 //
 // macOS tomonidagi `src/asosiy_oyna.swift` (`AsosiyOyna`) ning ekvivalenti.
 // Dizayn bir xil: tepada toolbar — oʻrtada segment boshqaruvi
-// (Yozish | Fayl | Tarjima), oʻng chetda ⚙ tugmasi; ostida tanlangan tabning
+// (Yozish | Fayl), oʻng chetda ⚙ tugmasi; ostida tanlangan tabning
 // koʻrinishi. Yon panel YOʻQ — macOS'da u ataylab olib tashlangan, chunki
 // ikki-uch rejim ustiga qoʻyilgan daraxt hech qanday maʼlumot bermasdi.
 //
@@ -25,7 +25,6 @@ class Chizgich;
 class Tab;
 class YozishTab;
 class FaylTab;
-class TarjimaTab;
 
 class AsosiyOyna {
 public:
@@ -55,13 +54,8 @@ public:
     // ⚙ tugmasi. Sozlamalar tab EMAS — alohida modal oyna (macOS'da sheet).
     std::function<void()> onSozlamalar;
 
-    // «Fayl» tabidagi matnni «Tarjima» tabiga uzatish soʻrovi. `tilKodi`
-    // boʻsh — foydalanuvchi tilni oʻsha tabda tanlaydi.
-    std::function<void(const std::wstring& matn, const std::string& tilKodi)> onTarjima;
-
     YozishTab* yozishTabi();
     FaylTab* faylTabi();
-    TarjimaTab* tarjimaTabi();
 
     // Diktovka tugagach tarixga qoʻshish uchun.
     void diktovkaTugadi(const std::wstring& matn);
@@ -74,20 +68,6 @@ public:
 
     // Kartadagi «Ctrl · Alt · D» chiplari.
     void hotkeyMatni(const std::wstring& matn);
-
-    // Yangilanish haqidagi ingichka chiziq («Kotib 1.2.1 ga yangilandi — …») —
-    // oyna chrome'ining bir qismi, uchala tabda ham koʻrinadi. Modal oyna
-    // ataylab EMAS: foydalanuvchining ishini toʻxtatishga haqqi yoʻq (macOS'dagi
-    // `BannerXabar` bilan bir xil). `tugma` boʻsh boʻlmasa — amal tugmasi.
-    //
-    // Foydalanuvchi ✕ ni bossa, AYNAN SHU `kalit` li banner boshqa koʻrsatilmaydi.
-    // `kalit` boʻsh — ✕ yoʻq (majburiy yangilanish banneri yopilmaydi, S9).
-    // `ikkinchi…` — chaproqdagi qoʻshimcha tugma («Saytdan yuklab olish»).
-    void yangilanishBanneri(const std::wstring& matn, const std::wstring& kalit,
-                            const std::wstring& tugma = L"", std::function<void()> amal = nullptr,
-                            const std::wstring& ikkinchiTugma = L"",
-                            std::function<void()> ikkinchiAmal = nullptr);
-    void yangilanishBanneriniYashir();
 
     // Yozish tabidagi ogohlantirish banneri (mikrofon tanlanmagan va h.k.).
     void banner(const std::wstring& matn, const std::wstring& tugmaNomi = L"",

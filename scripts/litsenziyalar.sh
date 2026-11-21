@@ -7,10 +7,10 @@
 # fayl ham oʻzi yangilanadi.
 #
 #   ./scripts/litsenziyalar.sh <chiqish-fayli>        # macOS: whisper.cpp + modellar
-#   ./scripts/litsenziyalar.sh <chiqish-fayli> win    # Windows: + CTranslate2, SentencePiece …
+#   ./scripts/litsenziyalar.sh <chiqish-fayli> win    # Windows: + LLVM/mingw ish vaqti kutubxonalari
 #
 # `src/build.sh` (→ Contents/Resources) va `win/build-mac.sh` (→ exe yonida)
-# chaqiradi. macOS ilovasida tarjimon yoʻq — uning bogʻliqliklari ham sanalmaydi. Manba yetishmasa — xato: litsenziyasiz binar tarqatilmasin.
+# chaqiradi. Oflayn tarjimon (CTranslate2, SentencePiece, NLLB) ikkala platformadan olib tashlangan. Manba yetishmasa — xato: litsenziyasiz binar tarqatilmasin.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CHIQISH="${1:?Ishlatish: $0 <chiqish-fayli> [win]}"
@@ -21,19 +21,6 @@ WIN=0
 BOLIMLAR=(
     "Voxly|LICENSE"
     "whisper.cpp / ggml|whisper.cpp/LICENSE"
-)
-[ "$WIN" = 1 ] && BOLIMLAR+=(
-    "CTranslate2|ctranslate2/LICENSE"
-    "ruy|ctranslate2/third_party/ruy/LICENSE"
-    "cpuinfo|ctranslate2/third_party/ruy/third_party/cpuinfo/LICENSE"
-    "cpu_features|ctranslate2/third_party/cpu_features/LICENSE"
-    "spdlog|ctranslate2/third_party/spdlog/LICENSE"
-    "SentencePiece|sentencepiece/LICENSE"
-    "Abseil|sentencepiece/third_party/absl/LICENSE"
-    "protobuf-lite|sentencepiece/third_party/protobuf-lite/LICENSE"
-    "darts-clone|sentencepiece/third_party/darts_clone/LICENSE"
-    "esaxx|sentencepiece/third_party/esaxx/LICENSE"
-    "Monocypher|win/third_party/monocypher/LICENCE.md"
 )
 
 for b in "${BOLIMLAR[@]}"; do
@@ -60,18 +47,6 @@ done
         echo
         echo
         echo "────────────────────────────────────────────────────────────────"
-        echo "BS::thread_pool (CTranslate2 ichida)"
-        echo "────────────────────────────────────────────────────────────────"
-        echo
-        grep -m1 -i "@copyright" "$ROOT/ctranslate2/third_party/BS_thread_pool.hpp" | sed 's/^[ *]*//'
-        echo
-        echo "────────────────────────────────────────────────────────────────"
-        echo "avx_mathfun / neon_mathfun (CTranslate2 ichida)"
-        echo "────────────────────────────────────────────────────────────────"
-        echo
-        sed -n '1,/\*\//p' "$ROOT/ctranslate2/third_party/avx_mathfun.h"
-        echo
-        echo "────────────────────────────────────────────────────────────────"
         echo "LLVM libc++ / libunwind / OpenMP, mingw-w64 (faqat Windows)"
         echo "────────────────────────────────────────────────────────────────"
         echo
@@ -89,11 +64,6 @@ done
     echo "  https://www.apache.org/licenses/LICENSE-2.0"
     echo "OpenAI Whisper (large-v3-turbo, medium) — MIT — https://github.com/openai/whisper/blob/main/LICENSE"
     echo "  ggml nusxasi: https://huggingface.co/ggerganov/whisper.cpp"
-    if [ "$WIN" = 1 ]; then
-        echo "NLLB-200 — Meta AI — Creative Commons Attribution-NonCommercial 4.0"
-        echo "  https://huggingface.co/facebook/nllb-200-3.3B"
-        echo "  https://creativecommons.org/licenses/by-nc/4.0/legalcode"
-    fi
     echo
     echo "────────────────────────────────────────────────────────────────"
     echo "Silero VAD (ggml-silero-v6.2.0.bin, ilova bilan birga)"

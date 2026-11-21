@@ -1,13 +1,11 @@
 // Katta faylni yuklab olish: HTTP Range bilan davom ettiriladi, bekor
 // qilinadi, jarayon xabar qilinadi.
 //
-// Ikki joyda ishlatiladi va shuning uchun alohida turadi:
-//   • nutq modeli (823 MB) — `model_yuklovchi.h`
-//   • tarjima modeli (3,1 GB arxiv) — `tarjima_yuklovchi.h`
+// Nutq modeli (823 MB) uchun ishlatiladi — `model_yuklovchi.h`.
 //
 // `.part` fayl va Range — sekin yoki uzilib turadigan internetda shart:
 // uzilgan yuklash keyingi urinishda oʻsha joydan davom etadi. macOS tomonida
-// ham shu naqsh (`model_download.swift`, `tarjima_yuklovchi.swift`).
+// ham shu naqsh (`model_download.swift`).
 #pragma once
 
 #include <functional>

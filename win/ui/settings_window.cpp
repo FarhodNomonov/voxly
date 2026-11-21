@@ -4,6 +4,8 @@
 
 #include "settings_window_ichki.h"
 
+#include "../core/versiya.h"
+
 namespace rubai {
 
 namespace {
@@ -95,15 +97,9 @@ LRESULT CALLBACK settingsProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 case kIdMic:
                     if (HIWORD(wp) == CBN_SELCHANGE) d->updateMicWarning();
                     return 0;
-                case kIdDonate: d->donate.show(d->instance, hwnd); return 0;
                 case kIdLog:
                     ShellExecuteW(nullptr, L"open", logPath().c_str(), nullptr, nullptr,
                                   SW_SHOWNORMAL);
-                    return 0;
-                case kIdYangilanishTugma:
-                    // Bu amal, sozlama emas — «Saqlash» ni kutmaydi.
-                    if (d->yangilanishBosildi) d->yangilanishBosildi();
-                    d->yangilanishQatori();
                     return 0;
                 case kIdQoshimcha:
                     d->qoshimchaOchiq = !d->qoshimchaOchiq;
@@ -141,33 +137,15 @@ LRESULT CALLBACK settingsProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             return 0;
         }
 
-        // Donat tugmasini oʻzimiz chizamiz — Windows'ning standart tugmasi
-        // rang qabul qilmaydi, bu esa ajralib turishi kerak.
-        case WM_DRAWITEM: {
-            auto* di = (DRAWITEMSTRUCT*)lp;
-            if (!d || di->CtlID != kIdDonate) break;
-
-            const bool pressed = (di->itemState & ODS_SELECTED) != 0;
-            const bool focused = (di->itemState & ODS_FOCUS) != 0;
-
-            HBRUSH b = CreateSolidBrush(pressed ? kDonateBgHover : kDonateBg);
-            FillRect(di->hDC, &di->rcItem, b);
-            DeleteObject(b);
-
-            if (focused) {
-                RECT f = di->rcItem;
-                InflateRect(&f, -3, -3);
-                DrawFocusRect(di->hDC, &f);
+        // «Haqida» qatoridagi havola (SysLink): sichqoncha yoki Enter.
+        case WM_NOTIFY: {
+            auto* n = reinterpret_cast<NMHDR*>(lp);
+            if (!d || n->idFrom != static_cast<UINT_PTR>(kIdHaqida)) break;
+            if (n->code == NM_CLICK || n->code == NM_RETURN) {
+                ShellExecuteW(nullptr, L"open", kMuallifSayti, nullptr, nullptr, SW_SHOWNORMAL);
+                return 0;
             }
-
-            SetBkMode(di->hDC, TRANSPARENT);
-            SetTextColor(di->hDC, RGB(255, 255, 255));
-            HFONT old = (HFONT)SelectObject(di->hDC, d->font);
-            wchar_t text[64] = {};
-            GetWindowTextW(di->hwndItem, text, 64);
-            DrawTextW(di->hDC, text, -1, &di->rcItem, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-            SelectObject(di->hDC, old);
-            return TRUE;
+            break;
         }
 
         case WM_VSCROLL: {
@@ -213,6 +191,8 @@ LRESULT CALLBACK settingsProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             SetBkMode(hdc, TRANSPARENT);
             if (d && (HWND)lp == d->ctrl(kIdMicWarning)) {
                 SetTextColor(hdc, RGB(176, 92, 0));  // ogohlantirish — toʻq sariq
+            } else if (d && (HWND)lp == d->ctrl(kIdAsosi)) {
+                SetTextColor(hdc, GetSysColor(COLOR_GRAYTEXT));  // atributsiya — xira
             }
             return (LRESULT)GetSysColorBrush(COLOR_WINDOW);
         }
@@ -262,12 +242,18 @@ void SettingsWindow::Impl::build() {
     add(L"BUTTON", L"Videokartadan foydalanish (tezroq)", BS_AUTOCHECKBOX | WS_TABSTOP, 24, 304,
         402, 22, kIdUseGpu);
 
-    // --- Yangilanishlar (S8). Holat va tugma `yangilovchi.h` dan keladi:
-    // «Kotib 1.2.0 · oxirgi tekshiruv: …» / «… yuklanmoqda 45 %» / «… tayyor».
-    // Matn ikki qatorga sigʻadi — sana va versiya uzun boʻlishi mumkin.
-    add(L"STATIC", L"", SS_LEFT, 24, 336, 270, 34, kIdYangilanishHolati);
-    add(L"BUTTON", L"Hozir tekshirish", BS_PUSHBUTTON | WS_TABSTOP, 306, 336, 120, 26,
-        kIdYangilanishTugma);
+    // --- Haqida: versiya va muallif (havola), ostida asl loyiha atributsiyasi.
+    // Avto-yangilanish qatori turgan joyda. Interfeys hali oʻzbekcha, bu ikki
+    // qator esa ataylab inglizcha (rus/ingliz interfeysi — keyingi bosqich).
+    // Kotib muallifi MIT litsenziyasi talabi bilan koʻrsatiladi — olib tashlamang.
+    const std::wstring haqida = L"Voxly " + joriyVersiya() +
+                                L" \x00B7 <a href=\"" + kMuallifSayti +
+                                L"\">Farkhod Nomonov</a>";
+    add(WC_LINK, haqida.c_str(), WS_TABSTOP, 24, 334, 402, 18, kIdHaqida);
+    if (HWND asosi = add(L"STATIC", L"Based on Kotib by Muhammad Mirqobilov (MIT)", SS_LEFT, 24,
+                         354, 402, 16, kIdAsosi)) {
+        SendMessageW(asosi, WM_SETFONT, (WPARAM)kichikFont, TRUE);
+    }
 
     // --- «Qoʻshimcha sozlamalar» ochilishi
     //
@@ -284,28 +270,16 @@ void SettingsWindow::Impl::build() {
     add(L"BUTTON", L"Oddiy apostrof (') ishlatish", BS_AUTOCHECKBOX | WS_TABSTOP, 24, 416, 402, 22,
         kIdApostrof);
 
-    // Anonim statistika — OSHKORALIK yozuvi (toggle YOʻQ, doim yoqiq).
-    // Yigʻish yashirin emas: bu yerda nima yuborilishi ochiq aytiladi va
-    // maxfiylik siyosatiga havola beriladi. Nima yuborilishi
-    // `core/statistika.h` da yozilgan.
-    add(L"STATIC", L"Anonim ishlash statistikasi", 0, 24, 442, 402, 22, kIdStatistika);
-    add(L"STATIC",
-        L"Ilovani yaxshilash uchun anonim maʼlumot yuboriladi: ilova va tizim "
-        L"versiyasi, qurilma turi (protsessor, xotira, videokarta), hamda har "
-        L"transkripsiya/tarjima uchun tezlik va davomiylik. Ovoz, matn va nima "
-        L"yozganingiz HECH QACHON yuborilmaydi. Batafsil: uzb.mirqobilov.com/maxfiylik",
-        0, 42, 464, 384, 44, kIdStatistikaIzoh);
-
     // --- Sunʼiy intellekt (ixtiyoriy)
     //
     // Ilova hech qanday kalit bilan kelmaydi va busiz toʻliq ishlaydi.
     // Kalit foydalanuvchining oʻzi kiritadi va Credential Manager'da
     // saqlanadi (`llm.h`), logga hech qachon tushmaydi.
-    add(L"STATIC", L"Sunʼiy intellekt (ixtiyoriy)", 0, 24, 518, 300, 18, kIdAiSarlavha);
-    add(L"STATIC", L"Kalit qoʻshsangiz, matnni tozalash va xulosa qilish qoʻshiladi.", 0, 24, 538,
+    add(L"STATIC", L"Sunʼiy intellekt (ixtiyoriy)", 0, 24, 442, 300, 18, kIdAiSarlavha);
+    add(L"STATIC", L"Kalit qoʻshsangiz, matnni tozalash va xulosa qilish qoʻshiladi.", 0, 24, 462,
         402, 20, kIdAiIzoh);
 
-    HWND prov = add(L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP, 24, 560, 180, 240,
+    HWND prov = add(L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP, 24, 484, 180, 240,
                     kIdProvayder);
     SendMessageW(prov, CB_ADDSTRING, 0, (LPARAM)L"— tanlanmagan —");
     for (const auto& pv : provayderlar()) {
@@ -316,40 +290,34 @@ void SettingsWindow::Impl::build() {
     // kalitning oʻzi baribir Credential Manager'da shifrlanadi.
     // Maydonlarda yorliq yoʻq, shuning uchun ishora matni (cue banner)
     // qoʻyiladi — macOS'da bu `placeholderString`.
-    add(L"EDIT", L"", ES_AUTOHSCROLL | ES_PASSWORD | WS_BORDER | WS_TABSTOP, 212, 560, 214, 24,
+    add(L"EDIT", L"", ES_AUTOHSCROLL | ES_PASSWORD | WS_BORDER | WS_TABSTOP, 212, 484, 214, 24,
         kIdKalit);
 
     // Base URL faqat «Boshqa (custom)» provayderda kerak — qolganlarida
     // manzil presetdan keladi va uni koʻrsatish faqat chalgʻitadi.
-    add(L"EDIT", L"", ES_AUTOHSCROLL | WS_BORDER | WS_TABSTOP, 24, 590, 402, 24, kIdBaseURL);
+    add(L"EDIT", L"", ES_AUTOHSCROLL | WS_BORDER | WS_TABSTOP, 24, 514, 402, 24, kIdBaseURL);
 
     // Model — tahrirlanadigan roʻyxat (CBS_DROPDOWN), oddiy tanlagich emas:
     //  1. OpenRouter 400 ga yaqin model qaytaradi;
     //  2. provayderda `/models` boʻlmasa nom qoʻlda yoziladi — boshi berk
     //     koʻcha hech qachon boʻlmaydi.
-    add(L"STATIC", L"Model", 0, 24, 626, 60, 18, kIdModelYozuv);
-    add(L"COMBOBOX", L"", CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP, 84, 622, 230,
+    add(L"STATIC", L"Model", 0, 24, 550, 60, 18, kIdModelYozuv);
+    add(L"COMBOBOX", L"", CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP, 84, 546, 230,
         260, kIdModel);
-    add(L"BUTTON", L"Yangilash", BS_PUSHBUTTON | WS_TABSTOP, 322, 622, 104, 26, kIdModelYangila);
-    add(L"STATIC", L"", 0, 24, 654, 402, 18, kIdModelHolati);
+    add(L"BUTTON", L"Yangilash", BS_PUSHBUTTON | WS_TABSTOP, 322, 546, 104, 26, kIdModelYangila);
+    add(L"STATIC", L"", 0, 24, 578, 402, 18, kIdModelHolati);
 
-    add(L"BUTTON", L"Ulanishni tekshirish", BS_PUSHBUTTON | WS_TABSTOP, 24, 676, 160, 26,
+    add(L"BUTTON", L"Ulanishni tekshirish", BS_PUSHBUTTON | WS_TABSTOP, 24, 600, 160, 26,
         kIdTekshir);
-    add(L"STATIC", L"", 0, 192, 680, 234, 18, kIdTekshirNatija);
+    add(L"STATIC", L"", 0, 192, 604, 234, 18, kIdTekshirNatija);
 
     // Diagnostika rejimi (G1): logda matn faqat shu yoqiq boʻlsa, 24 soatgacha.
     add(L"BUTTON", L"Diagnostika rejimi (24 soat): diktovka matni ham logga yoziladi",
-        BS_AUTOCHECKBOX | WS_TABSTOP, 24, 710, 402, 22, kIdDiagnostika);
-    add(L"BUTTON", L"Log faylini ochish…", BS_PUSHBUTTON | WS_TABSTOP, 24, 738, 150, 30, kIdLog);
+        BS_AUTOCHECKBOX | WS_TABSTOP, 24, 634, 402, 22, kIdDiagnostika);
+    add(L"BUTTON", L"Log faylini ochish…", BS_PUSHBUTTON | WS_TABSTOP, 24, 662, 150, 30, kIdLog);
 
-    // --- Donat tugmasi
-    //
-    // Ataylab chapda, Saqlash/Bekor qilishdan uzoqda — tasodifan bosilmasin.
-    // Rangi bilan ajralib turadi (BS_OWNERDRAW orqali oʻzimiz chizamiz),
-    // lekin oʻlchami kichik va hech narsani toʻsmaydi.
-    // Donat va pastki tugmalar — ular oʻrni qoʻshimcha boʻlim ochilganda
-    // pastga suriladi (`joylashuvniYangila`).
-    add(L"BUTTON", L"\x2665  Donat qilish", BS_OWNERDRAW | WS_TABSTOP, 24, 0, 132, 30, kIdDonate);
+    // --- Pastki tugmalar — ular oʻrni qoʻshimcha boʻlim ochilganda pastga
+    // suriladi (`joylashuvniYangila`).
     add(L"BUTTON", L"Saqlash", BS_DEFPUSHBUTTON | WS_TABSTOP, 236, 0, 92, 30, kIdSave);
     add(L"BUTTON", L"Bekor qilish", BS_PUSHBUTTON | WS_TABSTOP, 334, 0, 92, 30, kIdCancel);
 
@@ -362,24 +330,6 @@ void SettingsWindow::Impl::build() {
 
 // Qoʻshimcha boʻlimni koʻrsatadi/yashiradi, pastki tugmalarni joyiga qoʻyadi
 // va oyna balandligini moslaydi.
-int SettingsWindow::Impl::matnBalandligi(HWND c, int kenglikDip) const {
-    if (!c) return 0;
-    wchar_t bufer[1024] = {};
-    GetWindowTextW(c, bufer, static_cast<int>(std::size(bufer)));
-    if (!bufer[0]) return 0;
-
-    HDC dc = GetDC(c);
-    if (!dc) return 0;
-    HFONT eski = static_cast<HFONT>(SelectObject(dc, font));
-    RECT r{0, 0, scale(kenglikDip), 0};
-    DrawTextW(dc, bufer, -1, &r, DT_CALCRECT | DT_WORDBREAK | DT_NOPREFIX);
-    SelectObject(dc, eski);
-    ReleaseDC(c, dc);
-
-    const float k = static_cast<float>(dpi) / 96.0f;
-    return static_cast<int>((r.bottom - r.top) / k) + 2;  // pastdan biroz joy
-}
-
 void SettingsWindow::Impl::joylashuvniYangila() {
     for (int id : kQoshimchaIdlar) {
         if (HWND c = ctrl(id)) ShowWindow(c, qoshimchaOchiq ? SW_SHOW : SW_HIDE);
@@ -398,33 +348,19 @@ void SettingsWindow::Impl::joylashuvniYangila() {
     // koʻtariladi.
     const int siljish = ogohBalandligi - kMicOgohH;
 
-    // Statistika izohi haqiqatda necha qator boʻlishini oʻlchaymiz va
-    // undan pastdagilarni shunga qarab suramiz.
-    const int izohH = qoshimchaOchiq
-                          ? std::max(kStatIzohH, matnBalandligi(ctrl(kIdStatistikaIzoh), 384))
-                          : kStatIzohH;
-    const int izohSiljishi = izohH - kStatIzohH;
-
-    const int toliqBalandlik = (qoshimchaOchiq ? kWinHToliq : kWinH) + siljish + izohSiljishi;
+    const int toliqBalandlik = (qoshimchaOchiq ? kWinHToliq : kWinH) + siljish;
     const int pastQator = toliqBalandlik - 42;
 
     for (const Joy& j : joylar) {
         if (!j.h) continue;
         int y = j.y;
-        if (j.h == ctrl(kIdDonate) || j.h == ctrl(kIdSave) || j.h == ctrl(kIdCancel)) {
+        if (j.h == ctrl(kIdSave) || j.h == ctrl(kIdCancel)) {
             y = pastQator;
-        } else {
-            if (j.y >= kBolimBoshi) y += siljish;
-            if (j.y >= kAiBoshi) y += izohSiljishi;
+        } else if (j.y >= kBolimBoshi) {
+            y += siljish;
         }
         SetWindowPos(j.h, nullptr, scale(j.x), scale(y), 0, 0,
                      SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-    }
-
-    // Izohning oʻzini ham kerakli balandlikka kengaytiramiz.
-    if (HWND izoh = ctrl(kIdStatistikaIzoh)) {
-        SetWindowPos(izoh, nullptr, 0, 0, scale(384), scale(izohH),
-                     SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
     }
 
     kontentBalandligi = scale(toliqBalandlik);
@@ -583,7 +519,6 @@ void SettingsWindow::Impl::save() {
 
     const bool autoStart = SendMessageW(ctrl(kIdAutoStart), BM_GETCHECK, 0, 0) == BST_CHECKED;
     settings.autoStart = autoStart;
-    // Statistika doim yoqiq — oʻchirish tugmasi yoʻq (oshkoralik yozuvi bilan).
     settings.useGpu = SendMessageW(ctrl(kIdUseGpu), BM_GETCHECK, 0, 0) == BST_CHECKED;
     settings.oddiyApostrof = SendMessageW(ctrl(kIdApostrof), BM_GETCHECK, 0, 0) == BST_CHECKED;
     // Yoqilgan rejim qayta saqlansa muddat uzaymaydi — faqat yangi yoqilganda 24 soat.
@@ -600,8 +535,8 @@ void SettingsWindow::Impl::save() {
     setAutoStart(autoStart);
 
     // Fayl QAYTA oʻqiladi va faqat shu oyna tahrirlaydigan maydonlar ustiga
-    // yoziladi (E1): oyna ochiq turganda statistika `ornatmaId` ni yasagan
-    // yoki yangilanish tekshiruvi vaqtni yozgan boʻlishi mumkin.
+    // yoziladi (E1): oyna ochiq turganda boshqa modul faylga yozgan boʻlishi
+    // mumkin.
     settings = sozlamaOynasidan(loadSettings(), settings);
     if (!saveSettings(settings)) {
         MessageBoxW(hwnd, L"Sozlamalar saqlanmadi. Diskda joy bormi?", L"Sozlamalar",
@@ -619,6 +554,7 @@ SettingsWindow::SettingsWindow() : d(new Impl) {}
 SettingsWindow::~SettingsWindow() {
     if (d->hwnd) DestroyWindow(d->hwnd);
     if (d->font) DeleteObject(d->font);
+    if (d->kichikFont) DeleteObject(d->kichikFont);
     delete d;
 }
 
@@ -628,37 +564,13 @@ void SettingsWindow::setOnSaved(std::function<void(const Settings&)> cb) {
     d->onSaved = std::move(cb);
 }
 
-void SettingsWindow::setYangilanish(std::function<Yangilovchi::Korinish()> holat,
-                                    std::function<void()> bosildi) {
-    d->yangilanishHolati = std::move(holat);
-    d->yangilanishBosildi = std::move(bosildi);
-}
-
-void SettingsWindow::yangilanishniYangila() {
-    if (d->hwnd && IsWindowVisible(d->hwnd)) d->yangilanishQatori();
-}
-
-void SettingsWindow::Impl::yangilanishQatori() {
-    HWND matn = ctrl(kIdYangilanishHolati), tugma = ctrl(kIdYangilanishTugma);
-    if (!matn || !tugma) return;
-    if (!yangilanishHolati) {
-        ShowWindow(matn, SW_HIDE);
-        ShowWindow(tugma, SW_HIDE);
-        return;
-    }
-    const Yangilovchi::Korinish k = yangilanishHolati();
-    SetWindowTextW(matn, k.matn.c_str());
-    SetWindowTextW(tugma, k.tugma.c_str());
-    EnableWindow(tugma, k.tugmaFaol);
-}
-
 void SettingsWindow::show(HINSTANCE instance, const Settings& current, HWND ega) {
     d->settings = current;
 
     if (!d->hwnd) {
         d->instance = instance;
 
-        INITCOMMONCONTROLSEX icc{sizeof(icc), ICC_HOTKEY_CLASS | ICC_STANDARD_CLASSES};
+        INITCOMMONCONTROLSEX icc{sizeof(icc), ICC_HOTKEY_CLASS | ICC_STANDARD_CLASSES | ICC_LINK_CLASS};
         InitCommonControlsEx(&icc);
 
         WNDCLASSEXW wc{};
@@ -673,7 +585,7 @@ void SettingsWindow::show(HINSTANCE instance, const Settings& current, HWND ega)
         RegisterClassExW(&wc);
 
         d->hwnd =
-            CreateWindowExW(0, kClassName, L"Kotib — Sozlamalar",
+            CreateWindowExW(0, kClassName, L"Voxly — Sozlamalar",
                             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_VSCROLL, CW_USEDEFAULT,
                             CW_USEDEFAULT, 100, 100, ega, nullptr, instance, d);
         if (!d->hwnd) {
@@ -685,6 +597,9 @@ void SettingsWindow::show(HINSTANCE instance, const Settings& current, HWND ega)
         d->font = CreateFontW(-d->scale(13), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                               DEFAULT_CHARSET, OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS,
                               CLEARTYPE_QUALITY, VARIABLE_PITCH, L"Segoe UI");
+        d->kichikFont = CreateFontW(-d->scale(11), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                                    DEFAULT_CHARSET, OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS,
+                                    CLEARTYPE_QUALITY, VARIABLE_PITCH, L"Segoe UI");
 
         // Mijoz maydoni aynan kerakli oʻlchamda boʻlishi uchun ramka
         // qalinligini hisobga olamiz.
@@ -703,7 +618,6 @@ void SettingsWindow::show(HINSTANCE instance, const Settings& current, HWND ega)
                  current.insertMode == InsertMode::Type ? 1 : 0, 0);
     SendMessageW(d->ctrl(kIdAutoStart), BM_SETCHECK,
                  autoStartEnabled() ? BST_CHECKED : BST_UNCHECKED, 0);
-    // kIdStatistika endi statik yozuv — belgilash yoʻq.
     SendMessageW(d->ctrl(kIdUseGpu), BM_SETCHECK, current.useGpu ? BST_CHECKED : BST_UNCHECKED, 0);
     SendMessageW(d->ctrl(kIdApostrof), BM_SETCHECK,
                  current.oddiyApostrof ? BST_CHECKED : BST_UNCHECKED, 0);
@@ -714,7 +628,6 @@ void SettingsWindow::show(HINSTANCE instance, const Settings& current, HWND ega)
             : BST_UNCHECKED,
         0);
     d->llmniYukla();
-    d->yangilanishQatori();
 
     // Qurilmalar roʻyxatini har safar yangilaymiz — foydalanuvchi oyna
     // ochiq boʻlmagan paytda mikrofon ulagan boʻlishi mumkin.

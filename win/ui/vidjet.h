@@ -1,4 +1,4 @@
-// Kotib — chizilgan boshqaruv elementlari (vidjetlar).
+// Voxly — chizilgan boshqaruv elementlari (vidjetlar).
 //
 // macOS tomonida bularning oʻrnini AppKit bajaradi (`NSButton`, `NSTableView`,
 // `NSSegmentedControl`). Windows'ning standart boshqaruv elementlari dizaynga
@@ -93,7 +93,7 @@ public:
 };
 
 // ---- Tanlagich (segment boshqaruvi) ----------------------------------------
-// Toolbar oʻrtasidagi «Yozish | Fayl | Tarjima».
+// Toolbar oʻrtasidagi «Yozish | Fayl».
 //
 // Nomi ataylab `Segment` EMAS: `rubai::Segment` allaqachon band —
 // `matn_format.h` da u whisper qaytargan transkript boʻlagini bildiradi.
@@ -133,7 +133,7 @@ public:
 };
 
 // ---- Roʻyxat ---------------------------------------------------------------
-// Diktovka tarixi, hujjatlar roʻyxati, tillar roʻyxati — hammasi shu.
+// Diktovka tarixi, hujjatlar roʻyxati — hammasi shu.
 // Qatorlar talab boʻyicha chiziladi (virtualizatsiya): 200 ta yozuvli tarixda
 // ham faqat koʻrinadigan qatorlar chiziladi.
 class Royxat : public Vidjet {

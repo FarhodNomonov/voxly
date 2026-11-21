@@ -22,13 +22,12 @@
 #include "../core/llm.h"
 #include "../core/util.h"
 #include "autostart.h"
-#include "donate_window.h"
 
 namespace rubai {
 
 namespace {
 
-constexpr wchar_t kClassName[] = L"KotibSettings";
+constexpr wchar_t kClassName[] = L"VoxlySettings";
 
 enum CtrlId : int {
     kIdHotkey = 200,
@@ -37,12 +36,10 @@ enum CtrlId : int {
     kIdInsertMode,
     kIdAutoStart,
     kIdUseGpu,
-    kIdStatistika,
     kIdApostrof,
     kIdSave,
     kIdCancel,
     kIdReset,
-    kIdDonate,
     kIdLog,
     // Sunʼiy intellekt boʻlimi
     kIdProvayder,
@@ -57,13 +54,13 @@ enum CtrlId : int {
     // kerak: ular ham yashiriladi.
     kIdQoshimcha,
     kIdApostrofIzoh,
-    kIdStatistikaIzoh,
     kIdAiSarlavha,
     kIdAiIzoh,
     kIdModelYozuv,
-    // Yangilanishlar qatori (doim koʻrinadi)
-    kIdYangilanishHolati,
-    kIdYangilanishTugma,
+    // «Haqida» qatori (doim koʻrinadi): versiya, muallif havolasi va
+    // asl loyiha (Kotib) atributsiyasi.
+    kIdHaqida,
+    kIdAsosi,
     kIdDiagnostika,
     kIdBirinchiQoshimcha = kIdApostrof,  // roʻyxat chegaralari (pastga qarang)
 };
@@ -82,7 +79,7 @@ constexpr UINT WM_LLM_HOLAT = WM_APP + 41;     // wp: maydon id, lp: new std::ws
 // «Saqlash» tugmasi koʻrinmay qolardi.
 constexpr int kWinW = 460;
 constexpr int kWinH = 472;       // yopiq
-constexpr int kWinHToliq = 834;  // ochiq
+constexpr int kWinHToliq = 758;  // ochiq
 
 // Mikrofon ogohlantirishi uchun ajratilgan joy. Ogohlantirish YOʻQ boʻlsa
 // (oddiy mikrofon — eng koʻp uchraydigan holat) pastdagi hamma narsa shu
@@ -90,25 +87,18 @@ constexpr int kWinHToliq = 834;  // ochiq
 // macOS'da bu oʻz-oʻzidan chiqadi: u yerda `NSStackView` yashiringan
 // qatorni yigʻib qoʻyadi.
 constexpr int kMicOgohH = 52;
-// Statistika izohi uchun LOYIHADAGI balandlik. Haqiqiysi ish paytida
-// oʻlchanadi: shrift kengligi DPI va tizim sozlamalariga qarab oʻzgaradi va
-// matn goh ikki, goh uch qatorga tushadi. Qatʼiy raqam bilan oxirgi qator
-// kesilib qolardi.
-constexpr int kStatIzohH = 44;
 constexpr int kBolimBoshi = 218;  // ogohlantirishdan keyingi birinchi qator
-constexpr int kAiBoshi = 518;     // statistika izohidan keyingi birinchi qator
+
+// Muallif sayti — «Haqida» qatoridagi havola.
+constexpr wchar_t kMuallifSayti[] = L"https://farhod-nomonov.netlify.app";
 
 // Qoʻshimcha boʻlimdagi boshqaruvlar — birga yashiriladi/koʻrsatiladi.
 constexpr int kQoshimchaIdlar[] = {
-    kIdApostrof,     kIdStatistika,  kIdStatistikaIzoh, kIdAiSarlavha,    kIdAiIzoh,
-    kIdProvayder,    kIdKalit,       kIdBaseURL,        kIdModelYozuv,    kIdModel,
-    kIdModelYangila, kIdModelHolati, kIdTekshir,        kIdTekshirNatija, kIdLog,
-    kIdDiagnostika,
+    kIdApostrof,    kIdAiSarlavha,   kIdAiIzoh,      kIdProvayder,
+    kIdKalit,       kIdBaseURL,      kIdModelYozuv,  kIdModel,
+    kIdModelYangila, kIdModelHolati, kIdTekshir,     kIdTekshirNatija,
+    kIdLog,         kIdDiagnostika,
 };
-
-// Donat tugmasi ranglari — sayt palitrasidan.
-const COLORREF kDonateBg = RGB(169, 78, 46);
-const COLORREF kDonateBgHover = RGB(142, 63, 36);
 
 }  // namespace
 
@@ -116,15 +106,12 @@ struct SettingsWindow::Impl {
     HWND hwnd = nullptr;
     HINSTANCE instance = nullptr;
     HFONT font = nullptr;
+    HFONT kichikFont = nullptr;  // «Haqida» ostidagi atributsiya qatori
     UINT dpi = 96;
 
     Settings settings;
     std::vector<MicDevice> mics;
     std::function<void(const Settings&)> onSaved;
-    std::function<Yangilovchi::Korinish()> yangilanishHolati;
-    std::function<void()> yangilanishBosildi;
-    void yangilanishQatori();
-    DonateWindow donate;
 
     int scale(int v) const { return MulDiv(v, (int)dpi, 96); }
 
@@ -162,9 +149,6 @@ struct SettingsWindow::Impl {
     };
     std::vector<Joy> joylar;
     int ogohBalandligi = kMicOgohH;  // 0 yoki kMicOgohH
-
-    // Matn shu kenglikda necha DIP joy egallaydi (oʻralishni hisobga oladi).
-    int matnBalandligi(HWND c, int kenglikDip) const;
 
     // Vertikal surish. Kontent 716 DIP gacha choʻziladi va 768 piksellik
     // (yoki masshtablangan) ekranga sigʻmaydi — macOS tomonida sozlamalar

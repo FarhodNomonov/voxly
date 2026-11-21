@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(Kotib LANGUAGES C CXX)
+project(Voxly LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -48,20 +48,8 @@ foreach(_qism KOTIB_VER_KATTA KOTIB_VER_KICHIK KOTIB_VER_TUZATISH)
         message(FATAL_ERROR "VERSION: ${${_qism}} > 65535 — Windows versiya resursiga sigʻmaydi")
     endif()
 endforeach()
-# Yangilanish imzosining ochiq kaliti (Ed25519, base64) — repoda, macOS
-# `build.sh` ham shu fayldan oladi. Kalit almashsa build qayta konfiguratsiya
-# qilinadi.
-set(KOTIB_KALIT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/yangilanish-kaliti.pub")
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${KOTIB_KALIT_FILE}")
-file(STRINGS "${KOTIB_KALIT_FILE}" KOTIB_YANGILANISH_KALITI LIMIT_COUNT 1)
-string(STRIP "${KOTIB_YANGILANISH_KALITI}" KOTIB_YANGILANISH_KALITI)
-# CMake regex'ida `{n}` yoʻq — uzunlik alohida (32 bayt = 44 belgi base64).
-string(LENGTH "${KOTIB_YANGILANISH_KALITI}" _kalit_uzunligi)
-if(NOT _kalit_uzunligi EQUAL 44 OR NOT KOTIB_YANGILANISH_KALITI MATCHES "^[A-Za-z0-9+/]+=$")
-    message(FATAL_ERROR "scripts/yangilanish-kaliti.pub notoʻgʻri (32 baytlik base64 kutilgan)")
-endif()
 configure_file(res/kotib_versiya.h.in "${CMAKE_CURRENT_BINARY_DIR}/gen/kotib_versiya.h" @ONLY)
-message(STATUS "Kotib versiyasi: ${KOTIB_VERSIYA}")
+message(STATUS "Voxly versiyasi: ${KOTIB_VERSIYA}")
 # Bogʻliqlik QOʻLDA koʻrsatiladi: llvm-windres `.rc` uchun depfile yozmaydi
 # (CMake uni kutadi, lekin fayl hech qachon paydo boʻlmaydi), shuning uchun
 # Ninja app.rc ning `#include` va manifestini bilmaydi. Sinovda tutildi:
@@ -114,41 +102,6 @@ foreach(_lib "${GGML_CPU_LIB}" "${GGML_VULKAN_LIB}" "${VULKAN_IMPORT_LIB}" "${PA
     endif()
 endforeach()
 
-# ------------------------------------------------------- tarjimon (ixtiyoriy)
-#
-# CTranslate2 + SentencePiece statik kutubxonalari. Ular topilmasa ilova
-# TARJIMASIZ quriladi — MSVC yoʻli (`win/build.ps1`) va tez iteratsiya uchun
-# shu kerak. `KOTIB_TARJIMA` makrosi kodda shu holatni ajratadi.
-#
-# Kutubxonalar `win/build-mac.sh` bilan yigʻiladi. CTranslate2 arxitektura
-# nomiga registrga sezgir qaraydi — `toolchain-win-arm64-tarjima.cmake` ga
-# qarang.
-set(CT2_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../ctranslate2"   CACHE PATH "CTranslate2 manbasi")
-set(SP_ROOT  "${CMAKE_CURRENT_SOURCE_DIR}/../sentencepiece" CACHE PATH "SentencePiece manbasi")
-
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "(ARM64)|(aarch64)|(arm64)")
-    set(KOTIB_ARCH "arm64")
-else()
-    set(KOTIB_ARCH "x64")
-endif()
-
-set(CT2_BUILD "${CT2_ROOT}/build-win-${KOTIB_ARCH}" CACHE PATH "CTranslate2 build papkasi")
-set(SP_BUILD  "${SP_ROOT}/build-win-${KOTIB_ARCH}"  CACHE PATH "SentencePiece build papkasi")
-
-set(TARJIMA_BOR OFF)
-if(EXISTS "${CT2_BUILD}/libctranslate2.a" AND EXISTS "${SP_BUILD}/src/libsentencepiece.a")
-    set(TARJIMA_BOR ON)
-    # ruy koʻplab kichik kutubxonaga boʻlinadi va ular bir-biriga murojaat
-    # qiladi — linker guruhisiz tartib muammosi chiqadi.
-    file(GLOB RUY_LIBS "${CT2_BUILD}/third_party/ruy/ruy/*.a")
-    file(GLOB CPUINFO_LIBS "${CT2_BUILD}/third_party/ruy/third_party/cpuinfo/*.a"
-                           "${CT2_BUILD}/third_party/ruy/third_party/cpuinfo/deps/clog/*.a")
-    file(GLOB CPUFEAT_LIBS "${CT2_BUILD}/third_party/cpu_features/*.a")
-    message(STATUS "Tarjimon: yoqilgan (${KOTIB_ARCH})")
-else()
-    message(STATUS "Tarjimon: kutubxonalar topilmadi — tarjimasiz quriladi")
-endif()
-
 # --------------------------------------------------------------------- core
 
 add_library(rubai_core STATIC
@@ -160,14 +113,7 @@ add_library(rubai_core STATIC
     core/engine.cpp
     core/wav.cpp
     core/audio_capture.cpp
-    core/statistika.cpp
     core/versiya.cpp
-    core/yangilanish_siyosat.cpp
-    core/imzo.cpp
-    # Ed25519 (RFC 8032) — avto-yangilanish imzosi. Oʻzgartirilmagan nusxa,
-    # versiya va sha512 — third_party/monocypher/README.md.
-    third_party/monocypher/monocypher.c
-    third_party/monocypher/monocypher-ed25519.c
     core/matn_format.cpp
     core/media_decode.cpp
     core/json.cpp
@@ -180,37 +126,12 @@ add_library(rubai_core STATIC
     core/amallar.cpp
     core/vaqt_format.cpp
     core/yuklovchi.cpp
-    core/yangilovchi.cpp
     core/model_yuklovchi.cpp
-    core/matn_boluvchi.cpp
-    core/tillar.cpp
 )
-
-if(TARJIMA_BOR)
-    target_sources(rubai_core PRIVATE core/tarjima_bridge.cpp core/tarjimon.cpp
-                                     core/tarjima_yuklovchi.cpp)
-    if(KOTIB_ARCH STREQUAL "arm64")
-        # cpuinfo ARM64 Windows'ni bilmaydi — `cpuinfo_isa` ni oʻzimiz beramiz.
-        target_sources(rubai_core PRIVATE cmake/cpuinfo_stub.c)
-        target_include_directories(rubai_core PRIVATE
-            "${CT2_ROOT}/third_party/ruy/third_party/cpuinfo/include")
-    endif()
-    target_compile_definitions(rubai_core PUBLIC KOTIB_TARJIMA=1)
-    target_include_directories(rubai_core PUBLIC
-        "${CT2_ROOT}/include" "${SP_ROOT}/src")
-    target_link_libraries(rubai_core PUBLIC
-        -Wl,--start-group
-        "${CT2_BUILD}/libctranslate2.a"
-        "${SP_BUILD}/src/libsentencepiece.a"
-        ${RUY_LIBS} ${CPUINFO_LIBS} ${CPUFEAT_LIBS}
-        -Wl,--end-group)
-else()
-    target_compile_definitions(rubai_core PUBLIC KOTIB_TARJIMA=0)
-endif()
 
 target_include_directories(rubai_core PUBLIC
     core
-    # kotib_versiya.h — toʻliq versiya satri va yangilanish kaliti
+    # kotib_versiya.h — toʻliq versiya satri
     "${CMAKE_CURRENT_BINARY_DIR}/gen"
     "${WHISPER_ROOT}/include"
     "${WHISPER_ROOT}/ggml/include"
@@ -221,11 +142,10 @@ target_link_libraries(rubai_core PUBLIC
     shell32     # SHGetKnownFolderPath
     ole32       # COM (WASAPI)
     propsys     # PKEY_* qurilma xossalari
-    winhttp     # statistika, yangilanish va LLM
-    bcrypt      # SHA-256 va tasodifiy son — model va yangilanish fayllari
+    winhttp     # model yuklash va LLM
+    bcrypt      # SHA-256 — model fayli tekshiruvi
     credui      # API kalit — Credential Manager
     advapi32
-    version     # .exe resursidan versiyani oʻqish
     mfplat      # Media Foundation — audio/video dekodlash
     mfreadwrite
     mfuuid
@@ -246,25 +166,23 @@ target_link_libraries(rubai-cli PRIVATE rubai_core)
 # ------------------------------------------------------------------- testlar
 #
 # macOS'dagi `src/test.sh` ning ekvivalenti. Sof mantiq (matn formatlash,
-# versiya taqqoslash) ikkala platformada BIR XIL natija berishi shart —
+# JSON, sozlamalar) ikkala platformada BIR XIL natija berishi shart —
 # buni faqat test ushlab turadi.
 #
 # Windows binarisi, shuning uchun macOS'da ishlamaydi: uni VM'da yoki
 # Windows mashinada ishga tushiring.
 
-add_executable(kotib-testlar
+add_executable(voxly-testlar
     tests/main.cpp
     tests/test_matn_format.cpp
-    tests/test_yangilanish.cpp
     tests/test_json.cpp
     tests/test_llm.cpp
     tests/test_vaqt_format.cpp
-    tests/test_tarjima.cpp
     tests/test_saqlanmagan.cpp
     tests/test_sozlama.cpp
     tests/test_nutq.cpp
 )
-target_link_libraries(kotib-testlar PRIVATE rubai_core)
+target_link_libraries(voxly-testlar PRIVATE rubai_core)
 
 # ------------------------------------------------------------------ UI qatlami
 #
@@ -277,7 +195,6 @@ add_library(rubai_ui STATIC
     ui/asosiy_oyna.cpp
     ui/yozish_tab.cpp
     ui/fayl_tab.cpp
-    ui/tarjima_tab.cpp
     ui/matn_maydon.cpp
     ui/soragich.cpp
 )
@@ -295,7 +212,7 @@ endif()
 
 # ------------------------------------------------------------------- ilova
 
-add_executable(Kotib WIN32
+add_executable(Voxly WIN32
     ui/app.cpp
     ui/app_diktovka.cpp
     ui/autostart.cpp
@@ -303,24 +220,23 @@ add_executable(Kotib WIN32
     ui/overlay.cpp
     ui/settings_window.cpp
     ui/settings_window_llm.cpp
-    ui/donate_window.cpp
     res/app.rc
 )
-target_link_libraries(Kotib PRIVATE rubai_ui comctl32 dwmapi)
+target_link_libraries(Voxly PRIVATE rubai_ui comctl32 dwmapi)
 # app.rc → kotib_versiya.h (yuqoridagi «versiya» boʻlimi).
-target_include_directories(Kotib PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/gen")
+target_include_directories(Voxly PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/gen")
 
 # Manifest res/app.rc orqali joylanadi. Linker'ning o'z manifestini
 # o'chiramiz, aks holda ikkita RT_MANIFEST resursi to'qnashadi (CVT1100).
 # mingw linkeri o'zi manifest qo'shmaydi, unda bu kerak emas.
 if(MSVC)
-    set_target_properties(Kotib PROPERTIES LINK_FLAGS "/MANIFEST:NO")
+    set_target_properties(Voxly PROPERTIES LINK_FLAGS "/MANIFEST:NO")
 endif()
 
 if(EXISTS "${WHISPER_BUILD}/bin/Release")
-add_custom_command(TARGET Kotib POST_BUILD
+add_custom_command(TARGET Voxly POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
-            "${WHISPER_BUILD}/bin/Release" "$<TARGET_FILE_DIR:Kotib>"
+            "${WHISPER_BUILD}/bin/Release" "$<TARGET_FILE_DIR:Voxly>"
     COMMENT "whisper.cpp DLL'lari nusxalanmoqda"
 )
 

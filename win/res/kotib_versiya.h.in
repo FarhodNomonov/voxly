@@ -3,18 +3,13 @@
 //
 // Raqamli versiya (FILEVERSION, VS_FIXEDFILEINFO) faqat uchta raqamni
 // oladi; `-sinov1` kabi qoʻshimcha faqat matnli ProductVersion da va
-// `KOTIB_VER_STR` da. Yangilovchi va statistika `KOTIB_VER_STR` ni oladi:
-// raqamli versiya bilan `1.2.0-sinov1` → `1.2.0-sinov2` yangilanishi
-// hech qachon taklif qilinmasdi (`1.2.0` > `1.2.0-sinov2`).
+// `KOTIB_VER_STR` da. Ilovadagi «Haqida» qatori va log `KOTIB_VER_STR` ni
+// oladi (`core/versiya.cpp`).
 #ifndef KOTIB_VERSIYA_H
 #define KOTIB_VERSIYA_H
 
 #define KOTIB_VER_RAQAMLI   @KOTIB_VER_KATTA@,@KOTIB_VER_KICHIK@,@KOTIB_VER_TUZATISH@,0
 #define KOTIB_VER_FAYL_STR  "@KOTIB_VER_KATTA@.@KOTIB_VER_KICHIK@.@KOTIB_VER_TUZATISH@.0"
 #define KOTIB_VER_STR       "@KOTIB_VERSIYA@"
-
-// Yangilanish imzosining ochiq kaliti (Ed25519, base64) — manba:
-// `scripts/yangilanish-kaliti.pub`. Ochiq kalit maxfiy emas.
-#define KOTIB_YANGILANISH_KALITI "@KOTIB_YANGILANISH_KALITI@"
 
 #endif
