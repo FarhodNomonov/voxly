@@ -145,6 +145,7 @@ final class SozlamalarVC: NSViewController {
         qoshimcha = qurQoshimcha()
         qoshimcha.isHidden = true
         kontent.addArrangedSubview(qoshimcha)
+        kontent.addArrangedSubview(qurMuallif())
 
         // Har bir qator sheet kengligiga tortilsin — aks holda NSStackView ularni
         // eng keng elementga qarab tekislaydi va oʻng chekka "sakrab" turadi.
@@ -164,6 +165,29 @@ final class SozlamalarVC: NSViewController {
         // Hujjat kengligi klip kengligiga bogʻlanadi — gorizontal skroll chiqmaydi.
         kontent.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor).isActive = true
         view = scroll
+    }
+
+    // MARK: Muallif
+
+    // Pastki satr: versiya, muallif (portfolio havolasi) va asl loyiha
+    // (MIT talabi — Kotib muallifi koʻrsatilib turadi).
+    private func qurMuallif() -> NSView {
+        let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+        let muallif = BosiladiganYozuv(
+            "Voxly \(v) · " + tr("Фарход Номонов", "Farkhod Nomonov"),
+            rang: U.kok, size: 13, weight: .regular)
+        muallif.onBos = {
+            if let url = URL(string: "https://farhod-nomonov.netlify.app") {
+                NSWorkspace.shared.open(url)
+            }
+        }
+        let asl = U.yozuv(tr("Основано на Kotib (Muhammad Mirqobilov, MIT)",
+                             "Based on Kotib by Muhammad Mirqobilov (MIT)"), 11, .regular, U.matn2)
+        let s = NSStackView(views: [muallif, asl])
+        s.orientation = .vertical
+        s.alignment = .leading
+        s.spacing = 3
+        return s
     }
 
     // MARK: Diktovka tugmasi
