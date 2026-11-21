@@ -319,11 +319,14 @@ void App::oynaniOch() {
 // Model muhimroq, shuning uchun u birinchi tekshiriladi.
 void App::mikrofonBanneri() {
     modelBanneri_ = false;
-    if (Engine::findModel().empty()) {
+    // Model — joriy nutq tiliniki (Sozlamalar): til almashganda banner yangi
+    // til modelini yuklashni taklif qiladi (`applySettings` shu yerni chaqiradi).
+    if (Engine::findModel(settings_.nutqTili).empty()) {
         if (modelYuklovchi_.ketyaptimi()) return;  // matnni yuklash yangilaydi
         modelBanneri_ = true;
-        asosiy_.banner(L"Nutq modeli topilmadi — diktovka ishlamaydi.", L"Yuklab olish",
-                       [this] { modelniYukla(); });
+        asosiy_.banner(L"Nutq modeli (" + std::to_wstring(modelHajmiMb(modelUchun(settings_.nutqTili))) +
+                           L" MB) yuklanmagan — diktovka ishlamaydi.",
+                       L"Yuklab olish", [this] { modelniYukla(); });
         return;
     }
     if (settings_.micDeviceId.empty()) {
@@ -381,7 +384,10 @@ void App::modelniYukla() {
     asosiy_.banner(L"Model yuklanmoqda…", L"Bekor qilish", [this] { modelYuklovchi_.bekorQil(); });
 
     HWND oyna = hwnd_;
+    // Model — joriy nutq tiliniki. Yuklash oʻrtasida til oʻzgarsa ham shu
+    // model oxirigacha yuklanadi (`ModelYuklovchi::boshla`).
     modelYuklovchi_.boshla(
+        settings_.nutqTili,
         [oyna](long long olingan, long long jami) {
             PostMessageW(oyna, WM_RUBAI_MODEL, static_cast<WPARAM>(olingan / (1024 * 1024)),
                          static_cast<LPARAM>(jami / (1024 * 1024)));
@@ -398,6 +404,7 @@ void App::applySettings(const Settings& s) {
     const bool hotkeyChanged =
         (s.vkCode != settings_.vkCode) || (s.modifiers != settings_.modifiers);
     const bool gpuChanged = (s.useGpu != settings_.useGpu);
+    const bool tilChanged = (s.nutqTili != settings_.nutqTili);
 
     settings_ = s;
 
@@ -408,6 +415,7 @@ void App::applySettings(const Settings& s) {
 
     Engine& engine = Engine::instance();
     engine.setIdleUnloadSeconds(settings_.idleUnloadSeconds);
+    engine.setNutqTili(settings_.nutqTili);
 
     if (gpuChanged) {
         // GPU rejimi oʻzgardi — modelni qayta yuklash kerak, chunki
@@ -415,6 +423,14 @@ void App::applySettings(const Settings& s) {
         engine.setUseGpu(settings_.useGpu);
         engine.unload();
         engine.preload();
+    } else if (tilChanged) {
+        // Nutq tili oʻzgardi. Model shu yerda ALMASHTIRILMAYDI: ishchi oqim
+        // uni navbatdagi ishlar orasida almashtiradi (`Engine::ensureLoaded`)
+        // — yozilayotgan diktovka yoki fayl ishi buzilmaydi. Yangi til
+        // modeli diskda boʻlsa, oldindan yuklaymiz (birinchi diktovka
+        // kutmasin); boʻlmasa — banner uni yuklashni taklif qiladi.
+        logWrite(std::wstring(L"sozlamalar: nutq tili → ") + nutqTiliKodi(settings_.nutqTili));
+        if (!Engine::findModel(settings_.nutqTili).empty()) engine.preload();
     }
 
     asosiy_.hotkeyMatni(settings_.hotkeyDisplay());
@@ -430,7 +446,7 @@ bool App::init(HINSTANCE instance) {
     // Ishga tushish qatori (A6): muammo xabarida «qaysi versiya, qaysi
     // Windows, qaysi model» degan savol qolmasin.
     {
-        const std::wstring model = Engine::findModel();
+        const std::wstring model = Engine::findModel(settings_.nutqTili);
         std::wstring hajm;
         WIN32_FILE_ATTRIBUTE_DATA a{};
         if (!model.empty() && GetFileAttributesExW(model.c_str(), GetFileExInfoStandard, &a)) {
@@ -441,7 +457,8 @@ bool App::init(HINSTANCE instance) {
         const size_t saqlangan = saqlanmagan::royxat(saqlanmaganPapka()).size();
         logWrite(
             L"--- ilova ishga tushdi: " + ishgaTushishMuhiti() + L", model: " +
-            (model.empty() ? std::wstring(L"yoʻq") : model + hajm) + L", GPU: " +
+            (model.empty() ? std::wstring(L"yoʻq") : model + hajm) + L", nutq tili: " +
+            nutqTiliKodi(settings_.nutqTili) + L", GPU: " +
             (settings_.useGpu ? L"yoqiq" : L"oʻchiq") +
             (saqlangan ? L", saqlanmagan ovoz: " + std::to_wstring(saqlangan) : std::wstring()) +
             L" ---");
@@ -503,6 +520,7 @@ bool App::init(HINSTANCE instance) {
     Engine& engine = Engine::instance();
     engine.setUseGpu(settings_.useGpu);
     engine.setIdleUnloadSeconds(settings_.idleUnloadSeconds);
+    engine.setNutqTili(settings_.nutqTili);
 
     // Modelni fonda oldindan yuklaymiz va GPU quvurini isitamiz — birinchi
     // diktovka darhol ishlashi uchun.

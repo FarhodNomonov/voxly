@@ -7,7 +7,42 @@
 
 #include <string>
 
+#include "matn_format.h"  // Apostrof
+
 namespace rubai {
+
+// Diktovka va fayl transkripsiyasi tili — macOS'dagi `NutqTili`
+// (`src/model_tanlov.swift`). Har til — oʻz modeli bilan: rubaiSTT faqat
+// oʻzbekcha (rus nutqini ham lotin harflari bilan yozadi), rus va ingliz
+// uchun oddiy koʻp tilli Whisper (`model_tanlov.h`). Tartib macOS'dagi
+// `allCases` bilan bir xil — Sozlamalardagi roʻyxat shu tartibda.
+enum class NutqTili { Rus, Ingliz, Ozbek };
+
+// whisper til kodi: "ru", "en", "uz".
+inline const wchar_t* nutqTiliKodi(NutqTili t) {
+    switch (t) {
+        case NutqTili::Rus: return L"ru";
+        case NutqTili::Ingliz: return L"en";
+        case NutqTili::Ozbek: return L"uz";
+    }
+    return L"uz";
+}
+
+// Koddan til; nomaʼlum kod — `standart`.
+inline NutqTili nutqTiliKoddan(const std::wstring& kod, NutqTili standart) {
+    if (kod == L"ru") return NutqTili::Rus;
+    if (kod == L"en") return NutqTili::Ingliz;
+    if (kod == L"uz") return NutqTili::Ozbek;
+    return standart;
+}
+
+// Sozlamalar faylida `nutq.tili` kaliti boʻlmasa qaysi til. Yangi oʻrnatish
+// (fayl yoʻq) — rus (macOS'dagi `NutqTili.standart`). Fayl bor-u kalit yoʻq —
+// Kotib'dan (yoki tilsiz eski Voxly'dan) koʻchgan foydalanuvchi: u oʻzbek
+// modeli bilan ishlab kelgan, til jimgina almashmasin.
+inline NutqTili boshlangichNutqTili(bool faylBor) {
+    return faylBor ? NutqTili::Ozbek : NutqTili::Rus;
+}
 
 // Matnni faol oynaga qanday joylash.
 enum class InsertMode {
@@ -36,6 +71,10 @@ struct Settings {
     // Oddiy ASCII apostrof (') ishlatilsinmi. Sukut boʻyicha yoʻq — oʻzbek
     // lotin meʼyori ʻ va ʼ ni talab qiladi. macOS'da bu `Prefs.apostrof`.
     bool oddiyApostrof = false;
+
+    // Nutq tili — qaysi model va whisper tili ishlatiladi. Faylda kalit
+    // yoʻq boʻlsa qiymat `boshlangichNutqTili` dan (`loadSettings`).
+    NutqTili nutqTili = NutqTili::Rus;
 
     // «Diagnostika rejimi» tugash vaqti (unix soniya, 0 — oʻchiq). Yoqiq
     // boʻlsa diktovka matni ham logga yoziladi; 24 soatdan keyin oʻzi oʻchadi —
@@ -73,11 +112,20 @@ inline Settings sozlamaOynasidan(Settings fayl, const Settings& oyna) {
     fayl.autoStart = oyna.autoStart;
     fayl.useGpu = oyna.useGpu;
     fayl.oddiyApostrof = oyna.oddiyApostrof;
+    fayl.nutqTili = oyna.nutqTili;
     fayl.diagnostikaTugash = oyna.diagnostikaTugash;
     fayl.llmProvayder = oyna.llmProvayder;
     fayl.llmBaseURL = oyna.llmBaseURL;
     fayl.llmModel = oyna.llmModel;
     return fayl;
+}
+
+// Chiqadigan matndagi apostrof uslubi — macOS'dagi `Prefs.apostrof`. Oʻzbek
+// lotin meʼyori (ʻ/ʼ) FAQAT oʻzbek nutqi uchun: rus/ingliz matnida «don't»
+// kabi soʻzlar «donʼt» boʻlib ketmasin — u yerda hamma variant ASCII ' ga.
+inline Apostrof apostrofUslubi(const Settings& s) {
+    if (s.nutqTili != NutqTili::Ozbek) return Apostrof::Oddiy;
+    return s.oddiyApostrof ? Apostrof::Oddiy : Apostrof::Standart;
 }
 
 // Diagnostika rejimi hali amaldami. macOS'dagi `LogSiyosati.diagnostikaFaolmi`

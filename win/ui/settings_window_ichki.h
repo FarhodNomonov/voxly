@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "../core/audio_capture.h"
+#include "../core/engine.h"  // findModel — nutq tili izohi
 #include "../core/llm.h"
 #include "../core/util.h"
 #include "autostart.h"
@@ -62,6 +63,9 @@ enum CtrlId : int {
     kIdHaqida,
     kIdAsosi,
     kIdDiagnostika,
+    // Nutq tili (doim koʻrinadi) va uning izohi (model holati).
+    kIdNutqTili,
+    kIdNutqTiliIzoh,
     kIdBirinchiQoshimcha = kIdApostrof,  // roʻyxat chegaralari (pastga qarang)
 };
 
@@ -78,8 +82,8 @@ constexpr UINT WM_LLM_HOLAT = WM_APP + 41;     // wp: maydon id, lp: new std::ws
 // 768 piksellik noutbukda oynaning pastki qismi ekrandan chiqib ketardi —
 // «Saqlash» tugmasi koʻrinmay qolardi.
 constexpr int kWinW = 460;
-constexpr int kWinH = 472;       // yopiq
-constexpr int kWinHToliq = 758;  // ochiq
+constexpr int kWinH = 528;       // yopiq
+constexpr int kWinHToliq = 814;  // ochiq
 
 // Mikrofon ogohlantirishi uchun ajratilgan joy. Ogohlantirish YOʻQ boʻlsa
 // (oddiy mikrofon — eng koʻp uchraydigan holat) pastdagi hamma narsa shu
@@ -118,6 +122,8 @@ struct SettingsWindow::Impl {
     void build();
     void fillMics();
     void updateMicWarning();
+    NutqTili tanlanganTil() const;
+    void tilIzohiniYangila();
     void save();
     HWND ctrl(int id) const { return GetDlgItem(hwnd, id); }
 

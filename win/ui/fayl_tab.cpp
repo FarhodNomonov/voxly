@@ -603,11 +603,15 @@ void FaylTab::chiz(Chizgich& c) {
 void FaylTab::faylniQabulQil(const std::wstring& yol) {
     auto& i = *ichki_;
 
-    if (Engine::findModel().empty()) {
+    // Fayl ham diktovka bilan bir xil til va model bilan oʻgiriladi (Sozlamalar).
+    const NutqTili til = Engine::instance().nutqTili();
+    if (Engine::findModel(til).empty()) {
+        const MalumModel& m = modelUchun(til);
         ogohlantir(i.ota, L"Model topilmadi",
-                   L"Nutq modeli («ggml-rubaistt.bin») topilmadi.\n\n"
-                   L"«Yozish» boʻlimidagi «Yuklab olish» tugmasini bosing — "
-                   L"model bir marta yuklab olinadi (785 MB).");
+                   std::wstring(L"Nutq modeli («") + m.fayl + L"») topilmadi.\n\n" +
+                       L"«Yozish» boʻlimidagi «Yuklab olish» tugmasini bosing — "
+                       L"model bir marta yuklab olinadi (" +
+                       std::to_wstring(modelHajmiMb(m)) + L" MB).");
         return;
     }
     if (TranskripsiyaIshi::ishlayapti()) {

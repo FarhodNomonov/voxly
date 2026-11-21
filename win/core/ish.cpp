@@ -237,8 +237,8 @@ void TranskripsiyaIshi::Ichki::ishla() {
     }
 
     const Settings s = loadSettings();
-    const Hujjat h = HujjatOmbori::saqla(yol, davomiylik, hammasi,
-                                         s.oddiyApostrof ? Apostrof::Oddiy : Apostrof::Standart);
+    // Apostrof uslubi tilga bogʻliq (`apostrofUslubi`): oʻzbek meʼyori faqat oʻzbek nutqida.
+    const Hujjat h = HujjatOmbori::saqla(yol, davomiylik, hammasi, apostrofUslubi(s));
 
     if (h.id.empty()) {
         xato(L"Diskka saqlab boʻlmadi. Joy yetarli boʻlmasligi mumkin.");

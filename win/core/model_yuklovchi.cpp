@@ -15,11 +15,6 @@
 
 namespace rubai {
 
-// TODO(voxly): rehost — model hozircha asl muallif (Kotib) CDN'idan olinadi;
-// macOS ham shu manzilni ishlatadi (`src/model_download.swift`). Oʻz
-// hostingimizga koʻchirilganda ikkala platformada birga almashtiriladi.
-const wchar_t* ModelYuklovchi::kUrl = L"https://cdn.mirqobilov.com/v1.0/ggml-rubaistt.bin";
-
 namespace {
 
 std::wstring modelPapkasi() {
@@ -30,9 +25,9 @@ std::wstring modelPapkasi() {
     return p;
 }
 
-std::wstring modelYoli() {
+std::wstring modelYoli(const MalumModel& m) {
     const std::wstring p = modelPapkasi();
-    return p.empty() ? std::wstring() : p + L"\\ggml-rubaistt.bin";
+    return p.empty() ? std::wstring() : p + L"\\" + m.fayl;
 }
 
 long long faylHajmi(const std::wstring& yol) {
@@ -46,6 +41,8 @@ long long faylHajmi(const std::wstring& yol) {
 struct ModelYuklovchi::Ichki {
     std::atomic<bool> ketyapti{false};
     std::atomic<bool> bekor{false};
+    // Joriy yuklash qaysi model uchun — `boshla` qoʻyadi, ish oqimi oʻqiydi.
+    const MalumModel* model = &kOzbekModel;
 
     std::mutex qulf;
     std::function<void(long long, long long)> onJarayon;
@@ -70,7 +67,8 @@ struct ModelYuklovchi::Ichki {
 };
 
 void ModelYuklovchi::Ichki::ishla() {
-    const std::wstring yol = modelYoli();
+    const MalumModel& m = *model;
+    const std::wstring yol = modelYoli(m);
     if (yol.empty()) {
         tugadi(false, L"Maʼlumot papkasi topilmadi.");
         return;
@@ -84,18 +82,19 @@ void ModelYuklovchi::Ichki::ishla() {
             ildiz = ildiz.substr(0, ikkiNuqta + 2);
             ULARGE_INTEGER bosh{};
             if (GetDiskFreeSpaceExW(ildiz.c_str(), &bosh, nullptr, nullptr) &&
-                static_cast<long long>(bosh.QuadPart) < ModelYuklovchi::kHajm + (100LL << 20)) {
-                tugadi(false, L"Diskda joy yetarli emas — kamida 1 GB kerak.");
+                static_cast<long long>(bosh.QuadPart) < m.hajm + (100LL << 20)) {
+                tugadi(false, L"Diskda joy yetarli emas — kamida " +
+                                  std::to_wstring(modelHajmiMb(m) + 100) + L" MB kerak.");
                 return;
             }
         }
     }
 
-    logWrite(L"nutq modeli: yuklash boshlandi");
+    logWrite(std::wstring(L"nutq modeli: yuklash boshlandi — ") + m.fayl);
 
     const std::wstring qism = yol + L".part";
     const YuklashNatijasi n = faylYukla(
-        ModelYuklovchi::kUrl, qism, ModelYuklovchi::kHajm,
+        m.url, qism, m.hajm,
         [this](long long a, long long b) { jarayon(a, b); }, [this] { return bekor.load(); });
 
     if (!n.ok) {
@@ -107,7 +106,7 @@ void ModelYuklovchi::Ichki::ishla() {
 
     // Hajm mos kelmasa — fayl buzuq yoki server boshqa narsa berdi.
     // Yarim model bilan ishga tushish whisper ichida tushunarsiz xato beradi.
-    if (faylHajmi(qism) != ModelYuklovchi::kHajm) {
+    if (faylHajmi(qism) != m.hajm) {
         DeleteFileW(qism.c_str());
         logWrite(L"nutq modeli: hajm mos kelmadi — fayl oʻchirildi");
         tugadi(false, L"Yuklangan fayl buzuq. Qayta urinib koʻring.");
@@ -115,7 +114,7 @@ void ModelYuklovchi::Ichki::ishla() {
     }
     // Hajm toʻgʻri boʻlsa ham ichi buzilgan boʻlishi mumkin (disk, proksi).
     // Buzuq model whisper'da tushunarsiz «yuklanmadi» boʻlib chiqardi (F2).
-    if (faylSha256(qism) != ModelYuklovchi::kSha256) {
+    if (faylSha256(qism) != m.sha256) {
         DeleteFileW(qism.c_str());
         logWrite(L"nutq modeli: sha256 mos kelmadi — fayl oʻchirildi");
         tugadi(false, L"Yuklangan fayl buzuq. Qayta urinib koʻring (boshidan yuklanadi).");
@@ -128,9 +127,9 @@ void ModelYuklovchi::Ichki::ishla() {
         return;
     }
 
-    // Yangi model darhol ishlatilsin: eskisi (yoʻq edi) RAM'da qolmasin va
-    // keyingi diktovka uni topsin.
-    Engine::instance().setModelPath(yol);
+    // Yangi model darhol tayyor boʻlsin. Yoʻl majburan berilmaydi
+    // (`setModelPath`): dvigatel modelni joriy til boʻyicha oʻzi topadi —
+    // ilgari yoʻl qotirib qoʻyilardi va til almashganda model almashmasdi.
     Engine::instance().preload();
 
     logWrite(L"nutq modeli: tayyor");
@@ -147,7 +146,7 @@ ModelYuklovchi::~ModelYuklovchi() {
 bool ModelYuklovchi::ketyaptimi() const { return ichki_->ketyapti.load(); }
 void ModelYuklovchi::bekorQil() { ichki_->bekor.store(true); }
 
-void ModelYuklovchi::boshla(std::function<void(long long, long long)> jarayon,
+void ModelYuklovchi::boshla(NutqTili til, std::function<void(long long, long long)> jarayon,
                             std::function<void(bool, std::wstring)> tugadi) {
     if (ichki_->ketyapti.load()) return;
     {
@@ -155,6 +154,7 @@ void ModelYuklovchi::boshla(std::function<void(long long, long long)> jarayon,
         ichki_->onJarayon = std::move(jarayon);
         ichki_->onTugadi = std::move(tugadi);
     }
+    ichki_->model = &modelUchun(til);
     ichki_->bekor.store(false);
     ichki_->ketyapti.store(true);
 

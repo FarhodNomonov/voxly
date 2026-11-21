@@ -97,6 +97,9 @@ LRESULT CALLBACK settingsProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 case kIdMic:
                     if (HIWORD(wp) == CBN_SELCHANGE) d->updateMicWarning();
                     return 0;
+                case kIdNutqTili:
+                    if (HIWORD(wp) == CBN_SELCHANGE) d->tilIzohiniYangila();
+                    return 0;
                 case kIdLog:
                     ShellExecuteW(nullptr, L"open", logPath().c_str(), nullptr, nullptr,
                                   SW_SHOWNORMAL);
@@ -227,19 +230,29 @@ void SettingsWindow::Impl::build() {
     add(L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP, 24, 128, 402, 200, kIdMic);
     add(L"STATIC", L"", SS_LEFT, 24, 160, 402, 52, kIdMicWarning);
 
+    // --- Nutq tili (macOS'dagi `qurNutqTili`). Til nomlari — har biri oʻz
+    // tilida: interfeys hali oʻzbekcha, rus/ingliz UI — keyingi bosqich.
+    // Tartib `NutqTili` bilan bir xil (ruyxat indeksi = enum qiymati).
+    add(L"STATIC", L"Til / Язык", 0, 24, 218, 200, 18, -1);
+    HWND til = add(L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_TABSTOP, 24, 240, 200, 120, kIdNutqTili);
+    SendMessageW(til, CB_ADDSTRING, 0, (LPARAM)L"Русский");
+    SendMessageW(til, CB_ADDSTRING, 0, (LPARAM)L"English");
+    SendMessageW(til, CB_ADDSTRING, 0, (LPARAM)L"Oʻzbekcha");
+    add(L"STATIC", L"", SS_LEFT, 236, 244, 190, 18, kIdNutqTiliIzoh);
+
     // --- Matn kiritish usuli
-    add(L"STATIC", L"Matn kiritish usuli", 0, 24, 218, 200, 18, -1);
+    add(L"STATIC", L"Matn kiritish usuli", 0, 24, 274, 200, 18, -1);
     HWND mode =
-        add(L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_TABSTOP, 24, 240, 402, 120, kIdInsertMode);
+        add(L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_TABSTOP, 24, 296, 402, 120, kIdInsertMode);
     SendMessageW(mode, CB_ADDSTRING, 0,
                  (LPARAM)L"Tez (clipboard orqali qoʻyish) — tavsiya etiladi");
     SendMessageW(mode, CB_ADDSTRING, 0,
                  (LPARAM)L"Sekin (belgima-belgi yozish) — qoʻyish ishlamasa");
 
     // --- Bayroqlar
-    add(L"BUTTON", L"Kompyuter yonganda ishga tushsin", BS_AUTOCHECKBOX | WS_TABSTOP, 24, 278, 402,
+    add(L"BUTTON", L"Kompyuter yonganda ishga tushsin", BS_AUTOCHECKBOX | WS_TABSTOP, 24, 334, 402,
         22, kIdAutoStart);
-    add(L"BUTTON", L"Videokartadan foydalanish (tezroq)", BS_AUTOCHECKBOX | WS_TABSTOP, 24, 304,
+    add(L"BUTTON", L"Videokartadan foydalanish (tezroq)", BS_AUTOCHECKBOX | WS_TABSTOP, 24, 360,
         402, 22, kIdUseGpu);
 
     // --- Haqida: versiya va muallif (havola), ostida asl loyiha atributsiyasi.
@@ -249,9 +262,9 @@ void SettingsWindow::Impl::build() {
     const std::wstring haqida = L"Voxly " + joriyVersiya() +
                                 L" \x00B7 <a href=\"" + kMuallifSayti +
                                 L"\">Farkhod Nomonov</a>";
-    add(WC_LINK, haqida.c_str(), WS_TABSTOP, 24, 334, 402, 18, kIdHaqida);
+    add(WC_LINK, haqida.c_str(), WS_TABSTOP, 24, 390, 402, 18, kIdHaqida);
     if (HWND asosi = add(L"STATIC", L"Based on Kotib by Muhammad Mirqobilov (MIT)", SS_LEFT, 24,
-                         354, 402, 16, kIdAsosi)) {
+                         410, 402, 16, kIdAsosi)) {
         SendMessageW(asosi, WM_SETFONT, (WPARAM)kichikFont, TRUE);
     }
 
@@ -262,12 +275,12 @@ void SettingsWindow::Impl::build() {
     // Uchburchak (▾/▴) — macOS'dagi ⌄/⌃ oʻrniga. Segoe UI'da U+2303/2304
     // yoʻq va Windows ularni boshqa shriftdan oladi: natijada ingliz
     // klaviaturasidagi «^» kabi ingichka belgi chiqadi.
-    add(L"BUTTON", L"Qoʻshimcha sozlamalar  ▾", BS_PUSHBUTTON | BS_FLAT | WS_TABSTOP, 24, 378, 200,
+    add(L"BUTTON", L"Qoʻshimcha sozlamalar  ▾", BS_PUSHBUTTON | BS_FLAT | WS_TABSTOP, 24, 434, 200,
         26, kIdQoshimcha);
 
     // Oddiy ASCII apostrof. Sukut boʻyicha oʻchiq — oʻzbek lotin meʼyori
     // ʻ va ʼ ni talab qiladi (macOS'da `Prefs.apostrof`).
-    add(L"BUTTON", L"Oddiy apostrof (') ishlatish", BS_AUTOCHECKBOX | WS_TABSTOP, 24, 416, 402, 22,
+    add(L"BUTTON", L"Oddiy apostrof (') ishlatish", BS_AUTOCHECKBOX | WS_TABSTOP, 24, 472, 402, 22,
         kIdApostrof);
 
     // --- Sunʼiy intellekt (ixtiyoriy)
@@ -275,11 +288,11 @@ void SettingsWindow::Impl::build() {
     // Ilova hech qanday kalit bilan kelmaydi va busiz toʻliq ishlaydi.
     // Kalit foydalanuvchining oʻzi kiritadi va Credential Manager'da
     // saqlanadi (`llm.h`), logga hech qachon tushmaydi.
-    add(L"STATIC", L"Sunʼiy intellekt (ixtiyoriy)", 0, 24, 442, 300, 18, kIdAiSarlavha);
-    add(L"STATIC", L"Kalit qoʻshsangiz, matnni tozalash va xulosa qilish qoʻshiladi.", 0, 24, 462,
+    add(L"STATIC", L"Sunʼiy intellekt (ixtiyoriy)", 0, 24, 498, 300, 18, kIdAiSarlavha);
+    add(L"STATIC", L"Kalit qoʻshsangiz, matnni tozalash va xulosa qilish qoʻshiladi.", 0, 24, 518,
         402, 20, kIdAiIzoh);
 
-    HWND prov = add(L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP, 24, 484, 180, 240,
+    HWND prov = add(L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP, 24, 540, 180, 240,
                     kIdProvayder);
     SendMessageW(prov, CB_ADDSTRING, 0, (LPARAM)L"— tanlanmagan —");
     for (const auto& pv : provayderlar()) {
@@ -290,31 +303,31 @@ void SettingsWindow::Impl::build() {
     // kalitning oʻzi baribir Credential Manager'da shifrlanadi.
     // Maydonlarda yorliq yoʻq, shuning uchun ishora matni (cue banner)
     // qoʻyiladi — macOS'da bu `placeholderString`.
-    add(L"EDIT", L"", ES_AUTOHSCROLL | ES_PASSWORD | WS_BORDER | WS_TABSTOP, 212, 484, 214, 24,
+    add(L"EDIT", L"", ES_AUTOHSCROLL | ES_PASSWORD | WS_BORDER | WS_TABSTOP, 212, 540, 214, 24,
         kIdKalit);
 
     // Base URL faqat «Boshqa (custom)» provayderda kerak — qolganlarida
     // manzil presetdan keladi va uni koʻrsatish faqat chalgʻitadi.
-    add(L"EDIT", L"", ES_AUTOHSCROLL | WS_BORDER | WS_TABSTOP, 24, 514, 402, 24, kIdBaseURL);
+    add(L"EDIT", L"", ES_AUTOHSCROLL | WS_BORDER | WS_TABSTOP, 24, 570, 402, 24, kIdBaseURL);
 
     // Model — tahrirlanadigan roʻyxat (CBS_DROPDOWN), oddiy tanlagich emas:
     //  1. OpenRouter 400 ga yaqin model qaytaradi;
     //  2. provayderda `/models` boʻlmasa nom qoʻlda yoziladi — boshi berk
     //     koʻcha hech qachon boʻlmaydi.
-    add(L"STATIC", L"Model", 0, 24, 550, 60, 18, kIdModelYozuv);
-    add(L"COMBOBOX", L"", CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP, 84, 546, 230,
+    add(L"STATIC", L"Model", 0, 24, 606, 60, 18, kIdModelYozuv);
+    add(L"COMBOBOX", L"", CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP, 84, 602, 230,
         260, kIdModel);
-    add(L"BUTTON", L"Yangilash", BS_PUSHBUTTON | WS_TABSTOP, 322, 546, 104, 26, kIdModelYangila);
-    add(L"STATIC", L"", 0, 24, 578, 402, 18, kIdModelHolati);
+    add(L"BUTTON", L"Yangilash", BS_PUSHBUTTON | WS_TABSTOP, 322, 602, 104, 26, kIdModelYangila);
+    add(L"STATIC", L"", 0, 24, 634, 402, 18, kIdModelHolati);
 
-    add(L"BUTTON", L"Ulanishni tekshirish", BS_PUSHBUTTON | WS_TABSTOP, 24, 600, 160, 26,
+    add(L"BUTTON", L"Ulanishni tekshirish", BS_PUSHBUTTON | WS_TABSTOP, 24, 656, 160, 26,
         kIdTekshir);
-    add(L"STATIC", L"", 0, 192, 604, 234, 18, kIdTekshirNatija);
+    add(L"STATIC", L"", 0, 192, 660, 234, 18, kIdTekshirNatija);
 
     // Diagnostika rejimi (G1): logda matn faqat shu yoqiq boʻlsa, 24 soatgacha.
     add(L"BUTTON", L"Diagnostika rejimi (24 soat): diktovka matni ham logga yoziladi",
-        BS_AUTOCHECKBOX | WS_TABSTOP, 24, 634, 402, 22, kIdDiagnostika);
-    add(L"BUTTON", L"Log faylini ochish…", BS_PUSHBUTTON | WS_TABSTOP, 24, 662, 150, 30, kIdLog);
+        BS_AUTOCHECKBOX | WS_TABSTOP, 24, 690, 402, 22, kIdDiagnostika);
+    add(L"BUTTON", L"Log faylini ochish…", BS_PUSHBUTTON | WS_TABSTOP, 24, 718, 150, 30, kIdLog);
 
     // --- Pastki tugmalar — ular oʻrni qoʻshimcha boʻlim ochilganda pastga
     // suriladi (`joylashuvniYangila`).
@@ -483,6 +496,27 @@ void SettingsWindow::Impl::updateMicWarning() {
     }
 }
 
+NutqTili SettingsWindow::Impl::tanlanganTil() const {
+    switch (SendMessageW(ctrl(kIdNutqTili), CB_GETCURSEL, 0, 0)) {
+        case 0: return NutqTili::Rus;
+        case 1: return NutqTili::Ingliz;
+        case 2: return NutqTili::Ozbek;
+        default: return settings.nutqTili;
+    }
+}
+
+// Tanlangan til modeli diskdami — macOS'dagi `tilIzohiniYangila`. Model
+// yoʻq boʻlsa uning hajmi koʻrsatiladi: saqlangach «Yozish» boʻlimidagi
+// banner uni yuklashni taklif qiladi.
+void SettingsWindow::Impl::tilIzohiniYangila() {
+    const NutqTili til = tanlanganTil();
+    const std::wstring matn =
+        Engine::findModel(til).empty()
+            ? L"Model (" + std::to_wstring(modelHajmiMb(modelUchun(til))) + L" MB) yuklanadi"
+            : std::wstring(L"Model tayyor");
+    SetWindowTextW(ctrl(kIdNutqTiliIzoh), matn.c_str());
+}
+
 void SettingsWindow::Impl::save() {
     // --- Hotkey
     const WORD hk = (WORD)SendMessageW(ctrl(kIdHotkey), HKM_GETHOTKEY, 0, 0);
@@ -521,6 +555,7 @@ void SettingsWindow::Impl::save() {
     settings.autoStart = autoStart;
     settings.useGpu = SendMessageW(ctrl(kIdUseGpu), BM_GETCHECK, 0, 0) == BST_CHECKED;
     settings.oddiyApostrof = SendMessageW(ctrl(kIdApostrof), BM_GETCHECK, 0, 0) == BST_CHECKED;
+    settings.nutqTili = tanlanganTil();
     // Yoqilgan rejim qayta saqlansa muddat uzaymaydi — faqat yangi yoqilganda 24 soat.
     const long long hozir = static_cast<long long>(std::time(nullptr));
     const bool diagnostika = SendMessageW(ctrl(kIdDiagnostika), BM_GETCHECK, 0, 0) == BST_CHECKED;
@@ -543,7 +578,8 @@ void SettingsWindow::Impl::save() {
                     MB_OK | MB_ICONERROR);
         return;
     }
-    logWrite(L"sozlamalar saqlandi: " + settings.hotkeyDisplay());
+    logWrite(L"sozlamalar saqlandi: " + settings.hotkeyDisplay() + L", nutq tili " +
+             nutqTiliKodi(settings.nutqTili));
     if (onSaved) onSaved(settings);
 }
 
@@ -621,6 +657,8 @@ void SettingsWindow::show(HINSTANCE instance, const Settings& current, HWND ega)
     SendMessageW(d->ctrl(kIdUseGpu), BM_SETCHECK, current.useGpu ? BST_CHECKED : BST_UNCHECKED, 0);
     SendMessageW(d->ctrl(kIdApostrof), BM_SETCHECK,
                  current.oddiyApostrof ? BST_CHECKED : BST_UNCHECKED, 0);
+    SendMessageW(d->ctrl(kIdNutqTili), CB_SETCURSEL, static_cast<WPARAM>(current.nutqTili), 0);
+    d->tilIzohiniYangila();
     SendMessageW(
         d->ctrl(kIdDiagnostika), BM_SETCHECK,
         diagnostikaFaolmi(current.diagnostikaTugash, static_cast<long long>(std::time(nullptr)))

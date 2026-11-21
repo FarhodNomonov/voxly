@@ -6,37 +6,34 @@
 // ilova boshi berk koʻchada qolardi — «Model topilmadi» deb aytardi, lekin
 // nima qilishni koʻrsatmasdi.
 //
-// Model `%LOCALAPPDATA%\Voxly\models\` ga tushadi. `Engine::findModel`
-// uchinchi navbatda aynan shu joyga qaraydi, shuning uchun oʻrnatuvchi
-// qoʻygan nusxa (Program Files ichida) ustunligicha qoladi.
+// Oʻrnatuvchi endi model OLIB KELMAYDI (~50 MB): kerakli model birinchi
+// ishga tushishda shu yerda, tanlangan nutq tili uchun yuklanadi
+// (`model_tanlov.h` — rus/ingliz: Whisper large-v3-turbo, oʻzbek: rubaiSTT).
+//
+// Model `%LOCALAPPDATA%\Voxly\models\` ga tushadi — `Engine::findModel`
+// shu joyga qaraydi.
 #pragma once
 
 #include <functional>
 #include <memory>
 #include <string>
 
+#include "model_tanlov.h"
+
 namespace rubai {
 
 class ModelYuklovchi {
 public:
-    // CDN'dagi model. Oʻrnatuvchidagi manzil bilan bir xil
-    // (`installer/rubai.iss` → `ModelUrl`).
-    static const wchar_t* kUrl;
-
-    // Aniq hajm — koʻrsatkich uchun va yuklangandan keyin tekshirish uchun.
-    // Yarim yuklangan fayl «model» boʻlib qolmasligi kerak.
-    static constexpr long long kHajm = 823369796LL;
-    // Tarqatilayotgan q8_0 — macOS'dagi `ModelTanlov.joriy.sha256` bilan bir xil.
-    static constexpr const char* kSha256 =
-        "1b02df434902015e1464611a7748927e42fcb55c49791c85239cf713c8edc1a3";
-
     ModelYuklovchi();
     ~ModelYuklovchi();
     ModelYuklovchi(const ModelYuklovchi&) = delete;
     ModelYuklovchi& operator=(const ModelYuklovchi&) = delete;
 
-    // Fon oqimida yuklaydi. Qayta chaqiruvlar ISHCHI OQIMDAN keladi.
-    void boshla(std::function<void(long long, long long)> jarayon,
+    // `til` modelini fon oqimida yuklaydi (hajm va sha256 tekshiruvi bilan).
+    // Model boshlanishda tanlanadi — til yuklash oʻrtasida oʻzgarsa ham
+    // `.part` va sha256 bitta modelga tegishli qoladi (macOS bilan bir xil).
+    // Qayta chaqiruvlar ISHCHI OQIMDAN keladi.
+    void boshla(NutqTili til, std::function<void(long long, long long)> jarayon,
                 std::function<void(bool, std::wstring)> tugadi);
 
     // Bekor qilinganda yarim fayl SAQLANIB QOLADI — keyingi urinishda

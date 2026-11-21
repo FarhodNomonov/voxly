@@ -6,6 +6,7 @@
 #pragma once
 
 #include "matn_format.h"     // Segment
+#include "model_tanlov.h"    // NutqTili, MalumModel
 #include "whisper_bridge.h"  // rubai_progress_cb, rubai_abort_cb
 
 #include <functional>
@@ -25,14 +26,26 @@ class Engine {
 public:
     static Engine& instance();
 
-    // Model faylini qidiradi. Tartib:
-    //   1) <exe papkasi>\models\ggml-rubaistt.bin   (oʻrnatilgan holat)
-    //   2) <exe papkasi>\ggml-rubaistt.bin          (portable holat)
-    //   3) %LOCALAPPDATA%\Voxly\models\...       (qoʻlda qoʻyilgan)
+    // Shu tilning model faylini qidiradi (`modelUchun(til).fayl`). Tartib:
+    //   1) <exe papkasi>\models\<fayl>          (eski oʻrnatuvchi qoʻygan)
+    //   2) <exe papkasi>\<fayl>                  (portable holat)
+    //   3) %LOCALAPPDATA%\Voxly\models\<fayl>   (ilova yuklagan — asosiy joy)
+    // Fayl hajmi katalogdagiga AYNAN teng boʻlishi shart (macOS'dagi
+    // `ModelTanlov.nomzodlar`, A1): chala yoki buzuq fayl tushmaydi.
     // Topilmasa boʻsh satr.
-    static std::wstring findModel();
+    static std::wstring findModel(NutqTili til);
 
-    // Model yoʻlini majburan belgilash (test va CLI uchun).
+    // Nutq tili (Sozlamalar). Model shu tilniki boʻladi va whisper shu tilda
+    // ishlaydi. Faqat qiymatni saqlaydi: model ishchi oqimda, navbatdagi
+    // ishlar ORASIDA almashadi (`ensureLoaded`) — ketayotgan diktovka yoki
+    // fayl ishi buzilmaydi. Fayl ishi (`setBand(true)`) davomida til
+    // oʻzgarsa, ish boshlangan tilda tugaydi; yangi til keyingi ishdan.
+    // Darhol yuklash kerak boʻlsa — keyin `preload()`.
+    void setNutqTili(NutqTili til);
+    NutqTili nutqTili() const;
+
+    // Model yoʻlini majburan belgilash (test va CLI uchun). Belgilangan
+    // boʻlsa til almashganda model almashmaydi — faqat whisper tili.
     void setModelPath(const std::wstring& path);
 
     void setUseGpu(bool on);

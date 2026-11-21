@@ -3,7 +3,8 @@
 // Ilovaning oʻzi emas: core/ dagi kod toʻgʻri ishlayotganini tasdiqlaydi
 // (model yuklash, transkripsiya, signal tekshiruvi, log).
 //
-//   rubai-cli <audio> [--cpu] [--model <yoʻl>] [--segmentlar]
+//   rubai-cli <audio> [--cpu] [--til uz|ru|en] [--model <yoʻl>] [--segmentlar]
+//             --til: nutq tili va shu tilning modeli (standart — uz)
 //   rubai-cli --mics                 mikrofonlar roʻyxati
 //   rubai-cli --record <soniya>      mikrofondan yozib transkripsiya qilish
 //             [--saqla <fayl.wav>]   yozuvni WAV qilib ham saqlaydi (oʻlchov uchun)
@@ -89,6 +90,8 @@ int wmain(int argc, wchar_t** argv) {
     bool useGpu = true;
     bool segmentlar = false;
     int recordSeconds = 0;
+    // Standart — oʻzbek: VM sinov skriptlari (`tests/vm/testlar.cmd`) shunday yozilgan.
+    NutqTili til = NutqTili::Ozbek;
 
     for (int i = 1; i < argc; i++) {
         std::wstring a = argv[i];
@@ -104,6 +107,8 @@ int wmain(int argc, wchar_t** argv) {
             micId = argv[++i];
         } else if (a == L"--segmentlar") {
             segmentlar = true;
+        } else if (a == L"--til" && i + 1 < argc) {
+            til = nutqTiliKoddan(argv[++i], NutqTili::Ozbek);
         } else if (a == L"--model" && i + 1 < argc) {
             modelPath = argv[++i];
         } else if (!a.empty() && a[0] != L'-') {
@@ -113,7 +118,7 @@ int wmain(int argc, wchar_t** argv) {
 
     if (audioPath.empty() && recordSeconds <= 0) {
         print(L"Ishlatish:");
-        print(L"  rubai-cli <audio> [--cpu] [--model <yoʻl>] [--segmentlar]");
+        print(L"  rubai-cli <audio> [--cpu] [--til uz|ru|en] [--model <yoʻl>] [--segmentlar]");
         print(L"  rubai-cli --mics");
         print(L"  rubai-cli --record <soniya> [--mic <id>] [--saqla <fayl.wav>]");
         return 2;
@@ -167,8 +172,9 @@ int wmain(int argc, wchar_t** argv) {
     Engine& engine = Engine::instance();
     if (!modelPath.empty()) engine.setModelPath(modelPath);
     engine.setUseGpu(useGpu);
+    engine.setNutqTili(til);
 
-    const std::wstring resolved = modelPath.empty() ? Engine::findModel() : modelPath;
+    const std::wstring resolved = modelPath.empty() ? Engine::findModel(til) : modelPath;
     print(L"model: " + (resolved.empty() ? L"TOPILMADI" : resolved));
 
     if (segmentlar) {
@@ -192,7 +198,7 @@ int wmain(int argc, wchar_t** argv) {
         print(xomMatn(segs));
         print(L"");
         print(L"--- tayyor ---");
-        print(chiroyliMatn(segs, Apostrof::Standart));
+        print(chiroyliMatn(segs, til == NutqTili::Ozbek ? Apostrof::Standart : Apostrof::Oddiy));
         engine.shutdown();
         return 0;
     }

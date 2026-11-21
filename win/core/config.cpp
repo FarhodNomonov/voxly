@@ -47,7 +47,9 @@ Settings loadSettings() {
     s.modifiers = defaultModifiers();
 
     std::wstring path = settingsPath();
-    if (path.empty() || !fileExists(path)) return s;
+    const bool faylBor = !path.empty() && fileExists(path);
+    s.nutqTili = boshlangichNutqTili(faylBor);
+    if (!faylBor) return s;
 
     std::ifstream f(path.c_str(), std::ios::binary);
     if (!f) return s;
@@ -90,6 +92,8 @@ Settings loadSettings() {
                 s.didOnboard = (val == L"1");
             else if (key == L"oddiyApostrof")
                 s.oddiyApostrof = (val == L"1");
+            else if (key == L"nutq.tili")
+                s.nutqTili = nutqTiliKoddan(val, s.nutqTili);
             else if (key == L"diagnostikaTugash")
                 s.diagnostikaTugash = std::stoll(val);
             else if (key == L"llm.provayder")
@@ -129,6 +133,7 @@ bool saveSettings(const Settings& s) {
       << L"idleUnloadSeconds=" << s.idleUnloadSeconds << L"\n"
       << L"didOnboard=" << (s.didOnboard ? 1 : 0) << L"\n"
       << L"oddiyApostrof=" << (s.oddiyApostrof ? 1 : 0) << L"\n"
+      << L"nutq.tili=" << nutqTiliKodi(s.nutqTili) << L"\n"
       << L"diagnostikaTugash=" << s.diagnostikaTugash << L"\n"
       << L"llm.provayder=" << toWide(s.llmProvayder) << L"\n"
       << L"llm.baseURL=" << s.llmBaseURL << L"\n"

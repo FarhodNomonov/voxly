@@ -30,7 +30,7 @@ void App::startRecording() {
     // Model yoʻq boʻlsa yozuv BOSHLANMAYDI (A4): ilgari bu foydalanuvchi
     // gapirib boʻlgandan keyingina — «Model topilmadi» xatosi bilan —
     // bilinardi. Oynada «Yuklab olish» banneri (`mikrofonBanneri`) turadi.
-    if (Engine::findModel().empty()) {
+    if (Engine::findModel(settings_.nutqTili).empty()) {
         logWrite(L"yozish boshlanmadi: model topilmadi");
         overlay_.show(OverlayIcon::Warning,
                       modelYuklovchi_.ketyaptimi() ? L"Model hali yuklanmoqda — kuting"
@@ -148,7 +148,7 @@ void App::onResult(const TranscribeResult& r) {
     // Yagona tayyorlash qadami — tarix va kiritish shu natijani oladi
     // (oʻ/gʻ/ʼ va «Oddiy apostrof» sozlamasi; core/matn_format.h).
     const std::wstring matn =
-        matnniTayyorla(r.text, settings_.oddiyApostrof ? Apostrof::Oddiy : Apostrof::Standart);
+        matnniTayyorla(r.text, apostrofUslubi(settings_));
 
     // Matn faqat «Diagnostika rejimi» yoqiq boʻlsa (G1) — standart holatda
     // logda shaxsiy matn yoʻq, faqat uzunligi.
@@ -277,7 +277,7 @@ void App::onQaytaNatija(const TranscribeResult& r) {
     }
     if (!r.text.empty()) {
         const std::wstring matn =
-            matnniTayyorla(r.text, settings_.oddiyApostrof ? Apostrof::Oddiy : Apostrof::Standart);
+            matnniTayyorla(r.text, apostrofUslubi(settings_));
         const long long ms = saqlanmagan::sana(yol.substr(yol.find_last_of(L"\\/") + 1));
         DiktovkaTarixi::birgalik().qoshish(
             matn, static_cast<double>(qaytaNamunaSoni_) / kNamunaTezligi, ms > 0 ? ms / 1000 : 0);

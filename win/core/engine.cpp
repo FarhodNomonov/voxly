@@ -21,8 +21,6 @@ namespace rubai {
 
 namespace {
 
-constexpr wchar_t kModelFileName[] = L"ggml-rubaistt.bin";
-
 // Hisoblash oqimlari soni — fizik yadrolar soni (macOS'dagi `Whisper.oqimlar`
 // ning Intel qoidasi). Hyper-Threading'ning mantiqiy yadrolari whisper'ni
 // SEKINLASHTIRADI (i7-9750H, 6 yadro / 12 oqim: 10 oqim — 21,4 s, 6 oqim —
@@ -88,6 +86,10 @@ struct Engine::Impl {
     // Uzoq ish davomida idle boʻshatishni toʻxtatib turadi (`setBand`).
     std::atomic<bool> band{false};
     std::atomic<bool> loaded{false};
+    // Sozlamalardagi til (`setNutqTili`) va yuklangan model qaysi til
+    // uchun (faqat ishchi oqim oʻqiydi/yozadi).
+    std::atomic<NutqTili> til{NutqTili::Ozbek};
+    NutqTili yuklanganTil = NutqTili::Ozbek;
 
     mutable std::mutex mu;
     std::condition_variable cv;
@@ -161,17 +163,40 @@ struct GpuBelgisi {
 }  // namespace
 
 bool Engine::Impl::ensureLoaded(std::wstring& errOut, bool isitish) {
-    if (loaded.load()) return true;
-
+    const NutqTili kerakli = til.load();
     std::wstring path;
     {
         std::lock_guard<std::mutex> lock(mu);
         path = modelPath;
     }
-    if (path.empty()) path = Engine::findModel();
+    const bool majburiyYol = !path.empty();
+
+    if (loaded.load()) {
+        if (yuklanganTil == kerakli) return true;
+        // Fayl ishi ketyapti — boʻlaklar orasida til/model almashsa matn
+        // ikki tilda chiqardi. Ish boshlangan tilda tugaydi.
+        if (band.load()) return true;
+        // Rus va ingliz — bitta model: faqat whisper tili almashadi
+        // (macOS'dagi `Whisper.modelniYukla` bilan bir xil).
+        if (majburiyYol || birXilModel(yuklanganTil, kerakli)) {
+            rubai_set_language(toUtf8(nutqTiliKodi(kerakli)).c_str());
+            yuklanganTil = kerakli;
+            logWrite(std::wstring(L"nutq tili → ") + nutqTiliKodi(kerakli) +
+                     L" (model oʻsha)");
+            return true;
+        }
+        logWrite(std::wstring(L"nutq tili oʻzgardi → ") + nutqTiliKodi(kerakli) +
+                 L": model almashtirilmoqda");
+        unloadFromWorker();
+    }
+
+    // Til — model bilan birga, har yuklanishda (whisper_bridge.c ichki holati).
+    rubai_set_language(toUtf8(nutqTiliKodi(kerakli)).c_str());
+    if (path.empty()) path = Engine::findModel(kerakli);
     if (path.empty()) {
-        errOut = L"Model fayli topilmadi. Ilovani qayta oʻrnating.";
-        logWrite(L"XATO: model fayli topilmadi");
+        errOut = L"Nutq modeli topilmadi — «Yozish» boʻlimida «Yuklab olish» ni bosing.";
+        logWrite(std::wstring(L"XATO: model fayli topilmadi (til ") + nutqTiliKodi(kerakli) +
+                 L", " + modelUchun(kerakli).fayl + L")");
         return false;
     }
 
@@ -192,7 +217,8 @@ bool Engine::Impl::ensureLoaded(std::wstring& errOut, bool isitish) {
     // GPU yuklash va isitish (birinchi GPU hisobi) — drayver yiqilishi
     // mumkin boʻlgan yagona joylar. Belgi shu funksiya oxirigacha turadi.
     const GpuBelgisi belgi(wantGpu);
-    logWrite(L"model yuklanmoqda: " + path + (wantGpu ? L" (GPU)" : L" (CPU)"));
+    logWrite(L"model yuklanmoqda: " + path + (wantGpu ? L" (GPU)" : L" (CPU)") + L", til " +
+             nutqTiliKodi(kerakli));
     const auto t0 = std::chrono::steady_clock::now();
     int rc = yukla(wantGpu);
 
@@ -204,8 +230,9 @@ bool Engine::Impl::ensureLoaded(std::wstring& errOut, bool isitish) {
     }
 
     if (rc != 0) {
+        // Oʻrnatuvchi endi model olib kelmaydi — qayta oʻrnatish yordam bermaydi.
         errOut = L"Model yuklanmadi. Fayl buzilgan boʻlishi mumkin —\n"
-                 L"ilovani qayta oʻrnating.";
+                 L"uni oʻchirib, «Yozish» boʻlimida qayta yuklab oling:\n" + path;
         logWrite(L"XATO: rubai_load = " + std::to_wstring(rc) + L" (" + toWide(rubai_last_error()) +
                  L")");
         return false;
@@ -214,6 +241,7 @@ bool Engine::Impl::ensureLoaded(std::wstring& errOut, bool isitish) {
     const double secs =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
     setBackend(toWide(rubai_backend_name()));
+    yuklanganTil = kerakli;
     loaded.store(true);
     logWrite(L"model yuklandi: " + toWide(rubai_backend_name()) + L", " +
              std::to_wstring((int)(secs * 1000)) + L" ms, oqimlar: " +
@@ -408,19 +436,30 @@ Engine& Engine::instance() {
     return e;
 }
 
-std::wstring Engine::findModel() {
+std::wstring Engine::findModel(NutqTili til) {
+    const MalumModel& m = modelUchun(til);
     const std::wstring exe = exeDir();
     const std::wstring local = localAppDataDir();
     const std::wstring candidates[] = {
-        exe.empty() ? std::wstring() : exe + L"\\models\\" + kModelFileName,
-        exe.empty() ? std::wstring() : exe + L"\\" + kModelFileName,
-        local.empty() ? std::wstring() : local + L"\\models\\" + kModelFileName,
+        exe.empty() ? std::wstring() : exe + L"\\models\\" + m.fayl,
+        exe.empty() ? std::wstring() : exe + L"\\" + m.fayl,
+        local.empty() ? std::wstring() : local + L"\\models\\" + m.fayl,
     };
     for (const auto& p : candidates) {
-        if (!p.empty() && fileExists(p)) return p;
+        if (p.empty()) continue;
+        WIN32_FILE_ATTRIBUTE_DATA a{};
+        if (!GetFileAttributesExW(p.c_str(), GetFileExInfoStandard, &a)) continue;
+        if (a.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+        const long long hajm =
+            (static_cast<long long>(a.nFileSizeHigh) << 32) | a.nFileSizeLow;
+        if (hajm == m.hajm) return p;
     }
     return {};
 }
+
+void Engine::setNutqTili(NutqTili til) { d->til.store(til); }
+
+NutqTili Engine::nutqTili() const { return d->til.load(); }
 
 void Engine::setModelPath(const std::wstring& path) {
     std::lock_guard<std::mutex> lock(d->mu);
