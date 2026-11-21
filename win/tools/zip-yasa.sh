@@ -66,7 +66,8 @@ Voxly — офлайн-диктовка для Windows (портативная �
   «Выполнить в любом случае» (программа пока без цифровой подписи).
 
 ПЕРВЫЙ ШАГ — МОДЕЛЬ
-  В Настройках выберите язык речи, затем нажмите «Скачать».
+  В Настройках выберите язык речи. Затем в окне Voxly, в разделе
+  «Диктовка», на жёлтой полосе нажмите «Скачать».
   Модель скачивается один раз (русский/английский ~550 МБ, узбекский
   ~785 МБ). После этого интернет не нужен.
 
@@ -91,7 +92,8 @@ START
   your PC": "More info" -> "Run anyway" (the app is not signed yet).
 
 FIRST STEP — MODEL
-  In Settings choose the speech language, then click Download.
+  In Settings choose the speech language, then click Download on the
+  yellow bar in the Dictation section of the Voxly window.
   The model downloads once (Russian/English ~550 MB, Uzbek ~785 MB).
 
 MICROPHONE
