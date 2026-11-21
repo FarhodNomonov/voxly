@@ -2,15 +2,13 @@
 #
 # Windows oʻrnatuvchisini (Inno Setup) VM ichida yigʻadi.
 #
-#   ./win/tools/ornatuvchi-yasa.sh [--model <yoʻl>]
+#   ./win/tools/ornatuvchi-yasa.sh
 #
 # Natija: `dist/Voxly-<versiya>-win-setup.exe` — YAGONA fayl:
 #   • x64 va ARM64 binarlari ikkalasi ham ichida, oʻrnatish paytida mosi
 #     tanlanadi (`IsArm64`);
-#   • nutq modeli ham ichida (`--model` bilan) — macOS'dagi `.pkg` kabi.
-#
-# `--model` berilmasa modelsiz variant chiqadi (`…-win-onlayn-setup.exe`) —
-# u faqat ishlab chiqish uchun, tarqatiladigani har doim modelli.
+#   • nutq modeli ICHIDA EMAS — ilova uni tanlangan nutq tili uchun birinchi
+#     ishga tushganda oʻzi yuklaydi (`win/core/model_yuklovchi.cpp`).
 #
 # NEGA VM: `iscc.exe` faqat Windows'da ishlaydi va macOS'da Wine talab
 # qiladi. Windows 11 ARM VM'ida esa u emulyatsiya orqali muammosiz ishlaydi,
@@ -32,14 +30,10 @@ INNO_URL='https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innoset
 PORT="${KOTIB_VM_PORT:-2222}"
 KALIT="${KOTIB_VM_KEY:-$HOME/Developer/.vm/kotib_vm_key}"
 
-MODEL=""
-while [ $# -gt 0 ]; do
-    case "$1" in
-        --model) MODEL="$2"; shift ;;
-        *) echo "nomaʼlum parametr: $1" >&2; exit 2 ;;
-    esac
-    shift
-done
+if [ $# -gt 0 ]; then
+    echo "nomaʼlum parametr: $1 (--model endi yoʻq: oʻrnatuvchi modelsiz)" >&2
+    exit 2
+fi
 
 qadam() { printf '\n\033[1m==> %s\033[0m\n' "$1"; }
 
@@ -77,14 +71,8 @@ for arch in x64 arm64; do
         "kotib@127.0.0.1:C:/kotib-orn/$arch/"
 done
 
-if [ -n "$MODEL" ]; then
-    qadam "Model koʻchirilmoqda ($(du -h "$MODEL" | cut -f1))"
-    kochir "$MODEL" 'kotib@127.0.0.1:C:/kotib-orn/ggml-rubaistt.bin'
-fi
-
 qadam "Oʻrnatuvchi yigʻilmoqda (Voxly $KOTIB_VERSIYA)"
 bayroq="/DAppVersion=$KOTIB_VERSIYA /DSrcX64=$MEHMON\\x64 /DSrcArm64=$MEHMON\\arm64"
-[ -n "$MODEL" ] && bayroq="$bayroq /DBundleModel=$MEHMON\\ggml-rubaistt.bin"
 "$WIN" "\"$ISCC\" $bayroq $MEHMON\\win\\installer\\rubai.iss"
 
 qadam "Natijani olib kelamiz"

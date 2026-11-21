@@ -4,12 +4,11 @@
 ; nom va papkalar: ikkala ilova bir kompyuterda yonma-yon tura oladi va
 ; Voxly oʻrnatuvchisi Kotib'ga TEGMAYDI.
 ;
-; Bitta skriptdan ikki xil fayl chiqadi:
-;
-;   Voxly-<v>-win-setup.exe         nutq modeli ICHIDA (`/DBundleModel=…`) —
-;                                   tarqatiladigan yagona fayl
-;   Voxly-<v>-win-onlayn-setup.exe  modelsiz, modelni oʻzi yuklaydi — faqat
-;                                   ishlab chiqish uchun
+; Natija — `Voxly-<v>-win-setup.exe` (kichik, modelsiz). Nutq modeli oʻrnatuvchida
+; YOʻQ va oʻrnatuvchi uni yuklamaydi ham: model nutq tiliga bogʻliq
+; (rus/ingliz — Whisper large-v3-turbo ~550 MB, oʻzbek — rubaiSTT ~785 MB),
+; til esa ilova ichida tanlanadi. Ilova birinchi ishga tushganda kerakli
+; modelni oʻzi yuklaydi (`win/core/model_yuklovchi.cpp`, `model_tanlov.h`).
 ;
 ; Avto-yangilanish YOʻQ (Voxly tarmoqqa faqat model yuklash va foydalanuvchining
 ; oʻz AI kaliti bilan chiqadi): yangi versiya shunchaki ustidan oʻrnatiladi.
@@ -17,8 +16,8 @@
 ; x64 va ARM64 binarlari ikkalasi ham ichida (`Check: IsArm64`).
 ;
 ; PER-USER: administrator huquqi soʻralmaydi, ilova
-; `%LOCALAPPDATA%\Programs\Voxly` ga, nutq modeli `%LOCALAPPDATA%\Voxly\models`
-; ga tushadi.
+; `%LOCALAPPDATA%\Programs\Voxly` ga tushadi; ilova yuklagan nutq modellari —
+; `%LOCALAPPDATA%\Voxly\models` da (uninstall ularni soʻrab oʻchiradi).
 ;
 ; Build: `win/tools/ornatuvchi-yasa.sh` (iscc faqat Windows'da — VM ichida).
 
@@ -33,11 +32,6 @@
 #define AppPublisher   "Farkhod Nomonov"
 #define AppExe         "Voxly.exe"
 #define AppUrl         "https://farhod-nomonov.netlify.app"
-; TODO(voxly): rehost — model hozircha asl muallif (Kotib) CDN'idan olinadi
-; (`win/core/model_yuklovchi.cpp`, `src/model_download.swift` bilan bir xil).
-#define ModelUrl       "https://cdn.mirqobilov.com/v1.0/ggml-rubaistt.bin"
-#define ModelSha256    "1b02df434902015e1464611a7748927e42fcb55c49791c85239cf713c8edc1a3"
-#define ModelSize      823369796
 ; Ilovaning yagona nusxa mutex'i (`win/ui/app.h` → kMutexName).
 #define AppMutex       "Global\VoxlySingleInstance"
 
@@ -67,13 +61,7 @@ DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 UninstallDisplayIcon={app}\{#AppExe}
 OutputDir=..\..\dist
-#if defined(BundleModel)
 OutputBaseFilename={#AppName}-{#AppVersion}-win-setup
-#else
-; Modelsiz, oʻzi yuklaydigan variant faqat ishlab chiqish uchun —
-; foydalanuvchiga tarqatiladigani modelli, yagona fayl.
-OutputBaseFilename={#AppName}-{#AppVersion}-win-onlayn-setup
-#endif
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
@@ -107,32 +95,23 @@ Name: "ru"; MessagesFile: "compiler:Languages\Russian.isl"
 Name: "en"; MessagesFile: "compiler:Default.isl"
 
 [CustomMessages]
-uz.DownloadingModel=Til modeli yuklab olinmoqda (785 MB)...
-uz.ModelFailed=Til modelini yuklab olib boʻlmadi (3 marta urinildi).%n%nBu odatda internet ulanishi uzilganini bildiradi — 785 MB fayl uchun barqaror ulanish kerak.%n%nQOʻLDA YUKLAB OLISH (tavsiya etiladi):%n%n1. Quyidagi havolani brauzerda oching yoki yuklab olish menejeriga bering:%n   {#ModelUrl}%n%n2. Yuklangan «ggml-rubaistt.bin» faylini shu oʻrnatuvchi (setup.exe) turgan papkaga qoʻying%n%n3. Oʻrnatuvchini qaytadan ishga tushiring — u faylni oʻzi topadi va internetsiz oʻrnatadi%n%nTexnik xato: %1
-uz.ModelCopyFailed=Til modeli yangi joyga koʻchirilmadi. Diskda joy yetarlimi?%n%n%1
 uz.ExtraTasks=Qoʻshimcha:
-uz.UninstallModelsSavol=Til modeli saqlab qolinsinmi?
-uz.UninstallModels=Nutq modeli ~800 MB joy egallaydi. Saqlab qolsangiz, Voxly'ni qayta oʻrnatganda uni qayta yuklash shart boʻlmaydi.
+uz.UninstallModelsSavol=Nutq modellari saqlab qolinsinmi?
+uz.UninstallModels=Voxly yuklagan nutq modellari 550 MB – 1,4 GB joy egallaydi. Saqlab qolsangiz, Voxly'ni qayta oʻrnatganda ularni qayta yuklash shart boʻlmaydi.
 uz.UninstallModelsHa=Ha, saqlansin
 uz.UninstallModelsYoq=Yoʻq, oʻchirilsin
 
-ru.DownloadingModel=Загрузка языковой модели (785 МБ)...
-ru.ModelFailed=Не удалось загрузить языковую модель (3 попытки).%n%nОбычно это значит, что прервалось интернет-соединение — для файла 785 МБ нужна стабильная связь.%n%nЗАГРУЗИТЬ ВРУЧНУЮ (рекомендуется):%n%n1. Откройте ссылку в браузере или менеджере загрузок:%n   {#ModelUrl}%n%n2. Положите скачанный файл «ggml-rubaistt.bin» в папку, где лежит этот установщик (setup.exe)%n%n3. Запустите установщик снова — он сам найдёт файл и установит без интернета%n%nТехническая ошибка: %1
-ru.ModelCopyFailed=Не удалось скопировать языковую модель. Достаточно ли места на диске?%n%n%1
 ru.ExtraTasks=Дополнительно:
-ru.UninstallModelsSavol=Сохранить языковую модель?
-ru.UninstallModels=Модель распознавания речи занимает ~800 МБ. Если сохранить, при повторной установке Voxly её не придётся скачивать заново.
+ru.UninstallModelsSavol=Сохранить модели распознавания речи?
+ru.UninstallModels=Скачанные Voxly модели занимают от 550 МБ до 1,4 ГБ. Если сохранить, при повторной установке Voxly их не придётся скачивать заново.
 ru.UninstallModelsHa=Да, сохранить
 ru.UninstallModelsYoq=Нет, удалить
 
-en.DownloadingModel=Downloading the language model (785 MB)...
-en.ModelFailed=Could not download the language model (3 attempts).%n%nThis usually means the internet connection dropped — a 785 MB file needs a stable connection.%n%nDOWNLOAD MANUALLY (recommended):%n%n1. Open this link in a browser or download manager:%n   {#ModelUrl}%n%n2. Put the downloaded «ggml-rubaistt.bin» next to this installer (setup.exe)%n%n3. Run the installer again — it will find the file and install offline%n%nTechnical error: %1
-en.ModelCopyFailed=Could not copy the language model. Is there enough disk space?%n%n%1
 en.ExtraTasks=Additional:
-en.UninstallModelsSavol=Keep the language model?
-en.UninstallModels=The speech model takes ~800 MB. If you keep it, reinstalling Voxly will not need to download it again.
-en.UninstallModelsHa=Yes, keep it
-en.UninstallModelsYoq=No, delete it
+en.UninstallModelsSavol=Keep the speech models?
+en.UninstallModels=The speech models Voxly downloaded take 550 MB – 1.4 GB. If you keep them, reinstalling Voxly will not need to download them again.
+en.UninstallModelsHa=Yes, keep them
+en.UninstallModelsYoq=No, delete them
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:ExtraTasks}"
@@ -156,19 +135,11 @@ Source: "{#SrcArm64}\*"; DestDir: "{app}"; Flags: ignoreversion; Check: IsArm64
 ; bilan. Litsenziya talabi: har nusxada turishi shart.
 Source: "..\..\LICENSE";                   DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
 
-; NUTQ MODELI OʻRNATUVCHI ICHIDA
-;
-; Joyi — `%LOCALAPPDATA%\Voxly\models`, ilova papkasida EMAS: yangi versiya
-; ilova papkasini almashtiradi, model esa unga tegmasdan qoladi.
-; Allaqachon toʻgʻri hajmda turgan boʻlsa (qayta oʻrnatish yoki Kotib'dan
-; koʻchiriladigan nusxa) — 785 MB qayta yozilmaydi.
-;
-; `nocompression`: model allaqachon kvantlangan (q8_0) va siqilmaydi.
-#ifdef BundleModel
-Source: "{#BundleModel}"; DestDir: "{localappdata}\{#AppName}\models"; \
-    DestName: "ggml-rubaistt.bin"; Flags: ignoreversion nocompression uninsneveruninstall; \
-    Check: not ModelAlreadyInstalled
-#endif
+; Nutq modeli bu yerda YOʻQ — ilova uni tanlangan til uchun oʻzi yuklaydi.
+; Kotib'dan oʻtayotgan foydalanuvchining modeli (`%LOCALAPPDATA%\Kotib\models`)
+; ham bu yerda koʻchirilmaydi: ilova birinchi ishga tushganda Kotib papkasini
+; butunligicha oʻzi koʻchirib oladi (`win/core/util.cpp`) va oʻzbek modeli
+; qayta yuklanmaydi.
 
 [Icons]
 Name: "{group}\{#AppName}";                        Filename: "{app}\{#AppExe}"
@@ -184,24 +155,9 @@ Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; \
     Check: AppWasNotRunning
 
 [Code]
-//
-// MODEL QAYERDAN OLINADI (faqat `onlayn` variantda; `setup` da model ichida)
-//
-// Model 785 MB. Manbalar ketma-ket tekshiriladi:
-//
-//   1. Allaqachon o'rnatilgan — %LOCALAPPDATA%\Voxly\models
-//   2. Kotib qo'ygan nusxa     — %LOCALAPPDATA%\Kotib\models. Unga tegilmaydi:
-//                                Voxly birinchi ishga tushganda Kotib papkasini
-//                                o'zi ko'chirib oladi (`win/core/util.cpp`).
-//   3. setup.exe YONIDA        — foydalanuvchi modelni brauzer, yuklab olish
-//                                menejeri yoki fleshka orqali olib qo'yishi mumkin
-//   4. Internetdan yuklash     — 3 marta urinib ko'riladi
-
 var
-  DownloadPage: TDownloadWizardPage;
-  ModelSource: String;      // ko'chirish uchun manba; bo'sh = ko'chirish shart emas
   AppWasRunning: Boolean;   // o'rnatishdan oldin ilova ochiq edimi
-  ModellarniOchir: Boolean; // uninstall: til modeli ham oʻchirilsinmi
+  ModellarniOchir: Boolean; // uninstall: nutq modellari ham oʻchirilsinmi
 
 // ---- Umumiy yordamchilar
 
@@ -244,38 +200,6 @@ begin
   VoxlyYopilishiniKut(5);
 end;
 
-function YangiModelYoli(): String;
-begin
-  Result := ExpandConstant('{localappdata}\{#AppName}\models\ggml-rubaistt.bin');
-end;
-
-function KotibModelYoli(): String;
-begin
-  Result := ExpandConstant('{localappdata}\Kotib\models\ggml-rubaistt.bin');
-end;
-
-// Fayl bor va hajmi to'g'rimi (chala yuklangan fayl o'tib ketmasligi uchun).
-function ModelFileValid(const Path: String): Boolean;
-var
-  Size: Int64;
-begin
-  Result := False;
-  if not FileExists(Path) then
-    Exit;
-  if not FileSize64(Path, Size) then
-    Exit;
-  Result := (Size = {#ModelSize});
-end;
-
-// [Files] Check: ham shu — model joyida (yoki Kotib papkasida, ilova uni
-// birinchi ishga tushishda koʻchiradi) boʻlsa qayta yozilmaydi.
-function ModelAlreadyInstalled(): Boolean;
-begin
-  Result := ModelFileValid(YangiModelYoli()) or
-            (not DirExists(ExpandConstant('{localappdata}\{#AppName}')) and
-             ModelFileValid(KotibModelYoli()));
-end;
-
 // ---- Sehrgar
 
 function InitializeSetup(): Boolean;
@@ -291,131 +215,10 @@ begin
   Result := not AppWasRunning;
 end;
 
-function OnDownloadProgress(const Url, FileName: String; const Progress, ProgressMax: Int64): Boolean;
-begin
-  if ProgressMax <> 0 then
-    DownloadPage.SetProgress(Progress, ProgressMax);
-  Result := True;
-end;
-
-// setup.exe yonidagi model.
-function LocalModelPath(): String;
-begin
-  Result := ExpandConstant('{src}\ggml-rubaistt.bin');
-end;
-
-// Internetdan yuklash, N marta urinib. Muvaffaqiyatda True.
-function TryDownload(Attempts: Integer; var ErrText: String): Boolean;
-var
-  I: Integer;
-begin
-  Result := False;
-  ErrText := '';
-  for I := 1 to Attempts do
-  begin
-    try
-      if WizardSilent() then
-        DownloadTemporaryFile('{#ModelUrl}', 'ggml-rubaistt.bin', '{#ModelSha256}', nil)
-      else
-      begin
-        DownloadPage.Clear;
-        DownloadPage.Add('{#ModelUrl}', 'ggml-rubaistt.bin', '{#ModelSha256}');
-        DownloadPage.Download;
-      end;
-      Result := True;
-      Exit;
-    except
-      ErrText := GetExceptionMessage;
-    end;
-  end;
-end;
-
-// Modelni tayyorlaydi. Bo'sh satr = muvaffaqiyat, aks holda xato matni.
-// `ModelSource` boʻsh boʻlmasa — ssPostInstall uni yangi joyga nusxalaydi.
-function AcquireModel(): String;
-var
-  ErrText: String;
-begin
-  Result := '';
-  ModelSource := '';
-
-  if ModelAlreadyInstalled() then
-    Exit;
-
-#ifdef BundleModel
-  // Model ichida, [Files] uni joylaydi.
-  Exit;
-#endif
-
-  // setup.exe yonida
-  if ModelFileValid(LocalModelPath()) then
-  begin
-    ModelSource := LocalModelPath();
-    Exit;
-  end;
-
-  // Internet
-  if not WizardSilent() then
-    DownloadPage.Show;
-  try
-    if TryDownload(3, ErrText) then
-      ModelSource := ExpandConstant('{tmp}\ggml-rubaistt.bin')
-    else
-      Result := FmtMessage(ExpandConstant('{cm:ModelFailed}'), [ErrText]);
-  finally
-    if not WizardSilent() then
-      DownloadPage.Hide;
-  end;
-end;
-
-procedure InitializeWizard;
-begin
-  DownloadPage := CreateDownloadPage(
-    SetupMessage(msgWizardPreparing),
-    ExpandConstant('{cm:DownloadingModel}'),
-    @OnDownloadProgress);
-end;
-
-// Oynali (odatiy) o'rnatish.
-function NextButtonClick(CurPageID: Integer): Boolean;
-var
-  ErrText: String;
-begin
-  Result := True;
-  if CurPageID <> wpReady then
-    Exit;
-
-  ErrText := AcquireModel();
-  if ErrText <> '' then
-  begin
-    SuppressibleMsgBox(ErrText, mbCriticalError, MB_OK, IDOK);
-    Result := False;      // "Ready" sahifasida qolamiz, qayta urinish mumkin
-  end;
-end;
-
-// Jimgina o'rnatish (/SILENT, /VERYSILENT): sehrgar hodisalari chaqirilmaydi,
-// PrepareToInstall esa ikkala rejimda ham chaqiriladi.
-function PrepareToInstall(var NeedsRestart: Boolean): String;
-begin
-  Result := '';
-  if WizardSilent() then
-    Result := AcquireModel();
-end;
-
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-  Dst: String;
   ResultCode: Integer;
 begin
-  if (CurStep = ssPostInstall) and (ModelSource <> '') then
-  begin
-    Dst := YangiModelYoli();
-    ForceDirectories(ExtractFileDir(Dst));
-    if not CopyFile(ModelSource, Dst, False) then
-      SuppressibleMsgBox(FmtMessage(ExpandConstant('{cm:ModelCopyFailed}'), [Dst]),
-                         mbCriticalError, MB_OK, IDOK);
-  end;
-
   // Voxly ochiq edi — yangisini ochamiz.
   if (CurStep = ssDone) and AppWasRunning then
     Exec(ExpandConstant('{app}\{#AppExe}'), '', '', SW_SHOWNORMAL, ewNoWait, ResultCode);
@@ -431,7 +234,7 @@ begin
   VoxlyniYop();
 end;
 
-// «Til modeli saqlab qolinsinmi?» — Inno'ning «Haqiqatan oʻchirasizmi?»
+// «Nutq modellari saqlab qolinsinmi?» — Inno'ning «Haqiqatan oʻchirasizmi?»
 // tasdigʻidan KEYIN (usUninstall). Savol ataylab «saqlansinmi» shaklida:
 // TaskDialog'da standart tugma doim BIRINCHISI, demak Enter yoki shoshib
 // bosish modelni SAQLAYDI. Jim rejimda ham saqlanadi.
@@ -464,7 +267,7 @@ begin
         RegDeleteValue(HKCU, RunKalit, '{#AppName}');
   end;
 
-  // Faqat model (foydalanuvchi rozi boʻlsa). Sozlamalar, tarix va hujjatlar
+  // Faqat modellar (foydalanuvchi rozi boʻlsa). Sozlamalar, tarix va hujjatlar
   // (`%APPDATA%\Voxly`) hech qachon oʻchirilmaydi.
   if (CurUninstallStep = usPostUninstall) and ModellarniOchir then
     DelTree(ExpandConstant('{localappdata}\{#AppName}\models'), True, True, True);

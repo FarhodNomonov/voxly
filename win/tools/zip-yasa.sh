@@ -53,9 +53,10 @@ ISHGA TUSHIRISH
   (soat yonida) 🎙 ikonkasi boʻlib turadi.
 
 BIRINCHI QADAM — MODEL
-  Birinchi ochilishda «Nutq modeli topilmadi» degan sariq chiziq chiqadi.
-  «Yuklab olish» ni bosing — model bir marta yuklab olinadi (785 MB) va
-  kompyuterda saqlanadi. Shundan keyin internet kerak emas.
+  Birinchi ochilishda «Nutq modeli … yuklanmagan» degan sariq chiziq chiqadi.
+  Avval Sozlamalarda nutq tilini tanlang (Til / Язык), keyin «Yuklab olish»
+  ni bosing — model bir marta yuklab olinadi (rus/ingliz ~550 MB, oʻzbek
+  ~785 MB) va kompyuterda saqlanadi. Shundan keyin internet kerak emas.
 
 ISHLATISH
   Istalgan ilovada matn yozadigan joyga kursorni qoʻying, Ctrl+Alt+D

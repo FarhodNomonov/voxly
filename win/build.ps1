@@ -15,10 +15,8 @@
 param(
     [string]$WorkDir = "D:\rubai",     # whisper.cpp va build artefaktlari (katta)
     [switch]$SkipWhisper,
-    [switch]$NoInstaller,
-    # Oflayn o'rnatuvchi: model .exe ichiga joylanadi (~800 MB), internet
-    # kerak emas. Ishonchsiz ulanishli foydalanuvchilar uchun.
-    [string]$BundleModel = ""
+    # O'rnatuvchi modelsiz: nutq modelini ilova tanlangan til uchun o'zi yuklaydi.
+    [switch]$NoInstaller
 )
 
 $ErrorActionPreference = 'Stop'
@@ -262,21 +260,12 @@ New-Item -ItemType Directory -Force $DistDir | Out-Null
 
 # Versiya rubai.iss ga shu yerdan beriladi (u VERSION ni oʻzi oʻqimaydi).
 $isccArgs = @("/DSourceDir=$AppOut", "/DAppVersion=$Versiya")
-if ($BundleModel) {
-    if (-not (Test-Path $BundleModel)) { Fail "Model topilmadi: $BundleModel" }
-    $size = (Get-Item $BundleModel).Length
-    if ($size -ne [long]$Pins.MODEL_HAJM) { Fail "Model hajmi noto'g'ri ($size bayt) — fayl chala yoki boshqa versiya" }
-    $hash = (Get-FileHash -Algorithm SHA256 $BundleModel).Hash.ToLower()
-    if ($hash -ne $Pins.MODEL_SHA256) { Fail "Model sha256 mos emas ($hash) — fayl buzilgan yoki boshqa" }
-    Write-Host "  Oflayn variant: model ichiga joylanadi ($([math]::Round($size/1MB)) MB)"
-    $isccArgs += "/DBundleModel=$BundleModel"
-}
 $isccArgs += (Join-Path $PSScriptRoot 'installer\rubai.iss')
 
 & $iscc @isccArgs
 if ($LASTEXITCODE -ne 0) { Fail "o'rnatuvchi yig'ilmadi" }
 
-$mask = if ($BundleModel) { '*oflayn-setup.exe' } else { '*[0-9]-setup.exe' }
+$mask = '*-win-setup.exe'
 $setup = Get-ChildItem $DistDir -Filter $mask | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 Step "TAYYOR"
 Write-Host "  $($setup.FullName)  ($([math]::Round($setup.Length/1MB,1)) MB)" -ForegroundColor Green
