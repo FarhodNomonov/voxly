@@ -44,46 +44,68 @@ cp "$BUILD/Voxly.exe" "$ISH/"
 cp "$BUILD"/*.dll "$ISH/" 2>/dev/null || true
 cp "$ROOT/LICENSE" "$ISH/LICENSE.txt"
 
-cat > "$ISH/OQING.txt" <<'TXT'
-Voxly — ovozli yozuv (portativ nusxa)
-================================================
+# Silero VAD — jimlikni tashlaydi va uzun ovozni boʻladi; engine.cpp uni
+# exe yonidan qidiradi. Yoʻq boʻlsa ZIP yigʻilmaydi (jimlikda gallyutsinatsiya).
+# shellcheck source=../../scripts/bogliqliklar.env
+source "$ROOT/scripts/bogliqliklar.env"
+VAD="$ROOT/vad/$VAD_NOM"
+[ -f "$VAD" ] || { echo "VAD topilmadi: $VAD (./setup.sh yuklaydi)" >&2; exit 1; }
+[ "$(shasum -a 256 "$VAD" | cut -d' ' -f1)" = "$VAD_SHA256" ] || { echo "VAD sha256 mos emas: $VAD" >&2; exit 1; }
+cp "$VAD" "$ISH/"
+cp "$ROOT/THIRD_PARTY_NOTICES.md" "$ISH/THIRD_PARTY_NOTICES.txt"
 
-ISHGA TUSHIRISH
-  Voxly.exe ni ikki marta bosing. Ilova vazifalar panelining oʻng chetida
-  (soat yonida) 🎙 ikonkasi boʻlib turadi.
+# README — rus/ingliz (Windows Notepad UTF-8 ni oʻzi taniydi, CRLF bilan).
+cat > "$ISH/README.txt" <<'TXT'
+Voxly — офлайн-диктовка для Windows (портативная версия)
+=========================================================
 
-BIRINCHI QADAM — MODEL
-  Birinchi ochilishda «Nutq modeli … yuklanmagan» degan sariq chiziq chiqadi.
-  Avval Sozlamalarda nutq tilini tanlang (Til / Язык), keyin «Yuklab olish»
-  ni bosing — model bir marta yuklab olinadi (rus/ingliz ~550 MB, oʻzbek
-  ~785 MB) va kompyuterda saqlanadi. Shundan keyin internet kerak emas.
+ЗАПУСК
+  Дважды нажмите Voxly.exe. Значок Voxly появится в правом нижнем углу
+  (рядом с часами; если его не видно — нажмите стрелку ^).
+  Если Windows пишет «Windows защитил ваш компьютер»: «Подробнее» →
+  «Выполнить в любом случае» (программа пока без цифровой подписи).
 
-ISHLATISH
-  Istalgan ilovada matn yozadigan joyga kursorni qoʻying, Ctrl+Alt+D
-  bosing, gapiring, yana Ctrl+Alt+D bosing. Matn oʻsha joyga yoziladi.
+ПЕРВЫЙ ШАГ — МОДЕЛЬ
+  В Настройках выберите язык речи, затем нажмите «Скачать».
+  Модель скачивается один раз (русский/английский ~550 МБ, узбекский
+  ~785 МБ). После этого интернет не нужен.
 
-  Tugmani Sozlamalardan (⚙) oʻzgartirish mumkin.
+МИКРОФОН
+  В Настройках обязательно выберите свой микрофон. Иногда по умолчанию
+  стоит «Stereo Mix» — он записывает звук компьютера, а не ваш голос.
 
-MIKROFON
-  Sozlamalarda mikrofonni ALBATTA tanlang. Windows'da standart qurilma
-  baʼzan «Stereo Mix» boʻlib qoladi — u ovozingizni emas, kompyuter
-  ovozini yozadi. Ilova bunday qurilmalarni ogohlantiradi.
+ДИКТОВКА
+  Поставьте курсор туда, где нужен текст (Telegram, браузер, Word),
+  нажмите Ctrl+Alt+D, говорите, нажмите Ctrl+Alt+D ещё раз.
 
-SMARTSCREEN
-  Ilova kod imzosi sertifikati bilan imzolanmagan, shuning uchun Windows
-  «Windows protected your PC» deb ogohlantirishi mumkin:
-  «More info» → «Run anyway».
+ТРЕБОВАНИЯ
+  Windows 10 (1809+) или 11, 64-bit; 6 ГБ RAM; ~1 ГБ на диске.
 
-BU NUSXADA YOʻQ
-  Start menyusidagi yorliq va avtomatik ishga tushish oʻrnatuvchi bilan
-  keladi. Avtostartni ilovaning oʻzi Sozlamalardan yoqadi.
+-----------------------------------------------------------------
 
-TALABLAR
-  Windows 10 (1809) yoki Windows 11, 64-bit. 4 GB RAM (videokarta bilan)
-  yoki 6 GB (protsessor rejimida). ~1 GB disk.
+Voxly — offline dictation for Windows (portable)
 
-Litsenziya: LICENSE.txt. Model va whisper.cpp oʻz litsenziyalari ostida.
+START
+  Double-click Voxly.exe. The Voxly icon appears near the clock
+  (click the ^ arrow if hidden). If Windows says "Windows protected
+  your PC": "More info" -> "Run anyway" (the app is not signed yet).
+
+FIRST STEP — MODEL
+  In Settings choose the speech language, then click Download.
+  The model downloads once (Russian/English ~550 MB, Uzbek ~785 MB).
+
+MICROPHONE
+  Pick your microphone in Settings ("Stereo Mix" records computer sound).
+
+DICTATION
+  Put the cursor where the text should go, press Ctrl+Alt+D, speak,
+  press Ctrl+Alt+D again.
+
+Author: Farkhod Nomonov — https://farhod-nomonov.netlify.app
+Licenses: LICENSE.txt, THIRD_PARTY_NOTICES.txt
 TXT
+# Notepad uchun CRLF.
+perl -pi -e 's/\n/\r\n/' "$ISH/README.txt"
 
 # `ditto` HFS metadata qoʻshmaydi va Windows'da `__MACOSX` chiqmaydi.
 rm -f "$DIST/$NOM.zip"
