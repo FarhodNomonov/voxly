@@ -1,17 +1,41 @@
-// whisper.cpp C shim interfeysi (`whisper_bridge.c`). Swift unga
-// `Bridging.h` orqali kiradi. Windows nusxasi: `win/core/whisper_bridge.h`.
+// whisper.cpp C shim interfeysi (`whisper_bridge.c`) — macOS va Windows uchun
+// YAGONA fayl. Swift unga `Bridging.h` orqali, Windows C++ kodi toʻgʻridan-
+// toʻgʻri kiradi (`win/CMakeLists.txt` `src/` ni include yoʻliga qoʻshadi).
 
 #ifndef RUBAI_WHISPER_BRIDGE_H
 #define RUBAI_WHISPER_BRIDGE_H
 
-// Modelni yuklaydi (bir marta). 0 = muvaffaqiyat.
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// Modelni yuklaydi (bir marta), GPU bilan. 0 = muvaffaqiyat.
 int rubai_load(const char *model_path);
 
+// GPU'ni majburan oʻchirish mumkin (Windows'da CPU fallback uchun).
+// use_gpu = 0 boʻlsa faqat CPU backend ishlatiladi.
+int rubai_load_ex(const char *model_path, int use_gpu);
+
+#ifdef _WIN32
+#include <wchar.h>
+// Yoʻl UTF-16 da, fayl `_wfopen` bilan ochiladi va whisper.cpp'ga oʻz
+// oʻquvchimiz (`whisper_model_loader`) orqali beriladi. Kirillcha foydalanuvchi
+// nomi (C:\Users\Аброр\…) va 8.3 qisqa nomlar oʻchirilgan disk uchun:
+// llvm-mingw'da whisper.cpp yoʻlni tor `ifstream` bilan (ANSI kod sahifasida)
+// ochadi va bunday yoʻl ochilmaydi.
+int rubai_load_w(const wchar_t *model_path, int use_gpu);
+
+// Silero VAD modeli yoʻli (S12) — yuklashdan OLDIN, bir marta (UTF-16).
+// Har model yuklanishida VAD ham yuklanadi; berilmasa yoki yuklanmasa —
+// boʻlaksiz ishlaydi.
+void rubai_set_vad_path_w(const wchar_t *path);
+#else
 // Silero VAD modeli yoʻli (S12) — `rubai_load` dan OLDIN, bir marta. Har
 // model yuklanishida VAD ham yuklanadi: nutq yoʻq ovozda whisper chaqirilmaydi,
 // uzun ovoz jimliklardan boʻlinadi (`nutq_bolaklari.h`). Yoʻl berilmasa yoki
 // VAD yuklanmasa — 1.1 dagi kabi boʻlaksiz ishlaydi.
 void rubai_set_vad_path(const char *path);
+#endif
 
 // Nutq tili — whisper til kodi ("uz", "ru" …). Keyingi transkripsiyadan
 // boshlab amal qiladi. Standart: "uz".
@@ -49,14 +73,18 @@ int64_t rubai_segment_t1(int i);
 // Oxirgi xatoning qisqa tavsifi (ingliz tilida, log uchun). Hech qachon NULL emas.
 const char *rubai_last_error(void);
 
-// Faol backend nomi: "Metal", "CPU" yoki "" (yuklanmagan).
+// Faol backend nomi: "Metal", "Vulkan", "CUDA", "CPU" yoki "" (yuklanmagan).
 const char *rubai_backend_name(void);
 
 // whisper.cpp va ggml oʻz xabarlarini stderr'ga chiqaradi. Grafik ilovada
 // stderr yoʻq, shuning uchun ularni oʻz logimizga yoʻnaltiramiz.
 // fn = NULL boʻlsa xabarlar butunlay oʻchiriladi.
-// rubai_load dan OLDIN chaqirilishi kerak. (`win/core/whisper_bridge.h` bilan bir xil.)
+// rubai_load dan OLDIN chaqirilishi kerak.
 typedef void (*rubai_log_fn)(const char *msg);
 void rubai_set_log(rubai_log_fn fn);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

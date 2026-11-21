@@ -1,7 +1,7 @@
 // `nutq_bolaklari.c` testlari (S12): ovozni whisper chaqiruvlariga boʻlish.
-// Fayl macOS'dagi `src/nutq_bolaklari.c` bilan bayt-bayt bir xil
-// (`hammasi.sh` solishtiradi), shuning uchun bu testlar ikkala platformani qamraydi.
-#include "../core/nutq_bolaklari.h"
+// Fayl macOS bilan umumiy (`src/nutq_bolaklari.c`), shuning uchun bu testlar
+// ikkala platformani qamraydi.
+#include "../../src/nutq_bolaklari.h"
 
 #include <string>
 #include <vector>

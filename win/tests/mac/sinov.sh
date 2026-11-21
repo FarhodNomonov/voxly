@@ -23,7 +23,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 CHIQISH="${TMPDIR:-/tmp}/voxly-mac-sinov"
 
 # Ovozni boʻlaklash (S12) — sof C, macOS nusxasi bilan bayt-bayt bir xil.
-clang -std=c99 -O2 -Wall -Wextra -c "$ROOT/win/core/nutq_bolaklari.c" -o "$CHIQISH-nutq.o"
+clang -std=c99 -O2 -Wall -Wextra -c "$ROOT/src/nutq_bolaklari.c" -o "$CHIQISH-nutq.o"
 
 clang++ -std=c++20 -O1 -Wall -Wextra \
     -I"$ROOT/win/tests/mac" \

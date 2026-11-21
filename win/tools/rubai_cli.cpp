@@ -27,7 +27,7 @@
 #include "../core/saqlanmagan.h"
 #include "../core/util.h"
 #include "../core/wav.h"
-#include "../core/whisper_bridge.h"
+#include "whisper_bridge.h"
 
 using namespace rubai;
 

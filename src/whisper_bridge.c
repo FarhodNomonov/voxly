@@ -1,8 +1,12 @@
-// whisper.cpp ustidan C shim (macOS, Metal): model va VAD yuklash, diktovka va
-// Studiya transkripsiyasi, xato matni, backend nomi, log yoʻnaltirish.
-// Inferens va VAD parametrlari `win/core/whisper_bridge.c` bilan AYNAN bir xil —
-// `win/tests/mac/parametr-tekshir.sh` tekshiradi; «Ovozni boʻlaklash» boʻlimi
-// ikkala faylda soʻzma-soʻz bir xil.
+// whisper.cpp ustidan C shim: model va VAD yuklash, diktovka va Studiya
+// transkripsiyasi, xato matni, backend nomi, log yoʻnaltirish.
+//
+// YAGONA FAYL — macOS (`src/build.sh`, Metal) ham, Windows (`win/CMakeLists.txt`,
+// Vulkan/CPU) ham shuni kompilyatsiya qiladi: inferens parametrlari, VAD
+// boʻlaklash, audio_ctx va halqa toʻxtatgichi ikki platformada bir xil boʻlishi
+// shu bilan taʼminlanadi (ilgari `win/core/` da nusxa turardi va qoʻlda
+// sinxronlanardi). Platformaga xos joylar — faqat `#ifdef _WIN32` ostida:
+// backend DLL'larini yuklash, UTF-16 yoʻl bilan model/VAD ochish.
 
 #include "whisper.h"
 #include "ggml-backend.h"
@@ -14,9 +18,9 @@
 #include <stdio.h>
 
 static struct whisper_context *g_ctx = NULL;
-// Xato matni, faol backend va log — `win/core/whisper_bridge.c` bilan bir xil
-// (barqarorlik A5). Ilgari macOS'da whisper yiqilish sababini stderr'ga
-// yozardi, grafik ilovada esa stderr yoʻq — logda faqat «kod 1» qolardi.
+// Xato matni, faol backend va log (barqarorlik A5). Ilgari macOS'da whisper
+// yiqilish sababini stderr'ga yozardi, grafik ilovada esa stderr yoʻq — logda
+// faqat «kod 1» qolardi.
 static char g_err[256] = "";
 static char g_backend[32] = "";
 
@@ -49,7 +53,8 @@ void rubai_set_log(rubai_log_fn fn) {
     ggml_log_set(ggml_log_bridge, NULL);
 }
 
-// Yuklangan ggml backendlari orasidan GPU'sini topadi. Topilmasa "CPU".
+// Yuklangan ggml backendlari orasidan GPU'sini topadi (Metal, Vulkan, CUDA).
+// Topilmasa "CPU".
 static void detect_backend(int use_gpu) {
     snprintf(g_backend, sizeof(g_backend), "CPU");
     if (!use_gpu) return;
@@ -196,6 +201,35 @@ static int whisper_full_himoyali(struct whisper_context *ctx, struct whisper_ful
 
 static struct whisper_vad_context *g_vad = NULL;
 
+#ifdef _WIN32
+// whisper_model_loader — fayl `_wfopen` bilan ochiladi (kirillcha yoʻl).
+static size_t fayl_oqi(void *ctx, void *chiqish, size_t n) {
+    return fread(chiqish, 1, n, (FILE *)ctx);
+}
+static bool fayl_oxiri(void *ctx) { return feof((FILE *)ctx) != 0; }
+static void fayl_yop(void *ctx) { fclose((FILE *)ctx); }
+
+// VAD modeli yoʻli — bir marta beriladi; har model yuklanishida (180 s boʻsh
+// turishdan keyin ham) VAD ham yuklanadi.
+static wchar_t g_vad_yol[1024] = L"";
+
+void rubai_set_vad_path_w(const wchar_t *path) {
+    swprintf(g_vad_yol, sizeof(g_vad_yol) / sizeof(g_vad_yol[0]), L"%ls", path ? path : L"");
+}
+
+// VAD yuklanmasa diktovka baribir ishlaydi — 1.1 dagi kabi, boʻlaksiz.
+static void vad_yukla(void) {
+    if (g_vad || !g_vad_yol[0]) return;
+    FILE *f = _wfopen(g_vad_yol, L"rb");
+    if (f) {
+        struct whisper_vad_context_params vcp = whisper_vad_default_context_params();
+        vcp.use_gpu = false;  // ~2 ms / 1 s ovoz — CPU yetarli
+        struct whisper_model_loader oquvchi = {f, fayl_oqi, fayl_oxiri, fayl_yop};
+        g_vad = whisper_vad_init_with_params(&oquvchi, vcp);  // oʻquvchini oʻzi yopadi
+    }
+    if (!g_vad && g_log) g_log("VAD modeli yuklanmadi — ovoz boʻlaklarga boʻlinmaydi");
+}
+#else
 // VAD modeli yoʻli — bir marta beriladi; har model yuklanishida (180 s boʻsh
 // turishdan keyin ham) VAD ham yuklanadi.
 static char g_vad_yol[1024] = "";
@@ -212,27 +246,71 @@ static void vad_yukla(void) {
     g_vad = whisper_vad_init_from_file_with_params(g_vad_yol, vcp);
     if (!g_vad && g_log) g_log("VAD modeli yuklanmadi — ovoz boʻlaklarga boʻlinmaydi");
 }
+#endif
 
-int rubai_load(const char *model_path) {
+// Kontekst parametrlari — hamma yuklash yoʻllari uchun bitta joyda.
+static struct whisper_context_params kontekst_parametrlari(int use_gpu) {
+#ifdef _WIN32
+    // Backend DLL'larini yuklaydi (ggml-vulkan.dll, ggml-cpu-*.dll).
+    // GGML_BACKEND_DL bilan build qilinganda shart. macOS build'i statik —
+    // backendlar (Metal, CPU, BLAS) ilovaga ulangan.
+    ggml_backend_load_all();
+#endif
+    struct whisper_context_params cp = whisper_context_default_params();
+    cp.use_gpu = use_gpu ? true : false;  // macOS — Metal, Windows — Vulkan/CUDA
+    cp.flash_attn = true;
+    return cp;
+}
+
+int rubai_load_ex(const char *model_path, int use_gpu) {
     if (g_ctx) return 0;
     if (!model_path || !model_path[0]) {
         set_err("empty model path");
         return 1;
     }
-    struct whisper_context_params cp = whisper_context_default_params();
-    cp.use_gpu = true;  // Metal (Apple GPU)
-    cp.flash_attn = true;
+    struct whisper_context_params cp = kontekst_parametrlari(use_gpu);
     g_ctx = whisper_init_from_file_with_params(model_path, cp);
     if (!g_ctx) {
         set_err("whisper_init_from_file_with_params failed");
         g_backend[0] = '\0';
         return 1;
     }
-    detect_backend(1);
+    detect_backend(use_gpu);
     vad_yukla();
     set_err("");
     return 0;
 }
+
+int rubai_load(const char *model_path) { return rubai_load_ex(model_path, 1); }
+
+#ifdef _WIN32
+int rubai_load_w(const wchar_t *model_path, int use_gpu) {
+    if (g_ctx) return 0;
+    if (!model_path || !model_path[0]) {
+        set_err("empty model path");
+        return 1;
+    }
+    FILE *f = _wfopen(model_path, L"rb");
+    if (!f) {
+        set_err("model file could not be opened (_wfopen)");
+        return 1;
+    }
+    struct whisper_context_params cp = kontekst_parametrlari(use_gpu);
+    struct whisper_model_loader oquvchi = {f, fayl_oqi, fayl_oxiri, fayl_yop};
+    // whisper.cpp oʻquvchini muvaffaqiyatda ham, xatoda ham OʻZI yopadi
+    // (`whisper_init_with_params_no_state`) — bu yerda fclose YOʻQ.
+    g_ctx = whisper_init_with_params(&oquvchi, cp);
+    if (!g_ctx) {
+        set_err("whisper_init_with_params failed");
+        g_backend[0] = '\0';
+        return 1;
+    }
+    detect_backend(use_gpu);
+    vad_yukla();
+    set_err("");
+    return 0;
+}
+#endif
 
 static void segmentlarni_tozala(void);
 
@@ -249,7 +327,7 @@ void rubai_unload(void) {
     g_backend[0] = '\0';
 }
 
-// ---- Ovozni boʻlaklash (S12) — macOS va Windows'da AYNAN bir xil ----------
+// ---- Ovozni boʻlaklash (S12) — macOS va Windows uchun umumiy ---------------
 //
 // Bu fine-tune modelda `no_speech_prob` doim ~1e-10 — `no_speech_thold` hech
 // qachon ishlamaydi va jimlik/shovqin «musiqa» boʻlib chiqardi; `no_timestamps`

@@ -69,7 +69,7 @@ formatlaydi.
   qoʻshimcha orasida: `Keychain'da`, `macOS'ning`. Hech qachon regex bilan
   ommaviy almashtirmang (`AGENTS.md` → «Apostrophe convention»).
 - **Ikki platforma — bitta xulq.** whisper parametrlari
-  (`src/whisper_bridge.c` ↔ `win/core/whisper_bridge.c`), tarjima koʻprigi,
+  (umumiy `src/whisper_bridge.c` — ikkala build shuni oladi), tarjima koʻprigi,
   matn formatlash va yangilanish siyosati ikkala tomonda bir xil boʻlishi
   shart — testlar buni ushlaydi. Bir tomonni oʻzgartirsangiz, ikkinchisini ham.
 - **Sof mantiq — testlanadigan faylda.** AppKit/Win32/whisper/fayl tizimiga

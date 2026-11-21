@@ -23,12 +23,36 @@ namespace {
 
 constexpr wchar_t kModelFileName[] = L"ggml-rubaistt.bin";
 
+// Hisoblash oqimlari soni — fizik yadrolar soni (macOS'dagi `Whisper.oqimlar`
+// ning Intel qoidasi). Hyper-Threading'ning mantiqiy yadrolari whisper'ni
+// SEKINLASHTIRADI (i7-9750H, 6 yadro / 12 oqim: 10 oqim — 21,4 s, 6 oqim —
+// 19,3 s). Ilgari bu yerda «mantiqiy yadrolar − 2» turardi. Bir marta
+// hisoblanadi.
+int fizikYadrolar() {
+    DWORD bayt = 0;
+    GetLogicalProcessorInformation(nullptr, &bayt);
+    if (bayt == 0) return 0;
+    std::vector<SYSTEM_LOGICAL_PROCESSOR_INFORMATION> info(
+        bayt / sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION));
+    if (!GetLogicalProcessorInformation(info.data(), &bayt)) return 0;
+    int n = 0;
+    for (const auto& i : info) {
+        if (i.Relationship == RelationProcessorCore) n++;
+    }
+    return n;
+}
+
 int defaultThreads() {
-    // macOS versiyasi bilan bir xil qoida: yadrolar soni - 2, kamida 4.
-    SYSTEM_INFO si{};
-    GetSystemInfo(&si);
-    int n = (int)si.dwNumberOfProcessors - 2;
-    return n < 4 ? 4 : n;
+    static const int n = [] {
+        const int fizik = fizikYadrolar();
+        if (fizik > 0) return fizik;
+        // Aniqlab boʻlmadi — eski qoida: mantiqiy yadrolar − 2, kamida 4.
+        SYSTEM_INFO si{};
+        GetSystemInfo(&si);
+        const int m = (int)si.dwNumberOfProcessors - 2;
+        return m < 4 ? 4 : m;
+    }();
+    return n;
 }
 
 // whisper.cpp/ggml xabarlari -> bizning log fayl.
@@ -192,7 +216,8 @@ bool Engine::Impl::ensureLoaded(std::wstring& errOut, bool isitish) {
     setBackend(toWide(rubai_backend_name()));
     loaded.store(true);
     logWrite(L"model yuklandi: " + toWide(rubai_backend_name()) + L", " +
-             std::to_wstring((int)(secs * 1000)) + L" ms");
+             std::to_wstring((int)(secs * 1000)) + L" ms, oqimlar: " +
+             std::to_wstring(defaultThreads()));
 
     // Isitish faqat oldindan yuklashda va faqat GPU'da (E3). Ilgari u HAR
     // yuklanishda — 180 s boʻsh turishdan keyin foydalanuvchi diktovkani

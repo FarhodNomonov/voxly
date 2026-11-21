@@ -104,9 +104,13 @@ endforeach()
 
 # --------------------------------------------------------------------- core
 
+# whisper.cpp C shim'i va ovozni boʻlaklash — macOS bilan UMUMIY fayllar
+# (`src/`): inferens parametrlari ikki platformada bir xil boʻlishi shart.
+set(UMUMIY_SRC "${CMAKE_CURRENT_SOURCE_DIR}/../src")
+
 add_library(rubai_core STATIC
-    core/whisper_bridge.c
-    core/nutq_bolaklari.c
+    "${UMUMIY_SRC}/whisper_bridge.c"
+    "${UMUMIY_SRC}/nutq_bolaklari.c"
     core/util.cpp
     core/samples.cpp
     core/config.cpp
@@ -131,6 +135,8 @@ add_library(rubai_core STATIC
 
 target_include_directories(rubai_core PUBLIC
     core
+    # whisper_bridge.h, nutq_bolaklari.h (umumiy)
+    "${UMUMIY_SRC}"
     # kotib_versiya.h — toʻliq versiya satri
     "${CMAKE_CURRENT_BINARY_DIR}/gen"
     "${WHISPER_ROOT}/include"

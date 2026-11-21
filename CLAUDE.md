@@ -113,10 +113,10 @@ plus manual testing (see AGENTS.md → *What tests cannot cover*).
 - **Never run an uncapped `cmake --build -j`.** Every build here is `nice -n 10 … -j4` on
   purpose: an uncapped `-j` froze a 16 GB machine for half an hour (CTranslate2 recompiles
   its sources once per CPU ISA, ~1–2 GB per job). Warn before starting heavy builds.
-- **The two platforms' shared files must not drift.** `win/core/whisper_bridge.c` vs
-  `src/whisper_bridge.c`, and `win/core/tarjima_bridge.cpp` vs `src/tarjima_bridge.cpp`,
-  differ only by named Windows-only helpers — inference parameters, beam sizes, length
-  limits are identical, and `win/tests/mac/parametr-tekshir.sh` enforces it.
+- **The two platforms share one whisper bridge.** `src/whisper_bridge.{c,h}` and
+  `src/nutq_bolaklari.{c,h}` are compiled by both `src/build.sh` and `win/CMakeLists.txt`
+  (there is no `win/core/` copy any more); Windows-only code sits under `#ifdef _WIN32`
+  and must never set inference parameters — `win/tests/mac/parametr-tekshir.sh` enforces it.
 - **Dev builds are signed with Developer ID, not ad-hoc.** TCC keys an ad-hoc signature to
   the cdhash, so every rebuild silently drops the Accessibility grant.
 - **All user-data paths live in `src/yollar.swift`** (Windows: `core/util.cpp`). Never
@@ -148,9 +148,8 @@ plus manual testing (see AGENTS.md → *What tests cannot cover*).
 - `rubai_transcribe` mallocs its result (call `rubai_free_str`); `rubai_transcribe_segments`
   does not — `rubai_segment_text` points into the bridge's own segment store (valid until
   the next call or `rubai_unload`), must be copied immediately and must **never** be freed.
-- **Both bridges chunk audio with Silero VAD (S12)** — `nutq_bolaklari.c` (byte-identical
-  on both platforms) and the «Ovozni boʻlaklash» section (word-for-word identical; checked
-  by `parametr-tekshir.sh`). The VAD model is pinned in `scripts/bogliqliklar.env` and
+- **The bridge chunks audio with Silero VAD (S12)** — `nutq_bolaklari.c` and the
+  «Ovozni boʻlaklash» section of the shared `src/whisper_bridge.c`. The VAD model is pinned in `scripts/bogliqliklar.env` and
   ships next to the app. Don't "fix" hallucinations with `no_speech_thold`: on this model
   `no_speech_prob` is ~1e-10 everywhere (measured), see AGENTS.md → S12.
 - Uploading anything over 300 MiB to R2 needs the throwaway-Worker multipart route —

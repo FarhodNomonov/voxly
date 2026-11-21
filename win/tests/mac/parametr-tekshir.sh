@@ -4,25 +4,65 @@
 #
 #   ./win/tests/mac/parametr-tekshir.sh
 #
-# `src/whisper_bridge.c` va `win/core/whisper_bridge.c` — bir xil model
-# ustidagi bir xil chaqiruv. Parametrlardan bittasi ogʻib ketsa (masalan
-# `beam_size` yoki `no_speech_thold`), ikkala platforma bir xil ovozdan
-# BOSHQA matn beradi va bu «ikkita boshqa ilova» degani.
-#
-# Fayllarning oʻzi bayt-bayt bir xil EMAS: Windows tomoni UTF-16 yoʻl bilan
-# yuklaydi (`rubai_load_w`, VAD ham). Shuning uchun:
-#   • `p.<maydon>` (whisper) va `vp.<maydon>` (VAD, S12) satrlari solishtiriladi;
-#   • «Ovozni boʻlaklash» boʻlimi (VAD parametrlari, boʻlaklash, ikkala
-#     transkripsiya funksiyasi, segment xotirasi) — SOʻZMA-SOʻZ: u yerdagi har
-#     qanday farq ikki platformada boshqa matn degani;
-#   • `nutq_bolaklari.{c,h}` — bayt-bayt.
+# whisper.cpp ustidagi C shim (`src/whisper_bridge.c`) va ovozni boʻlaklash
+# (`src/nutq_bolaklari.{c,h}`) endi YAGONA fayllar: macOS (`src/build.sh`) ham,
+# Windows (`win/CMakeLists.txt`) ham shularni kompilyatsiya qiladi. Ilgari
+# `win/core/` da nusxa turardi va bu skript ularni solishtirardi. Endi u
+# bir xillik BUZILMASLIGINI tekshiradi:
+#   • `win/core/` da nusxa qayta paydo boʻlmagan, CMake `src/` dagini oladi;
+#   • `#ifdef _WIN32` / `#else` bloklarida whisper (`p.`) yoki VAD (`vp.`)
+#     parametri YOʻQ — platformaga xos joylar faqat fayl ochish va backend;
+#   • ikkala transkripsiya funksiyasi va VAD parametrlari topiladi va bir-biriga
+#     mos (yagona ruxsat etilgan farq — `no_timestamps`);
+#   • nutq modellari katalogi (hajm, sha256, manzil) `src/model_tanlov.swift`
+#     va `win/core/model_tanlov.h` da bir xil.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 ISH="${TMPDIR:-/tmp}/kotib-parametr"
 mkdir -p "$ISH"
+BRIDGE="$ROOT/src/whisper_bridge.c"
 
-# Berilgan funksiyadan parametr satrlarini ajratadi.
+xato=0
+yaxshi() { echo "✓ $*"; }
+yomon() { echo "✗ $*" >&2; xato=1; }
+
+# 1. Nusxa yoʻq, CMake umumiy faylni oladi.
+for f in whisper_bridge.c whisper_bridge.h nutq_bolaklari.c nutq_bolaklari.h; do
+    if [ -e "$ROOT/win/core/$f" ]; then
+        yomon "win/core/$f qayta paydo boʻldi — umumiy fayl src/$f (nusxa ogʻib ketadi)"
+    fi
+done
+if grep -q 'UMUMIY_SRC}/whisper_bridge.c' "$ROOT/win/CMakeLists.txt" \
+    && grep -q 'UMUMIY_SRC}/nutq_bolaklari.c' "$ROOT/win/CMakeLists.txt"; then
+    yaxshi "Windows build'i umumiy src/whisper_bridge.c va src/nutq_bolaklari.c ni kompilyatsiya qiladi"
+else
+    yomon "win/CMakeLists.txt umumiy src/ fayllarini kompilyatsiya qilmayapti"
+fi
+
+# 2. Platformaga xos bloklarda parametr yoʻq.
+#    `#if…` dan mos `#endif` gacha (ichma-ich bloklarni hisobga olib) chiqaradi.
+platforma_bloklari() {
+    awk '
+        /^[[:space:]]*#[[:space:]]*if/ {
+            chuqur++
+            if ($0 ~ /_WIN32/ && !ichida) { ichida = 1; boshi = chuqur }
+        }
+        ichida { print }
+        /^[[:space:]]*#[[:space:]]*endif/ {
+            if (ichida && chuqur == boshi) ichida = 0
+            chuqur--
+        }
+    ' "$1"
+}
+platforma_bloklari "$BRIDGE" > "$ISH/platforma.txt"
+if grep -nE '^[[:space:]]+v?p\.[a-z_.]+[[:space:]]*=' "$ISH/platforma.txt"; then
+    yomon "#ifdef _WIN32 bloklarida inferens/VAD parametri bor — platformalar boshqa matn beradi"
+else
+    yaxshi "platformaga xos bloklarda inferens/VAD parametri yoʻq ($(wc -l < "$ISH/platforma.txt" | tr -d ' ') qator tekshirildi)"
+fi
+
+# 3. Parametrlar topiladi; ikkala transkripsiya funksiyasi mos.
 ajrat() {
     local fayl="$1" funksiya="$2"
     # `grep` hech narsa topmasa 1 qaytaradi va `pipefail` butun skriptni
@@ -33,45 +73,42 @@ ajrat() {
         | sed -E 's|//.*$||' \
         | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//'
 }
-
-xato=0
 for f in rubai_transcribe rubai_transcribe_segments vad_parametrlari; do
-    ajrat "$ROOT/src/whisper_bridge.c"      "$f" > "$ISH/mac-$f.txt"
-    ajrat "$ROOT/win/core/whisper_bridge.c" "$f" > "$ISH/win-$f.txt"
-
-    if [ ! -s "$ISH/mac-$f.txt" ] || [ ! -s "$ISH/win-$f.txt" ]; then
-        echo "✗ $f: parametrlar topilmadi (funksiya nomi oʻzgardimi?)" >&2
-        xato=1
-        continue
-    fi
-    if diff -u "$ISH/mac-$f.txt" "$ISH/win-$f.txt"; then
-        echo "✓ $f: parametrlar bir xil ($(wc -l < "$ISH/mac-$f.txt" | tr -d ' ') ta)"
+    ajrat "$BRIDGE" "$f" > "$ISH/$f.txt"
+    if [ -s "$ISH/$f.txt" ]; then
+        yaxshi "$f: $(wc -l < "$ISH/$f.txt" | tr -d ' ') ta parametr"
     else
-        echo "✗ $f: parametrlar farq qiladi" >&2
-        xato=1
+        yomon "$f: parametrlar topilmadi (funksiya nomi oʻzgardimi?)"
     fi
 done
-
-# «Ovozni boʻlaklash» boʻlimi — sarlavhadan `rubai_free_str` gacha, soʻzma-soʻz.
-bolim() { sed -n '/^\/\/ ---- Ovozni boʻlaklash/,/^void rubai_free_str/p' "$1"; }
-bolim "$ROOT/src/whisper_bridge.c" > "$ISH/mac-bolim.txt"
-bolim "$ROOT/win/core/whisper_bridge.c" > "$ISH/win-bolim.txt"
-if [ ! -s "$ISH/mac-bolim.txt" ]; then
-    echo "✗ «Ovozni boʻlaklash» boʻlimi topilmadi" >&2
-    xato=1
-elif diff -u "$ISH/mac-bolim.txt" "$ISH/win-bolim.txt"; then
-    echo "✓ ovozni boʻlaklash: ikkala bridge'da soʻzma-soʻz bir xil ($(wc -l < "$ISH/mac-bolim.txt" | tr -d ' ') qator)"
+# Diktovka va Studiya bir xil model chaqiruvi — farq faqat `no_timestamps`
+# (segment chegaralari) va Studiyaning progress/abort callback'larida.
+filtr() { grep -vE '^p\.(no_timestamps|progress_callback|abort_callback|audio_ctx)' "$1" || true; }
+if diff -u <(filtr "$ISH/rubai_transcribe.txt") <(filtr "$ISH/rubai_transcribe_segments.txt"); then
+    yaxshi "diktovka va Studiya parametrlari bir xil (no_timestamps va callback'lardan tashqari)"
 else
-    echo "✗ ovozni boʻlaklash: bridge'lar farq qiladi" >&2
-    xato=1
+    yomon "rubai_transcribe va rubai_transcribe_segments parametrlari farq qiladi"
 fi
-for f in nutq_bolaklari.c nutq_bolaklari.h; do
-    if cmp -s "$ROOT/src/$f" "$ROOT/win/core/$f"; then
-        echo "✓ $f: bayt-bayt bir xil"
-    else
-        echo "✗ $f: src/ va win/core/ nusxalari farq qiladi" >&2
-        xato=1
-    fi
-done
+
+# 4. Nutq modellari katalogi ikki platformada bir xil.
+SWIFT="$ROOT/src/model_tanlov.swift"
+WINH="$ROOT/win/core/model_tanlov.h"
+if [ -f "$WINH" ]; then
+    # Swift: hajm `823_369_796`, sha256 64 hex, manzil "https://…".
+    while read -r hajm; do
+        if grep -q "${hajm//_/}LL" "$WINH"; then
+            yaxshi "model hajmi ${hajm//_/} — ikkala katalogda"
+        else
+            yomon "model hajmi ${hajm//_/} win/core/model_tanlov.h da yoʻq"
+        fi
+    done < <(grep -oE 'hajm: [0-9_]+' "$SWIFT" | sed 's/hajm: //')
+    while read -r sha; do
+        grep -q "$sha" "$WINH" || yomon "sha256 $sha win/core/model_tanlov.h da yoʻq"
+    done < <(grep -oE '"[0-9a-f]{64}"' "$SWIFT" | tr -d '"')
+    while read -r url; do
+        grep -qF "$url" "$WINH" || yomon "manzil $url win/core/model_tanlov.h da yoʻq"
+    done < <(grep -oE 'url: "https://[^"]+"' "$SWIFT" | sed -E 's/url: "(.*)"/\1/')
+    [ "$xato" = 0 ] && yaxshi "model sha256 va manzillari bir xil"
+fi
 
 exit "$xato"

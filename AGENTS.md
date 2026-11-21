@@ -98,10 +98,12 @@ silent uninstall run from SSH leaves `unins000.exe` behind, and the next install
 creates `unins001.*`. A second local user needs `SeBatchLogonRight` to run a scheduled
 task, and `Start-Process -Credential` from SSH fails with 0xC0000142.
 
-`win/core/whisper_bridge.c` is a near-verbatim copy of `src/whisper_bridge.c` — keep the
-inference parameters (language `uz`, beam size 5, `no_speech_thold 0.25`) identical in both
-so the two platforms produce the same output. **`./win/tests/mac/parametr-tekshir.sh`
-enforces this**: it extracts every `p.<field> = …` line from both files and diffs them.
+`src/whisper_bridge.c` is shared: the Windows build compiles the same file (Windows-only
+helpers — backend DLL loading, UTF-16 model/VAD paths — sit under `#ifdef _WIN32`), so the
+inference parameters (beam size 5, `no_speech_thold 0.25`, adaptive `audio_ctx`, loop guard)
+are identical by construction. **`./win/tests/mac/parametr-tekshir.sh`** checks that no copy
+reappears in `win/core/`, that no `p.`/`vp.` parameter is set inside a platform block, and
+that the speech-model catalog matches `win/core/model_tanlov.h`.
 The files are *not* byte-for-byte identical — the Windows side additionally has
 `rubai_load_ex` (CPU fallback) and `ggml_backend_load_all()` (DLL backends) — but the
 parameters are, and that is what changes the output. Since 1.2 (S10/A5) **both** record an
@@ -113,8 +115,7 @@ compiled pipeline, dozens to hundreds per model load. Keep those helpers identic
 macOS additionally has
 `rubai_transcribe_segments`, used by Studio to get per-segment timestamps; it shares
 every inference parameter with `rubai_transcribe` except one deliberate difference,
-`no_timestamps` (see S12 below). **Both platforms now have it** (`src/whisper_bridge.c` and
-`win/core/whisper_bridge.c`) and it must stay identical too.
+`no_timestamps` (see S12 below). Both platforms use it from the shared `src/whisper_bridge.c`.
 
 **S12 — Silero VAD chunking (1.2).** Measured, not guessed (`.stt-baho/s12`, FLEURS
 10 × ~120 s + 50 short clips + 20 non-speech files, two runs each): this fine-tuned model
@@ -142,9 +143,8 @@ from 78 % to 67 %. The loops the fallback cannot break are collapsed in text by
 ≥ 4 times in a row → once; text without such a run is returned untouched). Caveat: whisper.cpp
 seeds decoder 0's RNG only at state creation, so a fallback segment may depend on earlier
 calls in the session. Without the VAD
-file both bridges fall back to the 1.1 path. `parametr-tekshir.sh` now also diffs the `vp.`
-lines and the whole «Ovozni boʻlaklash» section **word for word**, and `nutq_bolaklari.{c,h}`
-byte for byte; the grouping is unit-tested in `win/tests/test_nutq.cpp`.
+file both bridges fall back to the 1.1 path. The VAD code and `nutq_bolaklari.{c,h}` are shared
+files in `src/`; the grouping is unit-tested in `win/tests/test_nutq.cpp`.
 Windows confirmed in the VM (2026-10-08, `rubai-cli`, CPU under `GGML_BACKEND_DL`): the same
 10 long files give WER 7.56 % vs macOS 7.83 % with the same normaliser
 (`scripts/stt-baho/score.py`; 6 files differ by a few words — CPU vs Metal float
