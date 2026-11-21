@@ -40,6 +40,7 @@ clang++ -std=c++20 -O1 -Wall -Wextra \
     "$ROOT/win/tests/mac/util_shim.cpp" \
     "$ROOT/win/core/matn_format.cpp" \
     "$ROOT/win/core/vaqt_format.cpp" \
+    "$ROOT/win/core/ui_tili.cpp" \
     "$ROOT/win/tests/test_saqlanmagan.cpp" \
     "$ROOT/win/tests/test_sozlama.cpp" \
     "$ROOT/win/core/saqlanmagan.cpp"

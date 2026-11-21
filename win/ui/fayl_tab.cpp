@@ -12,6 +12,7 @@
 #include "../core/ish.h"
 #include "../core/config.h"
 #include "../core/llm.h"
+#include "../core/ui_tili.h"
 #include "../core/util.h"
 #include "../core/vaqt_format.h"
 
@@ -127,13 +128,15 @@ void TashlashZonasi::chiz(Chizgich& c) {
     ikonkaChiz(c, cx, y);
     y += 58 + 16;
 
-    c.matn(L"Ovozli faylni shu yerga tashlang", D2D1::RectF(ramka.left, y, ramka.right, y + 28),
-           U::matn, 20.0f, Ogirlik::Yarim, Hizalash::Markaz);
+    c.matn(tr(L"Перетащите сюда аудио или видео", L"Drop an audio or video file here"),
+           D2D1::RectF(ramka.left, y, ramka.right, y + 28), U::matn, 20.0f, Ogirlik::Yarim,
+           Hizalash::Markaz);
     y += 26 + 16;
 
     const D2D1_RECT_F tugma = ramkaYasa(cx - 70, y, 140, 46);
     c.toldir(tugma, bosilgan_ ? U::kokBosilgan : U::kok, U::radiusTugma);
-    c.matn(L"Fayl tanlash", tugma, U::oq, 16.0f, Ogirlik::Yarim, Hizalash::Markaz, true);
+    c.matn(tr(L"Выбрать файл", L"Choose file"), tugma, U::oq, 16.0f, Ogirlik::Yarim,
+           Hizalash::Markaz, true);
 }
 
 bool TashlashZonasi::sichqonQoyildi(D2D1_POINT_2F p) {
@@ -285,16 +288,17 @@ void FaylTab::Ichki::yaxshilashMenyusi() {
                     royxatAmallar[i].nom.c_str());
     }
     AppendMenuW(m, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(m, MF_STRING, kMenyuErkin, L"Oʻz soʻrovim…");
+    AppendMenuW(m, MF_STRING, kMenyuErkin, tr(L"Свой запрос…", L"Custom request…"));
 
     const UINT tanlov = menyuniOch(ota, m, yaxshilash->ramka, dpi);
     DestroyMenu(m);
 
     if (tanlov == 0) return;
     if (tanlov == kMenyuErkin) {
-        const std::wstring korsatma = matnSora(ota, L"Oʻz soʻrovingiz",
-                                               L"Matn ustida nima qilish kerakligini yozing.\n"
-                                               L"Masalan: inglizchaga tarjima qil");
+        const std::wstring korsatma =
+            matnSora(ota, tr(L"Свой запрос", L"Custom request"),
+                     tr(L"Напишите, что сделать с текстом.\nНапример: переведи на английский",
+                        L"Describe what to do with the text.\nE.g.: translate into Spanish"));
         if (korsatma.empty()) return;
         amalniBajar(erkinAmal(korsatma));
         return;
@@ -309,13 +313,13 @@ void FaylTab::Ichki::matnMenyusi(POINT ekran) {
                 MF_STRING |
                     (!natijaKorinyapti && korinayotganTur == MatnTuri::Chiroyli ? MF_CHECKED
                                                                                 : MF_UNCHECKED),
-                kMenyuChiroyli, L"Tayyor matn");
+                kMenyuChiroyli, tr(L"Готовый текст", L"Formatted text"));
     AppendMenuW(m,
                 MF_STRING | (!natijaKorinyapti && korinayotganTur == MatnTuri::Xom ? MF_CHECKED
                                                                                    : MF_UNCHECKED),
-                kMenyuXom, L"Asl (tahrirsiz) matn");
+                kMenyuXom, tr(L"Исходный текст (без правок)", L"Original (raw) text"));
     AppendMenuW(m, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(m, MF_STRING, kMenyuNusxa, L"Nusxa olish");
+    AppendMenuW(m, MF_STRING, kMenyuNusxa, tr(L"Копировать", L"Copy"));
 
     const UINT tanlov =
         TrackPopupMenu(m, TPM_RETURNCMD | TPM_LEFTALIGN, ekran.x, ekran.y, 0, ota, nullptr);
@@ -397,7 +401,8 @@ void FaylTab::Ichki::eksport() {
     HANDLE f = CreateFileW(yol.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
                            FILE_ATTRIBUTE_NORMAL, nullptr);
     if (f == INVALID_HANDLE_VALUE) {
-        ogohlantir(ota, L"Xato", L"Faylni saqlab boʻlmadi.");
+        ogohlantir(ota, tr(L"Ошибка", L"Error"),
+                   tr(L"Не удалось сохранить файл.", L"Couldn't save the file."));
         return;
     }
     DWORD yozildi = 0;
@@ -446,35 +451,36 @@ FaylTab::FaylTab(HWND ota) : ichki_(std::make_unique<Ichki>()) {
     vidjetlar.qosh(r);
 
     // 2-koʻrinish
-    ichki_->orqaga = std::make_shared<Tugma>(L"‹ Audio", Tugma::Kor::Matnli);
+    ichki_->orqaga = std::make_shared<Tugma>(tr(L"‹ Файлы", L"‹ Files"), Tugma::Kor::Matnli);
     ichki_->orqaga->shriftOlchami = 16.0f;
     ichki_->orqaga->bosilganda = [this] { ichki_->royxatgaQayt(); };
     vidjetlar.qosh(ichki_->orqaga);
 
-    ichki_->nusxa = std::make_shared<Tugma>(L"Nusxa olish", Tugma::Kor::Asosiy);
+    ichki_->nusxa = std::make_shared<Tugma>(tr(L"Копировать", L"Copy"), Tugma::Kor::Asosiy);
     ichki_->nusxa->shriftOlchami = 16.0f;
     ichki_->nusxa->bosilganda = [this] { ichki_->nusxaOl(); };
     vidjetlar.qosh(ichki_->nusxa);
 
-    ichki_->saqla = std::make_shared<Tugma>(L"Saqlash…", Tugma::Kor::Ikkilamchi);
+    ichki_->saqla = std::make_shared<Tugma>(tr(L"Сохранить…", L"Save…"), Tugma::Kor::Ikkilamchi);
     ichki_->saqla->shriftOlchami = 16.0f;
     ichki_->saqla->bosilganda = [this] { ichki_->eksport(); };
     vidjetlar.qosh(ichki_->saqla);
 
-    ichki_->yaxshilash = std::make_shared<Tugma>(L"Matnni yaxshilash", Tugma::Kor::Ikkilamchi);
+    ichki_->yaxshilash =
+        std::make_shared<Tugma>(tr(L"Улучшить текст", L"Improve text"), Tugma::Kor::Ikkilamchi);
     ichki_->yaxshilash->shriftOlchami = 16.0f;
     ichki_->yaxshilash->chevron = true;
     ichki_->yaxshilash->bosilganda = [this] { ichki_->yaxshilashMenyusi(); };
     vidjetlar.qosh(ichki_->yaxshilash);
 
-    ichki_->bekor = std::make_shared<Tugma>(L"Bekor qilish", Tugma::Kor::Ikkilamchi);
+    ichki_->bekor = std::make_shared<Tugma>(tr(L"Отмена", L"Cancel"), Tugma::Kor::Ikkilamchi);
     ichki_->bekor->shriftOlchami = 13.0f;
     ichki_->bekor->bosilganda = [this] {
         if (ichki_->ish)
             ichki_->ish->bekorQil();
         else
             ichki_->amalIshi.bekorQil();
-        ichki_->holatMatni = L"Bekor qilinmoqda…";
+        ichki_->holatMatni = tr(L"Отменяю…", L"Cancelling…");
         ichki_->qaytaChiz();
     };
     vidjetlar.qosh(ichki_->bekor);
@@ -531,7 +537,7 @@ void FaylTab::joylashtir(const D2D1_RECT_F& hudud) {
     float x = hudud.left + 20;
     i.nusxa->ramka = ramkaYasa(x, tugmaY, 130, 44);
     x += 130 + 10;
-    i.saqla->ramka = ramkaYasa(x, tugmaY, 110, 44);
+    i.saqla->ramka = ramkaYasa(x, tugmaY, 130, 44);
 
     i.yaxshilash->ramka = ramkaYasa(hudud.right - 20 - 190, tugmaY, 190, 44);
 
@@ -546,12 +552,12 @@ void FaylTab::chiz(Chizgich& c) {
     auto& i = *ichki_;
 
     if (!i.matnKorinishi) {
-        c.matn(L"Oxirgi fayllar",
+        c.matn(tr(L"Недавние файлы", L"Recent files"),
                ramkaYasa(i.hudud.left + kChet, i.royxat->ramka.top - 30, 260, 22), U::matn2, 13.0f,
                Ogirlik::Yarim);
 
         if (i.hujjatlar.empty()) {
-            c.matn(L"Hali birorta fayl oʻgirilmagan",
+            c.matn(tr(L"Пока ни одного файла", L"No files transcribed yet"),
                    D2D1::RectF(i.royxat->ramka.left, i.royxat->ramka.top + 32,
                                i.royxat->ramka.right, i.royxat->ramka.top + 62),
                    U::matn3, 15.0f, Ogirlik::Oddiy, Hizalash::Markaz);
@@ -607,34 +613,42 @@ void FaylTab::faylniQabulQil(const std::wstring& yol) {
     const NutqTili til = Engine::instance().nutqTili();
     if (Engine::findModel(til).empty()) {
         const MalumModel& m = modelUchun(til);
-        ogohlantir(i.ota, L"Model topilmadi",
-                   std::wstring(L"Nutq modeli («") + m.fayl + L"») topilmadi.\n\n" +
-                       L"«Yozish» boʻlimidagi «Yuklab olish» tugmasini bosing — "
-                       L"model bir marta yuklab olinadi (" +
-                       std::to_wstring(modelHajmiMb(m)) + L" MB).");
+        const std::wstring mb = std::to_wstring(modelHajmiMb(m));
+        ogohlantir(i.ota, tr(L"Модель не найдена", L"Model not found"),
+                   tr(std::wstring(L"Модель распознавания («") + m.fayl + L"») не найдена.\n\n" +
+                          L"Нажмите «Скачать» в разделе «Диктовка» — модель скачивается "
+                          L"один раз (" +
+                          mb + L" МБ).",
+                      std::wstring(L"The speech model (“") + m.fayl + L"”) wasn't found.\n\n" +
+                          L"Click “Download” on the Dictate tab — the model downloads once (" + mb +
+                          L" MB)."));
         return;
     }
     if (TranskripsiyaIshi::ishlayapti()) {
-        ogohlantir(i.ota, L"Ish ketmoqda", L"Boshqa fayl ustida ish ketmoqda. Tugashini kuting.");
+        ogohlantir(i.ota, tr(L"Идёт обработка", L"Busy"),
+                   tr(L"Обрабатывается другой файл. Дождитесь окончания.",
+                      L"Another file is being processed. Please wait."));
         return;
     }
     // Diktovka yozilayotgan yoki matnga oʻgirilayotgan boʻlsa — fayl kutadi (D1).
     if (DiktovkaBand::faol()) {
-        ogohlantir(i.ota, L"Diktovka ketmoqda",
-                   L"Diktovka tugashini kuting, keyin faylni qayta tashlang.");
+        ogohlantir(i.ota, tr(L"Идёт диктовка", L"Dictation in progress"),
+                   tr(L"Дождитесь конца диктовки и перетащите файл снова.",
+                      L"Wait for the dictation to finish, then drop the file again."));
         return;
     }
     // LLM oqimi joriy hujjatga bogʻlangan. Shu payt yangi fayl qabul qilinsa,
     // oqim tugagach uning natijasi yangi hujjatning matniga qoʻshilib ketardi.
     if (i.bandmi) {
-        ogohlantir(i.ota, L"Amal ketmoqda",
-                   L"Joriy matn ustida amal tugashini kuting, keyin yangi fayl tashlang.");
+        ogohlantir(i.ota, tr(L"Выполняется действие", L"Action in progress"),
+                   tr(L"Дождитесь окончания действия с текстом, затем добавьте новый файл.",
+                      L"Wait for the current text action to finish, then add a new file."));
         return;
     }
 
     i.progress = 0;
     i.progressAniqmas = false;
-    i.holatMatni = L"Tayyorlanmoqda…";
+    i.holatMatni = tr(L"Подготовка…", L"Preparing…");
     i.progressniKorsat(true);
     joylashtir(i.hudud);
 
@@ -694,7 +708,7 @@ void FaylTab::xabarKeldi(UINT xabar, WPARAM wp, LPARAM lp) {
             i.progressniKorsat(false);
             joylashtir(i.hudud);
             i.qaytaChiz();
-            ogohlantir(i.ota, L"Xato", *m);
+            ogohlantir(i.ota, tr(L"Ошибка", L"Error"), *m);
             return;
         }
 
@@ -724,7 +738,7 @@ void FaylTab::xabarKeldi(UINT xabar, WPARAM wp, LPARAM lp) {
             // foydalanuvchi boʻsh ekranni koʻradi va matnini yoʻqotdim deb
             // oʻylaydi. Tayyor matnni qaytaramiz, keyin xatoni aytamiz.
             i.matnniOqi(MatnTuri::Chiroyli);
-            ogohlantir(i.ota, L"Xato", *m);
+            ogohlantir(i.ota, tr(L"Ошибка", L"Error"), *m);
             return;
         }
 

@@ -24,6 +24,7 @@
 #include <mutex>
 #include <thread>
 
+#include "ui_tili.h"
 #include "util.h"
 
 namespace rubai {
@@ -134,15 +135,20 @@ bool formatIsFloat(const WAVEFORMATEX* wf) {
 std::wstring MicDevice::warning() const {
     switch (kind) {
         case MicKind::Loopback:
-            return L"Bu mikrofon emas — u kompyuterdagi ovozni yozadi.\n"
-                   L"Ovozingiz yozilmaydi. Boshqa qurilma tanlang.";
+            return tr(L"Это не микрофон — он записывает звук компьютера.\n"
+                      L"Ваш голос не запишется. Выберите другое устройство.",
+                      L"This isn't a microphone — it records the computer's audio.\n"
+                      L"Your voice won't be recorded. Choose another device.");
         case MicKind::Bluetooth:
-            return L"Bluetooth quloqchin mikrofoni. Windows uni past sifatga\n"
-                   L"(telefon ovozi) oʻtkazadi — matn aniqligi pasayadi.\n"
-                   L"Imkon boʻlsa oddiy mikrofon ishlating.";
+            return tr(L"Bluetooth-микрофон: Windows снижает качество звука,\n"
+                      L"текст распознаётся хуже. Лучше обычный микрофон.",
+                      L"Bluetooth headset mic: Windows lowers the audio quality\n"
+                      L"and recognition suffers. A wired mic works better.");
         case MicKind::Virtual:
-            return L"Virtual mikrofon. Manba ilova ishlamasa ovoz oʻrniga\n"
-                   L"sukunat yoziladi.";
+            return tr(L"Виртуальный микрофон. Если программа-источник не\n"
+                      L"запущена, вместо голоса запишется тишина.",
+                      L"Virtual microphone. If its source app isn't running,\n"
+                      L"silence is recorded instead of your voice.");
         default: return {};
     }
 }
@@ -479,7 +485,7 @@ AudioCapture::~AudioCapture() {
 
 bool AudioCapture::start(const std::wstring& deviceId, std::wstring& error) {
     if (d->running.load()) {
-        error = L"Yozuv allaqachon ketmoqda";
+        error = tr(L"Запись уже идёт", L"Already recording");
         return false;
     }
 
@@ -505,9 +511,12 @@ bool AudioCapture::start(const std::wstring& deviceId, std::wstring& error) {
     if (!d->running.load() || d->lost.load()) {
         if (d->thread.joinable()) d->thread.join();
         d->running = false;
-        error = L"Mikrofon ochilmadi.\n"
-                L"Windows sozlamalarida mikrofonga ruxsat berilganini tekshiring:\n"
-                L"Sozlamalar > Maxfiylik > Mikrofon";
+        error = tr(L"Не удалось открыть микрофон.\n"
+                   L"Проверьте, что доступ к микрофону разрешён:\n"
+                   L"Параметры > Конфиденциальность и защита > Микрофон",
+                   L"Couldn't open the microphone.\n"
+                   L"Check that microphone access is allowed:\n"
+                   L"Settings > Privacy & security > Microphone");
         return false;
     }
     return true;

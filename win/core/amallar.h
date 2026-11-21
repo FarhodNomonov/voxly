@@ -4,7 +4,8 @@
 // xil: ular ilovaning javob sifatini belgilaydi va ikkala platformada bir xil
 // natija berishi kerak. Prompt oʻzgarsa — ikkala faylda birga oʻzgaradi.
 //
-// Prompt'lar oʻzbek tilida — model javobni ham oʻzbekcha berishi uchun.
+// Prompt'lar inglizcha; javob — transkriptning oʻz tilida (rus, ingliz yoki
+// oʻzbek). Amal nomlari — interfeys tilida (`tr`).
 #pragma once
 
 #include <functional>
@@ -53,7 +54,7 @@ public:
                std::function<void(const std::wstring&)> onXato);
 
     // Ketayotgan oqimni toʻxtatadi. Foydalanuvchi «Bekor qilish» ni bosganda
-    // xato emas, «Bekor qilindi.» xabari beriladi — macOS bilan bir xil.
+    // xato emas, «Отменено.» / «Cancelled.» xabari beriladi — macOS bilan bir xil.
     void bekorQil();
 
     bool ketyaptimi() const;

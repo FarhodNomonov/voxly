@@ -112,19 +112,19 @@ void SettingsWindow::Impl::modellarniOlish() {
     const int sel = static_cast<int>(SendMessageW(ctrl(kIdProvayder), CB_GETCURSEL, 0, 0));
     const auto& royxat = provayderlar();
     if (sel <= 0 || static_cast<size_t>(sel - 1) >= royxat.size()) {
-        maydonQoy(kIdModelHolati, L"Avval provayderni tanlang");
+        maydonQoy(kIdModelHolati, tr(L"Сначала выберите провайдера", L"Choose a provider first"));
         return;
     }
     const Provayder p = royxat[static_cast<size_t>(sel - 1)];
     const std::wstring kalit = maydonMatni(kIdKalit);
     const std::wstring baza = maydonMatni(kIdBaseURL);
     if (kalit.empty()) {
-        maydonQoy(kIdModelHolati, L"Avval API kalitni kiriting");
+        maydonQoy(kIdModelHolati, tr(L"Сначала введите ключ API", L"Enter the API key first"));
         return;
     }
 
     llmSoravKetyapti = true;
-    maydonQoy(kIdModelHolati, L"Modellar olinmoqda…");
+    maydonQoy(kIdModelHolati, tr(L"Загружаю список моделей…", L"Loading models…"));
 
     HWND oyna = hwnd;
     std::thread([oyna, p, baza, kalit] {
@@ -147,7 +147,7 @@ void SettingsWindow::Impl::ulanishniTekshir() {
 
     const Provayder* p = provayderTop(settings.llmProvayder);
     if (!p) {
-        maydonQoy(kIdTekshirNatija, L"Avval provayderni tanlang");
+        maydonQoy(kIdTekshirNatija, tr(L"Сначала выберите провайдера", L"Choose a provider first"));
         return;
     }
 
@@ -156,11 +156,12 @@ void SettingsWindow::Impl::ulanishniTekshir() {
     sorov.baseURL = maydonMatni(kIdBaseURL);
     sorov.model = maydonMatni(kIdModel);
     sorov.kalit = maydonMatni(kIdKalit);
-    sorov.system = L"Faqat «ha» deb javob ber.";
-    sorov.user = L"Salom";
+    // macOS'dagi tekshiruv soʻrovi bilan bir xil (`sozlamalar_llm.swift`).
+    sorov.system = L"Reply with just \"yes\".";
+    sorov.user = L"Hello";
 
     llmSoravKetyapti = true;
-    maydonQoy(kIdTekshirNatija, L"Tekshirilmoqda…");
+    maydonQoy(kIdTekshirNatija, tr(L"Проверяю…", L"Testing…"));
 
     HWND oyna = hwnd;
     std::thread([oyna, sorov] {
@@ -172,9 +173,9 @@ void SettingsWindow::Impl::ulanishniTekshir() {
         if (!xato.empty())
             natija = L"⚠ " + xato;
         else if (javob.empty())
-            natija = L"⚠ Javob boʻsh keldi";
+            natija = tr(L"⚠ Пустой ответ", L"⚠ Empty response");
         else
-            natija = L"✓ Ulanish ishlayapti";
+            natija = tr(L"✓ Подключение работает", L"✓ Connection works");
 
         PostMessageW(oyna, WM_LLM_HOLAT, kIdTekshirNatija,
                      reinterpret_cast<LPARAM>(new std::wstring(std::move(natija))));

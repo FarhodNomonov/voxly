@@ -3,6 +3,7 @@
 
 #include "media_decode.h"
 
+#include "ui_tili.h"
 #include "util.h"
 
 #include <windows.h>
@@ -129,13 +130,18 @@ MediaXato oqiyOch(const std::wstring& yol, IMFSourceReader** natija) {
 std::wstring mediaXatoXabari(MediaXato xato, const std::wstring& k) {
     switch (xato) {
         case MediaXato::Ochilmadi:
-            return L"«." + k +
-                   L"» fayllari qoʻllab-quvvatlanmaydi. "
-                   L"mp4, mov, m4a, mp3, wav yoki flac faylini tanlang.";
-        case MediaXato::AudioYoliYoq: return L"Bu faylda ovoz yoʻli topilmadi.";
-        case MediaXato::Bosh: return L"Fayl boʻsh.";
-        case MediaXato::OqishXatosi: return L"Faylni oʻqib boʻlmadi — u buzilgan boʻlishi mumkin.";
-        case MediaXato::BekorQilindi: return L"Bekor qilindi.";
+            return tr(
+                L"Файлы «." + k +
+                    L"» не поддерживаются. Выберите mp4, mov, m4a, mp3, wav или flac.",
+                L"“." + k +
+                    L"” files aren't supported. Choose an mp4, mov, m4a, mp3, wav or flac file.");
+        case MediaXato::AudioYoliYoq:
+            return tr(L"В этом файле нет звуковой дорожки.", L"This file has no audio track.");
+        case MediaXato::Bosh: return tr(L"Файл пустой.", L"The file is empty.");
+        case MediaXato::OqishXatosi:
+            return tr(L"Не удалось прочитать файл — возможно, он повреждён.",
+                      L"Couldn't read the file — it may be corrupted.");
+        case MediaXato::BekorQilindi: return tr(L"Отменено.", L"Cancelled.");
         case MediaXato::Yoq: return {};
     }
     return {};

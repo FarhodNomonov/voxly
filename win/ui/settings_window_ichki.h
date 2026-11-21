@@ -66,6 +66,9 @@ enum CtrlId : int {
     // Nutq tili (doim koʻrinadi) va uning izohi (model holati).
     kIdNutqTili,
     kIdNutqTiliIzoh,
+    // Interfeys tili (doim koʻrinadi) va «qayta ishga tushgach» izohi.
+    kIdUITili,
+    kIdUITiliIzoh,
     kIdBirinchiQoshimcha = kIdApostrof,  // roʻyxat chegaralari (pastga qarang)
 };
 
@@ -82,8 +85,8 @@ constexpr UINT WM_LLM_HOLAT = WM_APP + 41;     // wp: maydon id, lp: new std::ws
 // 768 piksellik noutbukda oynaning pastki qismi ekrandan chiqib ketardi —
 // «Saqlash» tugmasi koʻrinmay qolardi.
 constexpr int kWinW = 460;
-constexpr int kWinH = 528;       // yopiq
-constexpr int kWinHToliq = 814;  // ochiq
+constexpr int kWinH = 584;       // yopiq
+constexpr int kWinHToliq = 870;  // ochiq
 
 // Mikrofon ogohlantirishi uchun ajratilgan joy. Ogohlantirish YOʻQ boʻlsa
 // (oddiy mikrofon — eng koʻp uchraydigan holat) pastdagi hamma narsa shu
@@ -116,6 +119,7 @@ struct SettingsWindow::Impl {
     Settings settings;
     std::vector<MicDevice> mics;
     std::function<void(const Settings&)> onSaved;
+    std::function<void()> onQaytaIshga;
 
     int scale(int v) const { return MulDiv(v, (int)dpi, 96); }
 
@@ -156,7 +160,7 @@ struct SettingsWindow::Impl {
     std::vector<Joy> joylar;
     int ogohBalandligi = kMicOgohH;  // 0 yoki kMicOgohH
 
-    // Vertikal surish. Kontent 716 DIP gacha choʻziladi va 768 piksellik
+    // Vertikal surish. Kontent 870 DIP gacha choʻziladi va 768 piksellik
     // (yoki masshtablangan) ekranga sigʻmaydi — macOS tomonida sozlamalar
     // `NSScrollView` ichida turadi, bu yerda ham shunday boʻlishi kerak,
     // aks holda «Saqlash» tugmasi ekrandan chiqib ketadi.

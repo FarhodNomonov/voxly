@@ -4,6 +4,7 @@
 #include "model_yuklovchi.h"
 
 #include "engine.h"
+#include "ui_tili.h"
 #include "util.h"
 #include "yuklovchi.h"
 
@@ -70,7 +71,7 @@ void ModelYuklovchi::Ichki::ishla() {
     const MalumModel& m = *model;
     const std::wstring yol = modelYoli(m);
     if (yol.empty()) {
-        tugadi(false, L"Maʼlumot papkasi topilmadi.");
+        tugadi(false, tr(L"Папка данных не найдена.", L"The data folder wasn't found."));
         return;
     }
 
@@ -83,8 +84,9 @@ void ModelYuklovchi::Ichki::ishla() {
             ULARGE_INTEGER bosh{};
             if (GetDiskFreeSpaceExW(ildiz.c_str(), &bosh, nullptr, nullptr) &&
                 static_cast<long long>(bosh.QuadPart) < m.hajm + (100LL << 20)) {
-                tugadi(false, L"Diskda joy yetarli emas — kamida " +
-                                  std::to_wstring(modelHajmiMb(m) + 100) + L" MB kerak.");
+                const std::wstring mb = std::to_wstring(modelHajmiMb(m) + 100);
+                tugadi(false, tr(L"Недостаточно места на диске — нужно не меньше " + mb + L" МБ.",
+                                 L"Not enough disk space — at least " + mb + L" MB is needed."));
                 return;
             }
         }
@@ -109,7 +111,8 @@ void ModelYuklovchi::Ichki::ishla() {
     if (faylHajmi(qism) != m.hajm) {
         DeleteFileW(qism.c_str());
         logWrite(L"nutq modeli: hajm mos kelmadi — fayl oʻchirildi");
-        tugadi(false, L"Yuklangan fayl buzuq. Qayta urinib koʻring.");
+        tugadi(false, tr(L"Скачанный файл повреждён. Попробуйте снова.",
+                         L"The downloaded file is corrupted. Try again."));
         return;
     }
     // Hajm toʻgʻri boʻlsa ham ichi buzilgan boʻlishi mumkin (disk, proksi).
@@ -117,13 +120,15 @@ void ModelYuklovchi::Ichki::ishla() {
     if (faylSha256(qism) != m.sha256) {
         DeleteFileW(qism.c_str());
         logWrite(L"nutq modeli: sha256 mos kelmadi — fayl oʻchirildi");
-        tugadi(false, L"Yuklangan fayl buzuq. Qayta urinib koʻring (boshidan yuklanadi).");
+        tugadi(false, tr(L"Скачанный файл повреждён — попробуйте снова (загрузка начнётся заново).",
+                         L"The downloaded file is corrupted — try again (it will restart)."));
         return;
     }
 
     DeleteFileW(yol.c_str());
     if (!MoveFileW(qism.c_str(), yol.c_str())) {
-        tugadi(false, L"Faylni joyiga koʻchirib boʻlmadi.");
+        tugadi(false,
+               tr(L"Не удалось переместить файл на место.", L"Couldn't move the file into place."));
         return;
     }
 

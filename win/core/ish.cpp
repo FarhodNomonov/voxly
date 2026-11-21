@@ -7,6 +7,7 @@
 #include "engine.h"
 #include "media_decode.h"
 #include "samples.h"
+#include "ui_tili.h"
 #include "util.h"
 #include "whisper_bridge.h"
 
@@ -104,7 +105,7 @@ bool TranskripsiyaIshi::Ichki::bolakniQaytaIshla(double boshi, double oxiri, dou
         yol, boshi, oxiri,
         [&](double p) {
             // Dekodlash — ulushning birinchi 10%i.
-            progress(ulushBoshi + ulush * p * 0.10, L"Fayl oʻqilmoqda…");
+            progress(ulushBoshi + ulush * p * 0.10, tr(L"Извлекаю звук…", L"Extracting audio…"));
         },
         [&] { return bekor.load(); }, namunalar);
 
@@ -154,7 +155,7 @@ bool TranskripsiyaIshi::Ichki::bolakniQaytaIshla(double boshi, double oxiri, dou
             auto* k = static_cast<Kontekst*>(ud);
             // Transkripsiya — ulushning qolgan 90%i.
             k->ichki->progress(k->ulushBoshi + k->ulush * (0.10 + 0.90 * foiz / 100.0),
-                               L"Matnga oʻgirilmoqda…");
+                               tr(L"Распознаю…", L"Transcribing…"));
         },
         &kontekst, [](void* ud) -> bool { return static_cast<Kontekst*>(ud)->ichki->bekor.load(); },
         &kontekst, yangilar, xatoMatni);
@@ -164,7 +165,9 @@ bool TranskripsiyaIshi::Ichki::bolakniQaytaIshla(double boshi, double oxiri, dou
         return false;
     }
     if (rc != 0) {
-        xato(xatoMatni.empty() ? L"Matnga oʻgirib boʻlmadi." : xatoMatni);
+        xato(xatoMatni.empty()
+                 ? std::wstring(tr(L"Не удалось распознать.", L"Transcription failed."))
+                 : xatoMatni);
         return false;
     }
 
@@ -232,7 +235,7 @@ void TranskripsiyaIshi::Ichki::ishla() {
     }
 
     if (hammasi.empty()) {
-        xato(L"Faylda nutq aniqlanmadi.");
+        xato(tr(L"В файле не найдено речи.", L"No speech found in the file."));
         return;
     }
 
@@ -241,7 +244,8 @@ void TranskripsiyaIshi::Ichki::ishla() {
     const Hujjat h = HujjatOmbori::saqla(yol, davomiylik, hammasi, apostrofUslubi(s));
 
     if (h.id.empty()) {
-        xato(L"Diskka saqlab boʻlmadi. Joy yetarli boʻlmasligi mumkin.");
+        xato(tr(L"Не удалось сохранить на диск. Возможно, мало места.",
+                L"Couldn't save to disk. You may be low on space."));
         return;
     }
 
@@ -266,7 +270,9 @@ void TranskripsiyaIshi::bekorQil() { ichki_->bekor.store(true); }
 
 void TranskripsiyaIshi::boshla() {
     if (!ishniOlish()) {
-        if (onXato) onXato(L"Boshqa fayl ustida ish ketmoqda. Tugashini kuting.");
+        if (onXato)
+            onXato(tr(L"Обрабатывается другой файл. Дождитесь окончания.",
+                      L"Another file is being processed. Please wait."));
         return;
     }
 

@@ -12,6 +12,7 @@
 #include "llm.h"
 
 #include "json.h"
+#include "ui_tili.h"
 #include "util.h"
 
 #include <algorithm>
@@ -89,7 +90,7 @@ const std::vector<Provayder>& provayderlar() {
          Adapter::OpenAI, ""},
         {"anthropic", L"Anthropic", L"https://api.anthropic.com/v1", L"claude-haiku-4-5",
          Adapter::Anthropic, ""},
-        {"custom", L"Boshqa (custom)", L"", L"", Adapter::OpenAI, ""},
+        {"custom", tr(L"Другой (свой адрес)", L"Other (custom)"), L"", L"", Adapter::OpenAI, ""},
     };
     return royxat;
 }

@@ -11,6 +11,7 @@
 #include <thread>
 #include <vector>
 
+#include "../core/ui_tili.h"
 #include "../core/util.h"
 
 namespace rubai {
@@ -303,7 +304,7 @@ InsertResult insertText(const std::wstring& text, InsertMode mode) {
     InsertResult r;
 
     if (text.empty()) {
-        r.error = L"Matn boʻsh";
+        r.error = tr(L"Текст пустой", L"The text is empty");
         return r;
     }
 
@@ -314,7 +315,7 @@ InsertResult insertText(const std::wstring& text, InsertMode mode) {
             r.ok = true;
             return r;
         }
-        r.error = L"Matn kiritilmadi";
+        r.error = tr(L"Текст не введён", L"The text wasn't typed");
         return r;
     }
 
@@ -323,7 +324,9 @@ InsertResult insertText(const std::wstring& text, InsertMode mode) {
     auto nusxa = std::make_shared<ClipboardNusxa>(clipboardNusxaOl());
     DWORD bizniki = 0;
     if (!clipboardgaVaqtinchaYoz(text, bizniki)) {
-        r.error = L"Clipboard band — matn qoʻyilmadi.\nBir oz kutib qayta urinib koʻring.";
+        r.error =
+            tr(L"Буфер обмена занят — текст не вставлен.\nПодождите немного и попробуйте снова.",
+               L"The clipboard is busy — the text wasn't pasted.\nWait a moment and try again.");
         return r;
     }
 
@@ -333,7 +336,8 @@ InsertResult insertText(const std::wstring& text, InsertMode mode) {
 
     if (!pasteViaCtrlV()) {
         // Matn clipboard'da QOLADI — foydalanuvchi oʻzi Ctrl+V bosadi.
-        r.error = L"Matn joylanmadi, lekin u clipboard'da — Ctrl+V bosing.";
+        r.error = tr(L"Текст не вставлен, но он в буфере обмена — нажмите Ctrl+V.",
+                     L"The text wasn't pasted, but it's on the clipboard — press Ctrl+V.");
         return r;
     }
 

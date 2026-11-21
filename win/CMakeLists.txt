@@ -131,6 +131,7 @@ add_library(rubai_core STATIC
     core/vaqt_format.cpp
     core/yuklovchi.cpp
     core/model_yuklovchi.cpp
+    core/ui_tili.cpp
 )
 
 target_include_directories(rubai_core PUBLIC

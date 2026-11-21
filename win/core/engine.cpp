@@ -14,6 +14,7 @@
 #include <thread>
 
 #include "samples.h"
+#include "ui_tili.h"
 #include "util.h"
 #include "whisper_bridge.h"
 
@@ -194,7 +195,8 @@ bool Engine::Impl::ensureLoaded(std::wstring& errOut, bool isitish) {
     rubai_set_language(toUtf8(nutqTiliKodi(kerakli)).c_str());
     if (path.empty()) path = Engine::findModel(kerakli);
     if (path.empty()) {
-        errOut = L"Nutq modeli topilmadi — «Yozish» boʻlimida «Yuklab olish» ni bosing.";
+        errOut = tr(L"Модель распознавания не найдена — нажмите «Скачать» в разделе «Диктовка».",
+                    L"Speech model not found — click “Download” on the Dictate tab.");
         logWrite(std::wstring(L"XATO: model fayli topilmadi (til ") + nutqTiliKodi(kerakli) +
                  L", " + modelUchun(kerakli).fayl + L")");
         return false;
@@ -231,8 +233,11 @@ bool Engine::Impl::ensureLoaded(std::wstring& errOut, bool isitish) {
 
     if (rc != 0) {
         // Oʻrnatuvchi endi model olib kelmaydi — qayta oʻrnatish yordam bermaydi.
-        errOut = L"Model yuklanmadi. Fayl buzilgan boʻlishi mumkin —\n"
-                 L"uni oʻchirib, «Yozish» boʻlimida qayta yuklab oling:\n" + path;
+        errOut = tr(L"Не удалось загрузить модель. Файл может быть повреждён —\n"
+                    L"удалите его и скачайте заново в разделе «Диктовка»:\n",
+                    L"Couldn't load the model. The file may be corrupted —\n"
+                    L"delete it and download it again on the Dictate tab:\n") +
+                 path;
         logWrite(L"XATO: rubai_load = " + std::to_wstring(rc) + L" (" + toWide(rubai_last_error()) +
                  L")");
         return false;
@@ -294,7 +299,7 @@ TranscribeResult Engine::Impl::doTranscribe(const std::vector<float>& samples) {
     TranscribeResult r;
 
     if (samples.empty()) {
-        r.error = L"Ovoz yozilmadi";
+        r.error = tr(L"Звук не записан", L"No audio was recorded");
         return r;
     }
 
@@ -309,7 +314,7 @@ TranscribeResult Engine::Impl::doTranscribe(const std::vector<float>& samples) {
     r.seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
 
     if (!c) {
-        r.error = L"Transkripsiya bajarilmadi";
+        r.error = tr(L"Не удалось распознать", L"Transcription failed");
         logWrite(L"XATO: rubai_transcribe = NULL (" + toWide(rubai_last_error()) + L")");
         return r;
     }
@@ -560,7 +565,7 @@ int Engine::transcribeSegments(const std::vector<float>& samples, rubai_progress
                     chiqish.push_back(std::move(s));
                 }
             } else if (rc != 2) {
-                xato = L"Matnga oʻgirib boʻlmadi.";
+                xato = tr(L"Не удалось распознать.", L"Transcription failed.");
                 logWrite(L"XATO: rubai_transcribe_segments = " + std::to_wstring(rc) + L" (" +
                          toWide(rubai_last_error()) + L")");
             }
@@ -573,7 +578,7 @@ int Engine::transcribeSegments(const std::vector<float>& samples, rubai_progress
     {
         std::lock_guard<std::mutex> lock(d->mu);
         if (d->stopping) {
-            xato = L"Ilova yopilmoqda.";
+            xato = tr(L"Приложение закрывается.", L"The app is closing.");
             return 1;
         }
         d->queue.push_back({{}, nullptr, vazifa});

@@ -124,10 +124,12 @@ LRESULT CALLBACK settingsProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             d->llmSoravKetyapti = false;
             if (r->empty()) {
                 d->maydonQoy(kIdModelHolati,
-                             L"Bu provayder model roʻyxatini bermaydi — nomni qoʻlda yozing");
+                             tr(L"Провайдер не даёт список моделей — введите название",
+                                L"This provider doesn't list models — type the name"));
             } else {
                 d->modellarniKorsat(*r);
-                d->maydonQoy(kIdModelHolati, std::to_wstring(r->size()) + L" ta model");
+                d->maydonQoy(kIdModelHolati, tr(L"Моделей: " + std::to_wstring(r->size()),
+                                                std::to_wstring(r->size()) + L" models"));
             }
             return 0;
         }
@@ -194,7 +196,7 @@ LRESULT CALLBACK settingsProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             SetBkMode(hdc, TRANSPARENT);
             if (d && (HWND)lp == d->ctrl(kIdMicWarning)) {
                 SetTextColor(hdc, RGB(176, 92, 0));  // ogohlantirish — toʻq sariq
-            } else if (d && (HWND)lp == d->ctrl(kIdAsosi)) {
+            } else if (d && ((HWND)lp == d->ctrl(kIdAsosi) || (HWND)lp == d->ctrl(kIdUITiliIzoh))) {
                 SetTextColor(hdc, GetSysColor(COLOR_GRAYTEXT));  // atributsiya — xira
             }
             return (LRESULT)GetSysColorBrush(COLOR_WINDOW);
@@ -219,52 +221,75 @@ void SettingsWindow::Impl::build() {
         return c;
     };
 
+    // Matnlar — macOS'dagi `sozlamalar_view.swift` bilan bir xil soʻzlar.
+    // Kengliklar rus va ingliz matnining UZUNROGʻIGA qarab (Segoe UI 13 px:
+    // ~7 px/belgi): rus matni koʻpincha oʻzbekchadan uzunroq.
+
     // --- Diktovka tugmasi
-    add(L"STATIC", L"Diktovka tugmasi", 0, 24, 20, 200, 18, -1);
-    add(HOTKEY_CLASSW, L"", 0, 24, 42, 200, 26, kIdHotkey);
-    add(L"BUTTON", L"Standart (Ctrl+Alt+D)", BS_PUSHBUTTON, 236, 42, 190, 26, kIdReset);
-    add(L"STATIC", L"Kamida bitta modifikator (Ctrl, Alt, Shift) kerak.", 0, 24, 72, 400, 20, -1);
+    add(L"STATIC", tr(L"Клавиша диктовки", L"Dictation shortcut"), 0, 24, 20, 300, 18, -1);
+    add(HOTKEY_CLASSW, L"", 0, 24, 42, 180, 26, kIdHotkey);
+    add(L"BUTTON", tr(L"По умолчанию (Ctrl+Alt+D)", L"Default (Ctrl+Alt+D)"), BS_PUSHBUTTON, 212,
+        42, 214, 26, kIdReset);
+    add(L"STATIC",
+        tr(L"Нужен хотя бы один модификатор: Ctrl, Alt или Shift.",
+           L"Use at least one modifier: Ctrl, Alt or Shift."),
+        0, 24, 72, 402, 20, -1);
 
     // --- Mikrofon
-    add(L"STATIC", L"Mikrofon", 0, 24, 106, 200, 18, -1);
+    add(L"STATIC", tr(L"Микрофон", L"Microphone"), 0, 24, 106, 300, 18, -1);
     add(L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP, 24, 128, 402, 200, kIdMic);
     add(L"STATIC", L"", SS_LEFT, 24, 160, 402, 52, kIdMicWarning);
 
     // --- Nutq tili (macOS'dagi `qurNutqTili`). Til nomlari — har biri oʻz
-    // tilida: interfeys hali oʻzbekcha, rus/ingliz UI — keyingi bosqich.
+    // tilida, interfeys tilidan qatʼi nazar: oʻzbek foydalanuvchi rus yoki
+    // ingliz interfeysida ham «Oʻzbekcha» ni darhol topsin.
     // Tartib `NutqTili` bilan bir xil (ruyxat indeksi = enum qiymati).
-    add(L"STATIC", L"Til / Язык", 0, 24, 218, 200, 18, -1);
-    HWND til = add(L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_TABSTOP, 24, 240, 200, 120, kIdNutqTili);
+    add(L"STATIC", tr(L"Язык речи", L"Speech language"), 0, 24, 218, 300, 18, -1);
+    HWND til = add(L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_TABSTOP, 24, 240, 180, 120, kIdNutqTili);
     SendMessageW(til, CB_ADDSTRING, 0, (LPARAM)L"Русский");
     SendMessageW(til, CB_ADDSTRING, 0, (LPARAM)L"English");
     SendMessageW(til, CB_ADDSTRING, 0, (LPARAM)L"Oʻzbekcha");
-    add(L"STATIC", L"", SS_LEFT, 236, 244, 190, 18, kIdNutqTiliIzoh);
+    add(L"STATIC", L"", SS_LEFT, 212, 244, 214, 18, kIdNutqTiliIzoh);
+
+    // --- Interfeys tili (macOS'dagi `qurUITili`). Tartib `UITili` bilan bir
+    // xil. Til ishga tushishda bir marta aniqlanadi — oʻzgarsa saqlashda
+    // qayta ishga tushirish taklif qilinadi (`save`).
+    add(L"STATIC", tr(L"Язык интерфейса", L"App language"), 0, 24, 274, 300, 18, -1);
+    HWND ui = add(L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_TABSTOP, 24, 296, 180, 120, kIdUITili);
+    SendMessageW(ui, CB_ADDSTRING, 0, (LPARAM)tr(L"Как в системе", L"System default"));
+    SendMessageW(ui, CB_ADDSTRING, 0, (LPARAM)L"Русский");
+    SendMessageW(ui, CB_ADDSTRING, 0, (LPARAM)L"English");
+    add(L"STATIC", tr(L"Сменится после перезапуска", L"Applies after a restart"), SS_LEFT, 212, 300,
+        214, 18, kIdUITiliIzoh);
 
     // --- Matn kiritish usuli
-    add(L"STATIC", L"Matn kiritish usuli", 0, 24, 274, 200, 18, -1);
+    add(L"STATIC", tr(L"Способ ввода текста", L"Text input method"), 0, 24, 330, 300, 18, -1);
     HWND mode =
-        add(L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_TABSTOP, 24, 296, 402, 120, kIdInsertMode);
+        add(L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_TABSTOP, 24, 352, 402, 120, kIdInsertMode);
     SendMessageW(mode, CB_ADDSTRING, 0,
-                 (LPARAM)L"Tez (clipboard orqali qoʻyish) — tavsiya etiladi");
+                 (LPARAM)tr(L"Быстро (вставка через буфер обмена) — рекомендуется",
+                            L"Fast (paste via clipboard) — recommended"));
     SendMessageW(mode, CB_ADDSTRING, 0,
-                 (LPARAM)L"Sekin (belgima-belgi yozish) — qoʻyish ishlamasa");
+                 (LPARAM)tr(L"Медленно (ввод по символу) — если вставка не работает",
+                            L"Slow (type character by character) — if pasting fails"));
 
     // --- Bayroqlar
-    add(L"BUTTON", L"Kompyuter yonganda ishga tushsin", BS_AUTOCHECKBOX | WS_TABSTOP, 24, 334, 402,
-        22, kIdAutoStart);
-    add(L"BUTTON", L"Videokartadan foydalanish (tezroq)", BS_AUTOCHECKBOX | WS_TABSTOP, 24, 360,
-        402, 22, kIdUseGpu);
+    add(L"BUTTON", tr(L"Запускать при входе в систему", L"Open at login"),
+        BS_AUTOCHECKBOX | WS_TABSTOP, 24, 390, 402, 22, kIdAutoStart);
+    add(L"BUTTON", tr(L"Использовать видеокарту (быстрее)", L"Use the graphics card (faster)"),
+        BS_AUTOCHECKBOX | WS_TABSTOP, 24, 416, 402, 22, kIdUseGpu);
 
-    // --- Haqida: versiya va muallif (havola), ostida asl loyiha atributsiyasi.
-    // Avto-yangilanish qatori turgan joyda. Interfeys hali oʻzbekcha, bu ikki
-    // qator esa ataylab inglizcha (rus/ingliz interfeysi — keyingi bosqich).
-    // Kotib muallifi MIT litsenziyasi talabi bilan koʻrsatiladi — olib tashlamang.
-    const std::wstring haqida = L"Voxly " + joriyVersiya() +
-                                L" \x00B7 <a href=\"" + kMuallifSayti +
-                                L"\">Farkhod Nomonov</a>";
-    add(WC_LINK, haqida.c_str(), WS_TABSTOP, 24, 390, 402, 18, kIdHaqida);
-    if (HWND asosi = add(L"STATIC", L"Based on Kotib by Muhammad Mirqobilov (MIT)", SS_LEFT, 24,
-                         410, 402, 16, kIdAsosi)) {
+    // --- Haqida: versiya va muallif (havola), ostida asl loyiha atributsiyasi
+    // — macOS'dagi `qurMuallif` bilan bir xil matn. Avto-yangilanish qatori
+    // turgan joyda. Kotib muallifi MIT litsenziyasi talabi bilan
+    // koʻrsatiladi — olib tashlamang.
+    const std::wstring haqida = L"Voxly " + joriyVersiya() + L" \x00B7 <a href=\"" + kMuallifSayti +
+                                L"\">" + tr(L"Фарход Номонов", L"Farkhod Nomonov") + L"</a>";
+    add(WC_LINK, haqida.c_str(), WS_TABSTOP, 24, 446, 402, 18, kIdHaqida);
+    if (HWND asosi = add(L"STATIC",
+                         tr(L"Основано на Kotib (Muhammad Mirqobilov, MIT)",
+                            L"Based on Kotib by Muhammad Mirqobilov (MIT)"),
+                         SS_LEFT, 24, 466, 402, 16, kIdAsosi)) {
         SendMessageW(asosi, WM_SETFONT, (WPARAM)kichikFont, TRUE);
     }
 
@@ -275,26 +300,29 @@ void SettingsWindow::Impl::build() {
     // Uchburchak (▾/▴) — macOS'dagi ⌄/⌃ oʻrniga. Segoe UI'da U+2303/2304
     // yoʻq va Windows ularni boshqa shriftdan oladi: natijada ingliz
     // klaviaturasidagi «^» kabi ingichka belgi chiqadi.
-    add(L"BUTTON", L"Qoʻshimcha sozlamalar  ▾", BS_PUSHBUTTON | BS_FLAT | WS_TABSTOP, 24, 434, 200,
-        26, kIdQoshimcha);
+    add(L"BUTTON", tr(L"Дополнительно  ▾", L"Advanced  ▾"), BS_PUSHBUTTON | BS_FLAT | WS_TABSTOP,
+        24, 490, 200, 26, kIdQoshimcha);
 
     // Oddiy ASCII apostrof. Sukut boʻyicha oʻchiq — oʻzbek lotin meʼyori
     // ʻ va ʼ ni talab qiladi (macOS'da `Prefs.apostrof`).
-    add(L"BUTTON", L"Oddiy apostrof (') ishlatish", BS_AUTOCHECKBOX | WS_TABSTOP, 24, 472, 402, 22,
-        kIdApostrof);
+    add(L"BUTTON", tr(L"Простой апостроф (') в узбекском", L"Plain apostrophe (') for Uzbek"),
+        BS_AUTOCHECKBOX | WS_TABSTOP, 24, 528, 402, 22, kIdApostrof);
 
     // --- Sunʼiy intellekt (ixtiyoriy)
     //
     // Ilova hech qanday kalit bilan kelmaydi va busiz toʻliq ishlaydi.
     // Kalit foydalanuvchining oʻzi kiritadi va Credential Manager'da
     // saqlanadi (`llm.h`), logga hech qachon tushmaydi.
-    add(L"STATIC", L"Sunʼiy intellekt (ixtiyoriy)", 0, 24, 498, 300, 18, kIdAiSarlavha);
-    add(L"STATIC", L"Kalit qoʻshsangiz, matnni tozalash va xulosa qilish qoʻshiladi.", 0, 24, 518,
-        402, 20, kIdAiIzoh);
+    add(L"STATIC", tr(L"Искусственный интеллект (по желанию)", L"AI (optional)"), 0, 24, 554, 402,
+        18, kIdAiSarlavha);
+    add(L"STATIC",
+        tr(L"С ключом API появятся чистка текста и краткое изложение.",
+           L"Add your API key to get text cleanup and summaries."),
+        0, 24, 574, 402, 20, kIdAiIzoh);
 
-    HWND prov = add(L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP, 24, 540, 180, 240,
+    HWND prov = add(L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP, 24, 596, 180, 240,
                     kIdProvayder);
-    SendMessageW(prov, CB_ADDSTRING, 0, (LPARAM)L"— tanlanmagan —");
+    SendMessageW(prov, CB_ADDSTRING, 0, (LPARAM)tr(L"— не выбран —", L"— none —"));
     for (const auto& pv : provayderlar()) {
         SendMessageW(prov, CB_ADDSTRING, 0, (LPARAM)pv.nom.c_str());
     }
@@ -303,39 +331,44 @@ void SettingsWindow::Impl::build() {
     // kalitning oʻzi baribir Credential Manager'da shifrlanadi.
     // Maydonlarda yorliq yoʻq, shuning uchun ishora matni (cue banner)
     // qoʻyiladi — macOS'da bu `placeholderString`.
-    add(L"EDIT", L"", ES_AUTOHSCROLL | ES_PASSWORD | WS_BORDER | WS_TABSTOP, 212, 540, 214, 24,
+    add(L"EDIT", L"", ES_AUTOHSCROLL | ES_PASSWORD | WS_BORDER | WS_TABSTOP, 212, 596, 214, 24,
         kIdKalit);
 
     // Base URL faqat «Boshqa (custom)» provayderda kerak — qolganlarida
     // manzil presetdan keladi va uni koʻrsatish faqat chalgʻitadi.
-    add(L"EDIT", L"", ES_AUTOHSCROLL | WS_BORDER | WS_TABSTOP, 24, 570, 402, 24, kIdBaseURL);
+    add(L"EDIT", L"", ES_AUTOHSCROLL | WS_BORDER | WS_TABSTOP, 24, 626, 402, 24, kIdBaseURL);
 
     // Model — tahrirlanadigan roʻyxat (CBS_DROPDOWN), oddiy tanlagich emas:
     //  1. OpenRouter 400 ga yaqin model qaytaradi;
     //  2. provayderda `/models` boʻlmasa nom qoʻlda yoziladi — boshi berk
     //     koʻcha hech qachon boʻlmaydi.
-    add(L"STATIC", L"Model", 0, 24, 606, 60, 18, kIdModelYozuv);
-    add(L"COMBOBOX", L"", CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP, 84, 602, 230,
+    add(L"STATIC", tr(L"Модель", L"Model"), 0, 24, 662, 60, 18, kIdModelYozuv);
+    add(L"COMBOBOX", L"", CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP, 84, 658, 230,
         260, kIdModel);
-    add(L"BUTTON", L"Yangilash", BS_PUSHBUTTON | WS_TABSTOP, 322, 602, 104, 26, kIdModelYangila);
-    add(L"STATIC", L"", 0, 24, 634, 402, 18, kIdModelHolati);
+    add(L"BUTTON", tr(L"Обновить", L"Refresh"), BS_PUSHBUTTON | WS_TABSTOP, 322, 658, 104, 26,
+        kIdModelYangila);
+    add(L"STATIC", L"", 0, 24, 690, 402, 18, kIdModelHolati);
 
-    add(L"BUTTON", L"Ulanishni tekshirish", BS_PUSHBUTTON | WS_TABSTOP, 24, 656, 160, 26,
-        kIdTekshir);
-    add(L"STATIC", L"", 0, 192, 660, 234, 18, kIdTekshirNatija);
+    add(L"BUTTON", tr(L"Проверить подключение", L"Test connection"), BS_PUSHBUTTON | WS_TABSTOP, 24,
+        712, 180, 26, kIdTekshir);
+    add(L"STATIC", L"", 0, 212, 716, 214, 18, kIdTekshirNatija);
 
     // Diagnostika rejimi (G1): logda matn faqat shu yoqiq boʻlsa, 24 soatgacha.
-    add(L"BUTTON", L"Diagnostika rejimi (24 soat): diktovka matni ham logga yoziladi",
-        BS_AUTOCHECKBOX | WS_TABSTOP, 24, 690, 402, 22, kIdDiagnostika);
-    add(L"BUTTON", L"Log faylini ochish…", BS_PUSHBUTTON | WS_TABSTOP, 24, 718, 150, 30, kIdLog);
+    add(L"BUTTON",
+        tr(L"Режим диагностики (24 ч): текст диктовок в логе",
+           L"Diagnostic mode (24 h): dictated text goes to the log"),
+        BS_AUTOCHECKBOX | WS_TABSTOP, 24, 746, 402, 22, kIdDiagnostika);
+    add(L"BUTTON", tr(L"Открыть лог…", L"Open log file…"), BS_PUSHBUTTON | WS_TABSTOP, 24, 774, 150,
+        30, kIdLog);
 
     // --- Pastki tugmalar — ular oʻrni qoʻshimcha boʻlim ochilganda pastga
     // suriladi (`joylashuvniYangila`).
-    add(L"BUTTON", L"Saqlash", BS_DEFPUSHBUTTON | WS_TABSTOP, 236, 0, 92, 30, kIdSave);
-    add(L"BUTTON", L"Bekor qilish", BS_PUSHBUTTON | WS_TABSTOP, 334, 0, 92, 30, kIdCancel);
+    add(L"BUTTON", tr(L"Сохранить", L"Save"), BS_DEFPUSHBUTTON | WS_TABSTOP, 226, 0, 98, 30,
+        kIdSave);
+    add(L"BUTTON", tr(L"Отмена", L"Cancel"), BS_PUSHBUTTON | WS_TABSTOP, 328, 0, 98, 30, kIdCancel);
 
     // Ishora matnlari (macOS'dagi `placeholderString`).
-    SendMessageW(ctrl(kIdKalit), EM_SETCUEBANNER, TRUE, (LPARAM)L"API kalit");
+    SendMessageW(ctrl(kIdKalit), EM_SETCUEBANNER, TRUE, (LPARAM)tr(L"Ключ API", L"API key"));
     SendMessageW(ctrl(kIdBaseURL), EM_SETCUEBANNER, TRUE, (LPARAM)L"Base URL");
 
     joylashuvniYangila();
@@ -350,8 +383,8 @@ void SettingsWindow::Impl::joylashuvniYangila() {
     // «Boshqa (custom)» boʻlmasa Base URL baribir yashirin qoladi.
     xosQatorniYangila();
 
-    SetWindowTextW(ctrl(kIdQoshimcha),
-                   qoshimchaOchiq ? L"Qoʻshimcha sozlamalar  ▴" : L"Qoʻshimcha sozlamalar  ▾");
+    SetWindowTextW(ctrl(kIdQoshimcha), qoshimchaOchiq ? tr(L"Дополнительно  ▴", L"Advanced  ▴")
+                                                      : tr(L"Дополнительно  ▾", L"Advanced  ▾"));
 
     // Boʻlim ochilib-yopilganda kontent boshiga qaytamiz: quyidagi
     // joylashuv surilmagan koordinatalarda hisoblanadi.
@@ -450,18 +483,22 @@ void SettingsWindow::Impl::fillMics() {
 
     mics = listMicrophones();
 
-    SendMessageW(combo, CB_ADDSTRING, 0, (LPARAM)L"(tizim standarti)");
+    SendMessageW(combo, CB_ADDSTRING, 0, (LPARAM)tr(L"(системный)", L"(system default)"));
     int select = 0;
 
     for (size_t i = 0; i < mics.size(); i++) {
         std::wstring label = mics[i].name;
         switch (mics[i].kind) {
-            case MicKind::Loopback: label += L"   [mikrofon emas!]"; break;
-            case MicKind::Bluetooth: label += L"   [sifat past]"; break;
-            case MicKind::Virtual: label += L"   [virtual]"; break;
+            case MicKind::Loopback:
+                label += tr(L"   [не микрофон!]", L"   [not a microphone!]");
+                break;
+            case MicKind::Bluetooth:
+                label += tr(L"   [низкое качество]", L"   [low quality]");
+                break;
+            case MicKind::Virtual: label += tr(L"   [виртуальный]", L"   [virtual]"); break;
             default: break;
         }
-        if (mics[i].isDefault) label += L"   (standart)";
+        if (mics[i].isDefault) label += tr(L"   (по умолчанию)", L"   (default)");
         SendMessageW(combo, CB_ADDSTRING, 0, (LPARAM)label.c_str());
         if (!settings.micDeviceId.empty() && mics[i].id == settings.micDeviceId) {
             select = (int)i + 1;
@@ -482,7 +519,7 @@ void SettingsWindow::Impl::updateMicWarning() {
         // Standart qurilma xavfli boʻlishi mumkin — tekshiramiz.
         for (const auto& m : mics) {
             if (m.isDefault && m.kind != MicKind::Normal) {
-                text = L"Tizim standarti: " + m.name + L"\n" + m.warning();
+                text = tr(L"Системный: ", L"System default: ") + m.name + L"\n" + m.warning();
                 break;
             }
         }
@@ -510,10 +547,11 @@ NutqTili SettingsWindow::Impl::tanlanganTil() const {
 // banner uni yuklashni taklif qiladi.
 void SettingsWindow::Impl::tilIzohiniYangila() {
     const NutqTili til = tanlanganTil();
-    const std::wstring matn =
-        Engine::findModel(til).empty()
-            ? L"Model (" + std::to_wstring(modelHajmiMb(modelUchun(til))) + L" MB) yuklanadi"
-            : std::wstring(L"Model tayyor");
+    const std::wstring mb = std::to_wstring(modelHajmiMb(modelUchun(til)));
+    const std::wstring matn = Engine::findModel(til).empty()
+                                  ? tr(L"Модель (" + mb + L" МБ) будет скачана",
+                                       L"Model (" + mb + L" MB) will be downloaded")
+                                  : std::wstring(tr(L"Модель готова", L"Model ready"));
     SetWindowTextW(ctrl(kIdNutqTiliIzoh), matn.c_str());
 }
 
@@ -530,10 +568,13 @@ void SettingsWindow::Impl::save() {
         settings.hotkeyLabel = keyLabel(vk);
     } else {
         MessageBoxW(hwnd,
-                    L"Tugma saqlanmadi: kamida bitta modifikator\n"
-                    L"(Ctrl, Alt yoki Shift) va bitta tugma kerak.\n\n"
-                    L"Oldingi tugma oʻzgarishsiz qoldi.",
-                    L"Sozlamalar", MB_OK | MB_ICONWARNING);
+                    tr(L"Клавиша не сохранена: нужен хотя бы один модификатор\n"
+                       L"(Ctrl, Alt или Shift) и одна клавиша.\n\n"
+                       L"Прежняя клавиша осталась без изменений.",
+                       L"The shortcut wasn't saved: it needs at least one modifier\n"
+                       L"(Ctrl, Alt or Shift) and one key.\n\n"
+                       L"The previous shortcut still works."),
+                    tr(L"Настройки", L"Settings"), MB_OK | MB_ICONWARNING);
     }
 
     // --- Mikrofon
@@ -556,6 +597,12 @@ void SettingsWindow::Impl::save() {
     settings.useGpu = SendMessageW(ctrl(kIdUseGpu), BM_GETCHECK, 0, 0) == BST_CHECKED;
     settings.oddiyApostrof = SendMessageW(ctrl(kIdApostrof), BM_GETCHECK, 0, 0) == BST_CHECKED;
     settings.nutqTili = tanlanganTil();
+    const UITili oldingiUITili = settings.uiTili;
+    {
+        const LRESULT i = SendMessageW(ctrl(kIdUITili), CB_GETCURSEL, 0, 0);
+        if (i >= 0 && i <= static_cast<LRESULT>(UITili::Ingliz))
+            settings.uiTili = static_cast<UITili>(i);
+    }
     // Yoqilgan rejim qayta saqlansa muddat uzaymaydi — faqat yangi yoqilganda 24 soat.
     const long long hozir = static_cast<long long>(std::time(nullptr));
     const bool diagnostika = SendMessageW(ctrl(kIdDiagnostika), BM_GETCHECK, 0, 0) == BST_CHECKED;
@@ -574,13 +621,27 @@ void SettingsWindow::Impl::save() {
     // mumkin.
     settings = sozlamaOynasidan(loadSettings(), settings);
     if (!saveSettings(settings)) {
-        MessageBoxW(hwnd, L"Sozlamalar saqlanmadi. Diskda joy bormi?", L"Sozlamalar",
-                    MB_OK | MB_ICONERROR);
+        MessageBoxW(hwnd,
+                    tr(L"Настройки не сохранены. Есть ли место на диске?",
+                       L"Couldn't save the settings. Is there space on the disk?"),
+                    tr(L"Настройки", L"Settings"), MB_OK | MB_ICONERROR);
         return;
     }
     logWrite(L"sozlamalar saqlandi: " + settings.hotkeyDisplay() + L", nutq tili " +
              nutqTiliKodi(settings.nutqTili));
     if (onSaved) onSaved(settings);
+
+    // Interfeys tili — macOS'dagi `uiTilOzgardi`: til ishga tushishda bir
+    // marta aniqlanadi, shuning uchun qayta ishga tushirishni taklif qilamiz.
+    if (settings.uiTili != oldingiUITili &&
+        MessageBoxW(
+            hwnd,
+            tr(L"Язык интерфейса сменится после перезапуска.\n\nПерезапустить Voxly сейчас?",
+               L"The new language applies after a restart.\n\nRestart Voxly now?"),
+            tr(L"Перезапустить Voxly?", L"Restart Voxly?"), MB_YESNO | MB_ICONQUESTION) == IDYES &&
+        onQaytaIshga) {
+        onQaytaIshga();
+    }
 }
 
 // ------------------------------------------------------------------- API
@@ -599,6 +660,8 @@ HWND SettingsWindow::oyna() const { return d ? d->hwnd : nullptr; }
 void SettingsWindow::setOnSaved(std::function<void(const Settings&)> cb) {
     d->onSaved = std::move(cb);
 }
+
+void SettingsWindow::setOnQaytaIshga(std::function<void()> cb) { d->onQaytaIshga = std::move(cb); }
 
 void SettingsWindow::show(HINSTANCE instance, const Settings& current, HWND ega) {
     d->settings = current;
@@ -621,7 +684,7 @@ void SettingsWindow::show(HINSTANCE instance, const Settings& current, HWND ega)
         RegisterClassExW(&wc);
 
         d->hwnd =
-            CreateWindowExW(0, kClassName, L"Voxly — Sozlamalar",
+            CreateWindowExW(0, kClassName, tr(L"Voxly — Настройки", L"Voxly — Settings"),
                             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_VSCROLL, CW_USEDEFAULT,
                             CW_USEDEFAULT, 100, 100, ega, nullptr, instance, d);
         if (!d->hwnd) {
@@ -658,6 +721,7 @@ void SettingsWindow::show(HINSTANCE instance, const Settings& current, HWND ega)
     SendMessageW(d->ctrl(kIdApostrof), BM_SETCHECK,
                  current.oddiyApostrof ? BST_CHECKED : BST_UNCHECKED, 0);
     SendMessageW(d->ctrl(kIdNutqTili), CB_SETCURSEL, static_cast<WPARAM>(current.nutqTili), 0);
+    SendMessageW(d->ctrl(kIdUITili), CB_SETCURSEL, static_cast<WPARAM>(current.uiTili), 0);
     d->tilIzohiniYangila();
     SendMessageW(
         d->ctrl(kIdDiagnostika), BM_SETCHECK,

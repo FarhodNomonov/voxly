@@ -92,6 +92,8 @@ Settings loadSettings() {
                 s.didOnboard = (val == L"1");
             else if (key == L"oddiyApostrof")
                 s.oddiyApostrof = (val == L"1");
+            else if (key == L"ui.tili")
+                s.uiTili = uiTiliKoddan(val);
             else if (key == L"nutq.tili")
                 s.nutqTili = nutqTiliKoddan(val, s.nutqTili);
             else if (key == L"diagnostikaTugash")
@@ -120,8 +122,10 @@ bool saveSettings(const Settings& s) {
     if (path.empty()) return false;
 
     std::wostringstream o;
-    o << L"# Voxly sozlamalari\n"
-      << L"# Bu faylni qoʻlda tahrirlash mumkin. Ilovani qayta ishga tushiring.\n\n"
+    // Sarlavha inglizcha: fayl interfeys tilidan mustaqil (til oʻzgarsa
+    // ham qayta yozilmaydi) va uni ochgan har kim tushunsin.
+    o << L"# Voxly settings\n"
+      << L"# You can edit this file by hand. Restart Voxly afterwards.\n\n"
       << L"hotkey.vk=" << s.vkCode << L"\n"
       << L"hotkey.modifiers=" << s.modifiers << L"\n"
       << L"hotkey.label=" << s.hotkeyLabel << L"\n"
@@ -133,6 +137,7 @@ bool saveSettings(const Settings& s) {
       << L"idleUnloadSeconds=" << s.idleUnloadSeconds << L"\n"
       << L"didOnboard=" << (s.didOnboard ? 1 : 0) << L"\n"
       << L"oddiyApostrof=" << (s.oddiyApostrof ? 1 : 0) << L"\n"
+      << L"ui.tili=" << uiTiliKodi(s.uiTili) << L"\n"
       << L"nutq.tili=" << nutqTiliKodi(s.nutqTili) << L"\n"
       << L"diagnostikaTugash=" << s.diagnostikaTugash << L"\n"
       << L"llm.provayder=" << toWide(s.llmProvayder) << L"\n"

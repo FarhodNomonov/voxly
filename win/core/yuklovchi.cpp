@@ -3,6 +3,7 @@
 
 #include "yuklovchi.h"
 
+#include "ui_tili.h"
 #include "util.h"
 
 #include <windows.h>
@@ -54,7 +55,7 @@ YuklashNatijasi faylYukla(const std::wstring& url, const std::wstring& qism, lon
     u.dwHostNameLength = static_cast<DWORD>(-1);
     u.dwUrlPathLength = static_cast<DWORD>(-1);
     if (!WinHttpCrackUrl(url.c_str(), 0, 0, &u)) {
-        n.xato = L"Manzil notoʻgʻri.";
+        n.xato = tr(L"Неверный адрес.", L"Invalid address.");
         return n;
     }
     host.assign(u.lpszHostName, u.dwHostNameLength);
@@ -64,7 +65,7 @@ YuklashNatijasi faylYukla(const std::wstring& url, const std::wstring& qism, lon
     HINTERNET sessiya = WinHttpOpen(L"Voxly", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
                                     WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     if (!sessiya) {
-        n.xato = L"Tarmoq ochilmadi.";
+        n.xato = tr(L"Не удалось открыть сеть.", L"Couldn't open the network.");
         return n;
     }
     // Katta fayl uzoq yuklanadi — oʻqish chegarasi katta boʻlsin.
@@ -73,7 +74,7 @@ YuklashNatijasi faylYukla(const std::wstring& url, const std::wstring& qism, lon
     HINTERNET ulanish = WinHttpConnect(sessiya, host.c_str(), port, 0);
     if (!ulanish) {
         WinHttpCloseHandle(sessiya);
-        n.xato = L"Internetga ulanib boʻlmadi.";
+        n.xato = tr(L"Нет подключения к интернету.", L"No internet connection.");
         return n;
     }
 
@@ -83,7 +84,7 @@ YuklashNatijasi faylYukla(const std::wstring& url, const std::wstring& qism, lon
     if (!sorov) {
         WinHttpCloseHandle(ulanish);
         WinHttpCloseHandle(sessiya);
-        n.xato = L"Soʻrov yaratilmadi.";
+        n.xato = tr(L"Не удалось создать запрос.", L"Couldn't create the request.");
         return n;
     }
 
@@ -109,7 +110,8 @@ YuklashNatijasi faylYukla(const std::wstring& url, const std::wstring& qism, lon
             logWrite(L"yuklash: server 416 — .part toʻliq deb olinadi");
             n.ok = true;
         } else if (holat != 200 && holat != 206) {
-            n.xato = L"Server javob bermadi (" + std::to_wstring(holat) + L").";
+            n.xato = tr(L"Сервер не ответил (код ", L"The server didn't respond (code ") +
+                     std::to_wstring(holat) + L").";
         } else {
             // Content-Length ni SATR sifatida oʻqiymiz: `WINHTTP_QUERY_FLAG_NUMBER`
             // DWORD beradi va 4 GB dan katta fayl jimgina notoʻgʻri chiqadi.
@@ -129,7 +131,8 @@ YuklashNatijasi faylYukla(const std::wstring& url, const std::wstring& qism, lon
                                    ofset > 0 ? OPEN_ALWAYS : CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL,
                                    nullptr);
             if (f == INVALID_HANDLE_VALUE) {
-                n.xato = L"Faylni ochib boʻlmadi. Diskda joy borligini tekshiring.";
+                n.xato = tr(L"Не удалось открыть файл. Проверьте место на диске.",
+                            L"Couldn't open the file. Check free disk space.");
             } else {
                 LARGE_INTEGER joy;
                 joy.QuadPart = ofset;
@@ -142,14 +145,15 @@ YuklashNatijasi faylYukla(const std::wstring& url, const std::wstring& qism, lon
                 for (;;) {
                     if (bekor && bekor()) {
                         n.ok = false;
-                        n.xato = L"Bekor qilindi.";
+                        n.xato = tr(L"Отменено.", L"Cancelled.");
                         break;
                     }
 
                     DWORD bor = 0;
                     if (!WinHttpQueryDataAvailable(sorov, &bor)) {
                         n.ok = false;
-                        n.xato = L"Ulanish uzildi. Qayta urinib koʻring.";
+                        n.xato = tr(L"Соединение прервалось. Попробуйте снова.",
+                                    L"The connection dropped. Try again.");
                         break;
                     }
                     if (bor == 0) break;
@@ -158,14 +162,16 @@ YuklashNatijasi faylYukla(const std::wstring& url, const std::wstring& qism, lon
                     DWORD oqildi = 0;
                     if (!WinHttpReadData(sorov, bufer.data(), soralgan, &oqildi) || oqildi == 0) {
                         n.ok = false;
-                        n.xato = L"Ulanish uzildi. Qayta urinib koʻring.";
+                        n.xato = tr(L"Соединение прервалось. Попробуйте снова.",
+                                    L"The connection dropped. Try again.");
                         break;
                     }
                     DWORD yozildi = 0;
                     if (!WriteFile(f, bufer.data(), oqildi, &yozildi, nullptr) ||
                         yozildi != oqildi) {
                         n.ok = false;
-                        n.xato = L"Diskka yozib boʻlmadi. Joy yetarli emas.";
+                        n.xato = tr(L"Не удалось записать на диск. Мало места.",
+                                    L"Couldn't write to disk. Not enough space.");
                         break;
                     }
                     olingan += oqildi;
@@ -178,7 +184,8 @@ YuklashNatijasi faylYukla(const std::wstring& url, const std::wstring& qism, lon
                 // Endi bu — uzilish: `.part` qoladi, keyingi safar davom etadi.
                 if (n.ok && jami > 0 && olingan < jami) {
                     n.ok = false;
-                    n.xato = L"Ulanish uzildi. Qayta urinib koʻring.";
+                    n.xato = tr(L"Соединение прервалось. Попробуйте снова.",
+                                L"The connection dropped. Try again.");
                     logWrite(L"yuklash: ulanish erta yopildi (" + std::to_wstring(olingan) +
                              L" / " + std::to_wstring(jami) + L" bayt) — .part saqlandi");
                 }
@@ -187,7 +194,7 @@ YuklashNatijasi faylYukla(const std::wstring& url, const std::wstring& qism, lon
             }
         }
     } else {
-        n.xato = L"Internetga ulanib boʻlmadi.";
+        n.xato = tr(L"Нет подключения к интернету.", L"No internet connection.");
     }
 
     WinHttpCloseHandle(sorov);

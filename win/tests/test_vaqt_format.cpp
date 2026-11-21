@@ -1,8 +1,9 @@
 // `vaqt_format.cpp` testlari.
 //
 // Bu matnlar foydalanuvchi koʻradigan yozuvlar va ular macOS bilan AYNAN
-// bir xil boʻlishi shart (`tests/vaqt_format_testlari.swift` dagi bilan bir
-// xil holatlar tekshiriladi). Shu sabab test bor.
+// bir xil boʻlishi shart (`tests/test_vaqt_format.swift` dagi bilan bir
+// xil holatlar tekshiriladi) — rus va ingliz interfeysida. Shu sabab test bor.
+#include "../core/ui_tili.h"
 #include "../core/vaqt_format.h"
 
 #include <ctime>
@@ -35,6 +36,9 @@ long long vaqt(int yil, int oy, int kun, int soat, int daqiqa) {
 }  // namespace
 
 void vaqtFormatTestlari() {
+    // Matnlar interfeys tilida (`ui_tili.h`) — avval rus, oxirida ingliz.
+    joriyUITiliniQoy(UITili::Rus);
+
     // ---- taymer ----
     tengmi(L"taymer nol", VaqtFormat::taymer(0), L"0:00");
     tengmi(L"taymer soniyalar", VaqtFormat::taymer(4), L"0:04");
@@ -45,47 +49,70 @@ void vaqtFormatTestlari() {
     tengmi(L"taymer manfiy", VaqtFormat::taymer(-5), L"0:00");
 
     // ---- davomiylik ----
-    tengmi(L"davomiylik juda qisqa", VaqtFormat::davomiylik(30), L"1 daqiqadan kam");
-    tengmi(L"davomiylik daqiqa", VaqtFormat::davomiylik(12 * 60), L"12 daqiqa");
-    tengmi(L"davomiylik roppa-rosa soat", VaqtFormat::davomiylik(3600), L"1 soat");
-    tengmi(L"davomiylik soat va daqiqa", VaqtFormat::davomiylik(65 * 60), L"1 soat 5 daqiqa");
-    tengmi(L"davomiylik manfiy", VaqtFormat::davomiylik(-10), L"1 daqiqadan kam");
+    tengmi(L"davomiylik juda qisqa", VaqtFormat::davomiylik(30), L"меньше минуты");
+    tengmi(L"davomiylik daqiqa", VaqtFormat::davomiylik(12 * 60), L"12 мин");
+    tengmi(L"davomiylik roppa-rosa soat", VaqtFormat::davomiylik(3600), L"1 ч");
+    tengmi(L"davomiylik soat va daqiqa", VaqtFormat::davomiylik(65 * 60), L"1 ч 5 мин");
+    tengmi(L"davomiylik manfiy", VaqtFormat::davomiylik(-10), L"меньше минуты");
 
     // ---- nisbiy va kun ----
     const long long hozir = vaqt(2026, 9, 10, 12, 0);
 
-    tengmi(L"nisbiy bugun", VaqtFormat::nisbiy(vaqt(2026, 9, 10, 16, 4), hozir), L"bugun 16:04");
-    tengmi(L"nisbiy kecha", VaqtFormat::nisbiy(vaqt(2026, 9, 9, 18, 22), hozir), L"kecha 18:22");
+    tengmi(L"nisbiy bugun", VaqtFormat::nisbiy(vaqt(2026, 9, 10, 16, 4), hozir), L"сегодня 16:04");
+    tengmi(L"nisbiy kecha", VaqtFormat::nisbiy(vaqt(2026, 9, 9, 18, 22), hozir), L"вчера 18:22");
     tengmi(L"nisbiy eski sana", VaqtFormat::nisbiy(vaqt(2026, 8, 22, 18, 22), hozir),
-           L"22 avg 18:22");
+           L"22 авг. 18:22");
 
-    tengmi(L"kun bugun", VaqtFormat::kun(vaqt(2026, 9, 10, 1, 5), hozir), L"bugun");
-    tengmi(L"kun kecha", VaqtFormat::kun(vaqt(2026, 9, 9, 23, 59), hozir), L"kecha");
-    tengmi(L"kun eski", VaqtFormat::kun(vaqt(2026, 8, 22, 9, 0), hozir), L"22 avg");
+    tengmi(L"kun bugun", VaqtFormat::kun(vaqt(2026, 9, 10, 1, 5), hozir), L"сегодня");
+    tengmi(L"kun kecha", VaqtFormat::kun(vaqt(2026, 9, 9, 23, 59), hozir), L"вчера");
+    tengmi(L"kun eski", VaqtFormat::kun(vaqt(2026, 8, 22, 9, 0), hozir), L"22 авг.");
 
     // Kecha yarim tundan keyin: taqqoslash KALENDAR kuni boʻyicha ketadi,
     // «24 soat oldin» boʻyicha emas.
     const long long yarimTun = vaqt(2026, 9, 10, 0, 30);
     tengmi(L"yarim tundan keyin kechagi kech", VaqtFormat::kun(vaqt(2026, 9, 9, 22, 0), yarimTun),
-           L"kecha");
+           L"вчера");
     tengmi(L"yarim tundan keyin bugun", VaqtFormat::kun(vaqt(2026, 9, 10, 0, 1), yarimTun),
-           L"bugun");
+           L"сегодня");
 
     // Oy chegarasi — «kecha» hisobi oy oʻzgarganda ham toʻgʻri boʻlsin.
     const long long oyBoshi = vaqt(2026, 3, 1, 10, 0);
-    tengmi(L"oy chegarasida kecha", VaqtFormat::kun(vaqt(2026, 2, 28, 20, 0), oyBoshi), L"kecha");
+    tengmi(L"oy chegarasida kecha", VaqtFormat::kun(vaqt(2026, 2, 28, 20, 0), oyBoshi), L"вчера");
 
     // Yil chegarasi.
     const long long yilBoshi = vaqt(2026, 1, 1, 9, 0);
     tengmi(L"yil chegarasida kecha", VaqtFormat::kun(vaqt(2025, 12, 31, 23, 0), yilBoshi),
-           L"kecha");
+           L"вчера");
 
-    // Barcha oy qisqartmalari — macOS `uz_Latn` lokalidagi bilan bir xil.
-    const wchar_t* oylar[12] = {L"yan", L"fev", L"mar", L"apr", L"may", L"iyn",
-                                L"iyl", L"avg", L"sen", L"okt", L"noy", L"dek"};
+    // Barcha oy qisqartmalari — macOS'dagi `DateFormatter` ("d MMM") bilan
+    // bir xil (`ru_RU` va `en_US`).
+    const wchar_t* oylarRu[12] = {L"янв.", L"февр.", L"марта", L"апр.", L"мая",   L"июня",
+                                  L"июля", L"авг.",  L"сент.", L"окт.", L"нояб.", L"дек."};
+    const wchar_t* oylarEn[12] = {L"Jan", L"Feb", L"Mar", L"Apr", L"May", L"Jun",
+                                  L"Jul", L"Aug", L"Sep", L"Oct", L"Nov", L"Dec"};
     for (int oy = 1; oy <= 12; ++oy) {
-        const std::wstring kutilgan = L"15 " + std::wstring(oylar[oy - 1]);
-        tengmi(L"oy qisqartmasi " + std::to_wstring(oy),
-               VaqtFormat::kun(vaqt(2025, oy, 15, 12, 0), hozir), kutilgan);
+        tengmi(L"oy qisqartmasi (ru) " + std::to_wstring(oy),
+               VaqtFormat::kun(vaqt(2025, oy, 15, 12, 0), hozir),
+               L"15 " + std::wstring(oylarRu[oy - 1]));
     }
+
+    // ---- Ingliz interfeysi ----
+    joriyUITiliniQoy(UITili::Ingliz);
+    for (int oy = 1; oy <= 12; ++oy) {
+        tengmi(L"oy qisqartmasi (en) " + std::to_wstring(oy),
+               VaqtFormat::kun(vaqt(2025, oy, 15, 12, 0), hozir),
+               L"15 " + std::wstring(oylarEn[oy - 1]));
+    }
+    tengmi(L"en: nisbiy bugun", VaqtFormat::nisbiy(vaqt(2026, 9, 10, 16, 4), hozir),
+           L"today 16:04");
+    tengmi(L"en: nisbiy kecha", VaqtFormat::nisbiy(vaqt(2026, 9, 9, 18, 22), hozir),
+           L"yesterday 18:22");
+    tengmi(L"en: nisbiy eski sana", VaqtFormat::nisbiy(vaqt(2026, 8, 22, 18, 22), hozir),
+           L"22 Aug 18:22");
+    tengmi(L"en: davomiylik juda qisqa", VaqtFormat::davomiylik(30), L"under a minute");
+    tengmi(L"en: davomiylik daqiqa", VaqtFormat::davomiylik(12 * 60), L"12 min");
+    tengmi(L"en: davomiylik soat", VaqtFormat::davomiylik(3600), L"1 h");
+    tengmi(L"en: davomiylik soat va daqiqa", VaqtFormat::davomiylik(65 * 60), L"1 h 5 min");
+
+    joriyUITiliniQoy(UITili::Rus);
 }

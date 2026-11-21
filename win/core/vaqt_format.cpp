@@ -3,6 +3,8 @@
 
 #include "vaqt_format.h"
 
+#include "ui_tili.h"
+
 #include <algorithm>
 #include <cmath>
 #include <ctime>
@@ -12,9 +14,12 @@ namespace VaqtFormat {
 
 namespace {
 
-// macOS'ning `uz_Latn` lokalidagi qisqartmalar bilan bir xil.
-const wchar_t* kOylar[12] = {L"yan", L"fev", L"mar", L"apr", L"may", L"iyn",
-                             L"iyl", L"avg", L"sen", L"okt", L"noy", L"dek"};
+// macOS'dagi `DateFormatter` ("d MMM", `ru_RU` / `en_US`) bilan bir xil
+// qisqartmalar — rus tilida kelishikdagi shakl («15 марта», «15 мая»).
+const wchar_t* kOylarRu[12] = {L"янв.", L"февр.", L"марта", L"апр.", L"мая",   L"июня",
+                               L"июля", L"авг.",  L"сент.", L"окт.", L"нояб.", L"дек."};
+const wchar_t* kOylarEn[12] = {L"Jan", L"Feb", L"Mar", L"Apr", L"May", L"Jun",
+                               L"Jul", L"Aug", L"Sep", L"Oct", L"Nov", L"Dec"};
 
 std::tm mahalliy(long long unix) {
     const std::time_t t = static_cast<std::time_t>(unix);
@@ -33,15 +38,15 @@ std::wstring soatMatni(const std::tm& m) {
     return b;
 }
 
+// `swprintf` ATAYLAB yoʻq: ASCII boʻlmagan matn (kirill) bilan u macOS'dagi
+// test quvurida («C» lokal) xato qaytaradi — oddiy ulash ikkala tomonda bir xil.
 std::wstring sanaMatni(const std::tm& m) {
-    wchar_t b[24];
-    swprintf(b, 24, L"%d %ls", m.tm_mday, kOylar[m.tm_mon]);
-    return b;
+    return std::to_wstring(m.tm_mday) + L" " + (uiInglizmi() ? kOylarEn : kOylarRu)[m.tm_mon];
 }
 
-// «bugun» / «kecha» / «22 avg». Ikkala funksiya ham shundan foydalanadi.
+// «сегодня» / «вчера» / «22 авг.». Ikkala funksiya ham shundan foydalanadi.
 std::wstring kunAsosi(const std::tm& sana, const std::tm& hozir) {
-    if (birKunmi(sana, hozir)) return L"bugun";
+    if (birKunmi(sana, hozir)) return tr(L"сегодня", L"today");
 
     // Kechagi kunni «hozir minus 24 soat» dan olamiz va localtime bilan
     // qaytadan yoyamiz — oy/yil chegarasi va yozgi vaqt oʻzgarishi
@@ -51,7 +56,7 @@ std::wstring kunAsosi(const std::tm& sana, const std::tm& hozir) {
     std::time_t t = std::mktime(&h) - 24 * 60 * 60;
     std::tm kechaTm{};
     localtime_s(&kechaTm, &t);
-    if (birKunmi(sana, kechaTm)) return L"kecha";
+    if (birKunmi(sana, kechaTm)) return tr(L"вчера", L"yesterday");
 
     return sanaMatni(sana);
 }
@@ -76,20 +81,14 @@ std::wstring nisbiy(long long unix, long long hozir) {
 std::wstring davomiylik(double soniya) {
     const long long daqiqa = std::max<long long>(0, static_cast<long long>(soniya)) / 60;
     // Nol daqiqa «fayl boʻsh» degan taassurot beradi — buni ochiq aytamiz.
-    if (daqiqa == 0) return L"1 daqiqadan kam";
+    if (daqiqa == 0) return tr(L"меньше минуты", L"under a minute");
 
-    wchar_t b[48];
-    if (daqiqa < 60) {
-        swprintf(b, 48, L"%lld daqiqa", daqiqa);
-        return b;
-    }
+    const std::wstring min = tr(L" мин", L" min");
+    if (daqiqa < 60) return std::to_wstring(daqiqa) + min;
     const long long soat = daqiqa / 60;
     const long long qoldiq = daqiqa % 60;
-    if (qoldiq == 0)
-        swprintf(b, 48, L"%lld soat", soat);
-    else
-        swprintf(b, 48, L"%lld soat %lld daqiqa", soat, qoldiq);
-    return b;
+    const std::wstring s = std::to_wstring(soat) + tr(L" ч", L" h");
+    return qoldiq == 0 ? s : s + L" " + std::to_wstring(qoldiq) + min;
 }
 
 std::wstring kun(long long unix, long long hozir) {

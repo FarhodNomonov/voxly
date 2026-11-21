@@ -24,7 +24,10 @@ void App::startRecording() {
     // Fayl ishi ketayotganda diktovka BOSHLANMAYDI (D1): navbat bitta, matn
     // fayl tugaguncha kutib, keyin boshqa oynaga tushardi. macOS bilan bir xil.
     if (TranskripsiyaIshi::ishlayapti()) {
-        overlay_.show(OverlayIcon::Warning, L"Fayl ustida ish ketmoqda — kuting", 2000);
+        overlay_.show(
+            OverlayIcon::Warning,
+            tr(L"Идёт обработка файла — подождите", L"A file is being processed — please wait"),
+            2000);
         return;
     }
     // Model yoʻq boʻlsa yozuv BOSHLANMAYDI (A4): ilgari bu foydalanuvchi
@@ -33,8 +36,11 @@ void App::startRecording() {
     if (Engine::findModel(settings_.nutqTili).empty()) {
         logWrite(L"yozish boshlanmadi: model topilmadi");
         overlay_.show(OverlayIcon::Warning,
-                      modelYuklovchi_.ketyaptimi() ? L"Model hali yuklanmoqda — kuting"
-                                                   : L"Nutq modeli topilmadi — oynada yuklab oling",
+                      modelYuklovchi_.ketyaptimi()
+                          ? tr(L"Модель ещё скачивается — подождите",
+                               L"The model is still downloading — please wait")
+                          : tr(L"Модель распознавания не найдена — скачайте её в окне Voxly",
+                               L"Speech model not found — download it in the Voxly window"),
                       4000);
         oynaniOch();
         return;
@@ -43,14 +49,17 @@ void App::startRecording() {
     std::wstring error;
     if (!capture_.start(settings_.micDeviceId, error)) {
         logWrite(L"XATO: yozish boshlanmadi — " + error);
-        overlay_.show(OverlayIcon::Warning, L"Mikrofon ochilmadi", 4000);
-        notify(L"Mikrofon ochilmadi", error, NIIF_ERROR);
+        overlay_.show(OverlayIcon::Warning,
+                      tr(L"Не удалось открыть микрофон", L"Couldn't open the microphone"), 4000);
+        notify(tr(L"Не удалось открыть микрофон", L"Couldn't open the microphone"), error,
+               NIIF_ERROR);
         return;
     }
     recording_ = true;
     DiktovkaBand::mikrofon = true;
     yozishBoshlandi_ = GetTickCount64();
-    updateTrayTip(L"Yozilmoqda…  (" + settings_.hotkeyDisplay() + L" — toʻxtatish)");
+    updateTrayTip(tr(L"Запись…  (", L"Recording…  (") + settings_.hotkeyDisplay() +
+                  tr(L" — остановить)", L" — stop)"));
     asosiy_.diktovkaHolati(true);
     SetTimer(hwnd_, kDarajaTaymer, kDarajaOraligi, nullptr);
     SetTimer(hwnd_, kMaxYozishTaymer, kMaxYozishMs, nullptr);
@@ -62,7 +71,9 @@ void App::startRecording() {
     // Ikkalasi ham ilovaning ODATDAGI ishlatilishi: matn boshqa ilovaga
     // yoziladi, demak Voxly oynasi deyarli har doim orqada boʻladi.
     if (GetForegroundWindow() != asosiy_.deskriptor()) {
-        overlay_.show(OverlayIcon::Recording, L"Yozilmoqda…  (" + settings_.hotkeyDisplay() + L")");
+        // macOS'dagi «Запись… (ещё раз ⌃⌥D)» bilan bir xil.
+        overlay_.show(OverlayIcon::Recording, tr(L"Запись… (ещё раз ", L"Recording… (press ") +
+                                                  settings_.hotkeyDisplay() + tr(L")", L" again)"));
     }
     logWrite(L"yozish boshlandi");
 }
@@ -86,7 +97,10 @@ void App::stopAndTranscribe() {
     // namuna bermasa esa — baribir «jim» (`checkSamples` izohidagi tashvish).
     if (check.verdict == AudioVerdict::Silent && yozishDavomiyligi_ < 1.0) {
         updateTrayTip(kAppName);
-        overlay_.show(OverlayIcon::Warning, L"Juda qisqa — kamida 1 soniya gapiring", 3000);
+        overlay_.show(OverlayIcon::Warning,
+                      tr(L"Слишком коротко — говорите хотя бы секунду",
+                         L"Too short — speak for at least a second"),
+                      3000);
         return;
     }
     if (check.verdict == AudioVerdict::Silent) {
@@ -97,22 +111,28 @@ void App::stopAndTranscribe() {
         // maxfiylik sozlamasini yoqish), shuning uchun uni oʻtkazib yuborib
         // boʻlmaydigan qilib qoʻyamiz. macOS'da faqat koʻrsatkich bor —
         // u yerda ruxsat masalasi tizimning oʻz dialogi bilan hal boʻladi.
-        overlay_.show(OverlayIcon::Warning, L"Mikrofon jim — signal yoʻq", 4000);
-        notify(L"Mikrofon jim",
-               L"Signal aniqlanmadi. Mikrofon ulanganini va Windows\n"
-               L"maxfiylik sozlamalarida ruxsat berilganini tekshiring.",
+        overlay_.show(OverlayIcon::Warning,
+                      tr(L"С микрофона не идёт звук", L"No sound from the microphone"), 4000);
+        notify(tr(L"С микрофона не идёт звук", L"No sound from the microphone"),
+               tr(L"Сигнала нет. Проверьте, что микрофон подключён и что\n"
+                  L"в параметрах конфиденциальности Windows доступ разрешён.",
+                  L"No signal. Check that the microphone is connected and\n"
+                  L"allowed in the Windows privacy settings."),
                NIIF_WARNING);
         return;
     }
     if (check.verdict == AudioVerdict::TooShort) {
         updateTrayTip(kAppName);
-        overlay_.show(OverlayIcon::Warning, L"Juda qisqa — kamida 1 soniya gapiring", 3000);
+        overlay_.show(OverlayIcon::Warning,
+                      tr(L"Слишком коротко — говорите хотя бы секунду",
+                         L"Too short — speak for at least a second"),
+                      3000);
         return;
     }
 
     busy_ = true;
-    updateTrayTip(L"Matnga oʻgirilmoqda…");
-    overlay_.show(OverlayIcon::Working, L"Matnga oʻgirilmoqda…");
+    updateTrayTip(tr(L"Распознаю…", L"Transcribing…"));
+    overlay_.show(OverlayIcon::Working, tr(L"Распознаю…", L"Transcribing…"));
 
     std::vector<float> tayyor = prepareSamples(samples);
     kutilayotganOvoz_ = std::move(samples);
@@ -141,7 +161,10 @@ void App::onResult(const TranscribeResult& r) {
     SetTimer(hwnd_, kQaytaTaymer, kQaytaKutishMs, nullptr);
 
     if (r.text.empty()) {
-        overlay_.show(OverlayIcon::Warning, L"Ovoz aniqlanmadi — balandroq gapiring", 3500);
+        overlay_.show(
+            OverlayIcon::Warning,
+            tr(L"Речь не распознана — говорите громче", L"No speech detected — speak louder"),
+            3500);
         return;
     }
 
@@ -169,11 +192,17 @@ void App::onResult(const TranscribeResult& r) {
     if (foregroundWindowIsElevated()) {
         matnniClipboardgaQoy(matn);
         logWrite(L"faol oyna administrator huquqida — matn clipboard'da qoldirildi");
-        overlay_.show(OverlayIcon::Warning, L"Matn clipboard'da — Ctrl+V bosing", 5000);
-        notify(L"Matn joylanmadi",
-               L"Faol oyna administrator huquqi bilan ishlayapti —\n"
-               L"Windows unga matn yuborishga ruxsat bermaydi.\n"
-               L"Matn clipboard'da: Ctrl+V bosing.",
+        overlay_.show(OverlayIcon::Warning,
+                      tr(L"Текст в буфере обмена — нажмите Ctrl+V",
+                         L"Text is on the clipboard — press Ctrl+V"),
+                      5000);
+        notify(tr(L"Текст не вставлен", L"The text wasn't pasted"),
+               tr(L"Активное окно запущено от имени администратора —\n"
+                  L"Windows не разрешает отправлять в него текст.\n"
+                  L"Текст в буфере обмена: нажмите Ctrl+V.",
+                  L"The active window runs as administrator —\n"
+                  L"Windows doesn't let other apps send text to it.\n"
+                  L"The text is on the clipboard: press Ctrl+V."),
                NIIF_WARNING);
         return;
     }
@@ -189,8 +218,11 @@ void App::onResult(const TranscribeResult& r) {
     // Joylanmadi — sababini aytamiz.
     const std::wstring& msg = ins.error;
     logWrite(L"matn joylanmadi: " + msg);
-    overlay_.show(OverlayIcon::Warning, L"Matn clipboard'da — Ctrl+V bosing", 5000);
-    notify(L"Matn joylanmadi", msg, NIIF_WARNING);
+    overlay_.show(
+        OverlayIcon::Warning,
+        tr(L"Текст в буфере обмена — нажмите Ctrl+V", L"Text is on the clipboard — press Ctrl+V"),
+        5000);
+    notify(tr(L"Текст не вставлен", L"The text wasn't pasted"), msg, NIIF_WARNING);
 }
 
 // ------------------------------------------------------ saqlanmagan ovoz (A2)
@@ -204,14 +236,20 @@ void App::ovozniSaqla(std::vector<float> ovoz, const std::wstring& sabab) {
     if (yol.empty()) {
         logWrite(L"XATO: ovozni saqlab boʻlmadi");
         overlay_.show(OverlayIcon::Warning, sabab, 5000);
-        notify(L"Xatolik", sabab, NIIF_ERROR);
+        notify(tr(L"Ошибка", L"Error"), sabab, NIIF_ERROR);
         return;
     }
     logWrite(L"ovoz saqlandi: " + yol + L" (" + std::to_wstring(ovoz.size()) + L" namuna)");
-    overlay_.show(OverlayIcon::Warning, sabab + L" — ovoz saqlandi", 6000);
-    notify(L"Ovoz saqlandi",
-           sabab + L"\nGapirganingiz yoʻqolmadi: tray menyusida «Saqlangan ovozni\n"
-                   L"matnga oʻgirish» — yoki model tayyor boʻlgach oʻzi oʻgiriladi.",
+    // macOS'dagi «⚠️ … — запись сохранена, повторите из меню» bilan bir xil.
+    overlay_.show(OverlayIcon::Warning,
+                  sabab + tr(L" — запись сохранена, повторите из меню",
+                             L" — audio saved, retry from the menu"),
+                  6000);
+    notify(tr(L"Запись сохранена", L"Audio saved"),
+           sabab + tr(L"\nСказанное не потеряно: в меню значка — «Распознать сохранённые\n"
+                      L"записи», или это произойдёт само, когда модель заработает.",
+                      L"\nWhat you said isn't lost: use “Transcribe saved recordings” in the\n"
+                      L"tray menu, or it happens automatically once the model works."),
            NIIF_WARNING);
 }
 
@@ -226,7 +264,10 @@ void App::saqlanganlarniOgir(bool qolda) {
         if (qolda || !avtoUrinilgan_.count(y)) qaytaNavbat_.push_back(y);
     }
     if (qaytaNavbat_.empty()) {
-        if (qolda) overlay_.show(OverlayIcon::Warning, L"Saqlangan ovoz yoʻq", 2000);
+        if (qolda) {
+            overlay_.show(OverlayIcon::Warning,
+                          tr(L"Нет сохранённых записей", L"No saved recordings"), 2000);
+        }
         return;
     }
     qaytaIshlanyapti_ = true;
@@ -236,7 +277,10 @@ void App::saqlanganlarniOgir(bool qolda) {
     qaytaXato_.clear();
     logWrite(L"saqlangan ovoz: " + std::to_wstring(qaytaNavbat_.size()) + L" ta qayta urinish (" +
              (qolda ? L"qoʻlda" : L"avtomatik") + L")");
-    if (qolda) overlay_.show(OverlayIcon::Working, L"Saqlangan ovoz matnga oʻgirilmoqda…");
+    if (qolda) {
+        overlay_.show(OverlayIcon::Working,
+                      tr(L"Распознаю сохранённые записи…", L"Transcribing saved recordings…"));
+    }
     qaytaKeyingi();
 }
 
@@ -302,19 +346,25 @@ void App::qaytaTugadi() {
                 hammasi += m;
             }
             buferGaQoy(hwnd_, hammasi);
-            overlay_.show(OverlayIcon::Done,
-                          std::to_wstring(qaytaMatnlar_.size()) +
-                              L" ta ovoz matnga oʻgirildi — clipboard'da (Ctrl+V) va tarixda",
-                          5000);
+            const std::wstring n = std::to_wstring(qaytaMatnlar_.size());
+            overlay_.show(
+                OverlayIcon::Done,
+                tr(L"Распознано записей: " + n + L" — в буфере обмена (Ctrl+V) и в истории",
+                   n + L" recordings transcribed — on the clipboard (Ctrl+V) and in history"),
+                5000);
         } else if (!qaytaXato_.empty()) {
-            overlay_.show(OverlayIcon::Warning, qaytaXato_ + L" — ovoz saqlanib qoldi", 4000);
+            overlay_.show(OverlayIcon::Warning,
+                          qaytaXato_ + tr(L" — запись сохранена", L" — the audio is kept"), 4000);
         } else {
-            overlay_.show(OverlayIcon::Warning, L"Saqlangan ovozda nutq topilmadi", 3000);
+            overlay_.show(
+                OverlayIcon::Warning,
+                tr(L"В сохранённых записях нет речи", L"No speech in the saved recordings"), 3000);
         }
     } else if (!qaytaMatnlar_.empty() && !recording_) {
+        const std::wstring n = std::to_wstring(qaytaMatnlar_.size());
         overlay_.show(OverlayIcon::Done,
-                      L"Saqlangan " + std::to_wstring(qaytaMatnlar_.size()) +
-                          L" ta ovoz matnga oʻgirildi — Voxly oynasida",
+                      tr(L"Распознано сохранённых записей: " + n + L" — в окне Voxly",
+                         n + L" saved recordings transcribed — see the Voxly window"),
                       4000);
     }
 }

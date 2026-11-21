@@ -117,9 +117,11 @@ LRESULT App::handle(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             if (static_cast<long long>(wp) == oxirgiModelMb_) return 0;
             oxirgiModelMb_ = static_cast<long long>(wp);
             wchar_t matn[96];
-            swprintf(matn, 96, L"Model yuklanmoqda…  %llu / %llu MB",
-                     static_cast<unsigned long long>(wp), static_cast<unsigned long long>(lp));
-            asosiy_.banner(matn, L"Bekor qilish", [this] { modelYuklovchi_.bekorQil(); });
+            swprintf(
+                matn, 96,
+                tr(L"Скачиваю модель…  %llu / %llu МБ", L"Downloading the model…  %llu / %llu MB"),
+                static_cast<unsigned long long>(wp), static_cast<unsigned long long>(lp));
+            asosiy_.banner(matn, tr(L"Отмена", L"Cancel"), [this] { modelYuklovchi_.bekorQil(); });
             return 0;
         }
 
@@ -130,11 +132,14 @@ LRESULT App::handle(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 // boʻldi, lekin mikrofon ogohlantirishi qolgan boʻlishi
                 // mumkin. Ilgari u keyingi ochilishgacha koʻrinmasdi.
                 mikrofonBanneri();
-                notify(kAppName, L"Nutq modeli yuklandi — diktovka tayyor.", NIIF_INFO);
+                notify(kAppName,
+                       tr(L"Модель распознавания скачана — диктовка готова.",
+                          L"The speech model is downloaded — dictation is ready."),
+                       NIIF_INFO);
                 SetTimer(hwnd_, kQaytaTaymer, kQaytaKutishMs, nullptr);
             } else {
-                asosiy_.banner(L"Model yuklanmadi: " + *xato, L"Qayta urinish",
-                               [this] { modelniYukla(); });
+                asosiy_.banner(tr(L"Модель не скачалась: ", L"Model download failed: ") + *xato,
+                               tr(L"Повторить", L"Try again"), [this] { modelniYukla(); });
             }
             return 0;
         }
@@ -253,23 +258,25 @@ void App::showMenu() {
     if (!menu) return;
 
     const std::wstring hk = settings_.hotkeyDisplay();
-    AppendMenuW(
-        menu, MF_STRING | (busy_ ? MF_GRAYED : 0), kMenuDictate,
-        (recording_ ? L"Yozishni toʻxtatish  (" + hk + L")" : L"Diktovka  (" + hk + L")").c_str());
+    AppendMenuW(menu, MF_STRING | (busy_ ? MF_GRAYED : 0), kMenuDictate,
+                (recording_ ? tr(L"Остановить запись  (", L"Stop recording  (") + hk + L")"
+                            : tr(L"Диктовка  (", L"Dictate  (") + hk + L")")
+                    .c_str());
     // Matnga oʻgirib boʻlmagan ovoz bor boʻlsagina (A2).
     const size_t saqlangan = saqlanmagan::royxat(saqlanmaganPapka()).size();
     if (saqlangan > 0) {
-        AppendMenuW(
-            menu, MF_STRING | (qaytaIshlanyapti_ ? MF_GRAYED : 0), kMenuQayta,
-            (L"Saqlangan ovozni matnga oʻgirish (" + std::to_wstring(saqlangan) + L")").c_str());
+        AppendMenuW(menu, MF_STRING | (qaytaIshlanyapti_ ? MF_GRAYED : 0), kMenuQayta,
+                    (tr(L"Распознать сохранённые записи (", L"Transcribe saved recordings (") +
+                     std::to_wstring(saqlangan) + L")")
+                        .c_str());
     }
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, kMenuOyna, L"Oynani ochish");
-    AppendMenuW(menu, MF_STRING, kMenuSettings, L"Sozlamalar…");
-    AppendMenuW(menu, MF_STRING, kMenuLog, L"Log faylini ochish…");
-    AppendMenuW(menu, MF_STRING, kMenuLitsenziya, L"Litsenziyalar…");
+    AppendMenuW(menu, MF_STRING, kMenuOyna, tr(L"Открыть окно", L"Open window"));
+    AppendMenuW(menu, MF_STRING, kMenuSettings, tr(L"Настройки…", L"Settings…"));
+    AppendMenuW(menu, MF_STRING, kMenuLog, tr(L"Открыть лог…", L"Open log file…"));
+    AppendMenuW(menu, MF_STRING, kMenuLitsenziya, tr(L"Лицензии…", L"Licenses…"));
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, kMenuQuit, L"Chiqish");
+    AppendMenuW(menu, MF_STRING, kMenuQuit, tr(L"Выйти", L"Quit"));
 
     POINT pt;
     GetCursorPos(&pt);
@@ -291,9 +298,12 @@ bool App::registerHotkey() {
 
     logWrite(L"XATO: hotkey band — " + settings_.hotkeyDisplay());
     MessageBoxW(nullptr,
-                (L"Diktovka tugmasi (" + settings_.hotkeyDisplay() +
-                 L") boshqa dastur tomonidan band qilingan.\n\n"
-                 L"Sozlamalar faylidan boshqa tugma tanlang:\n" +
+                (tr(L"Клавиша диктовки (", L"The dictation shortcut (") +
+                 settings_.hotkeyDisplay() +
+                 tr(L") занята другой программой.\n\n"
+                    L"Выберите другую в Настройках Voxly или в файле настроек:\n",
+                    L") is taken by another program.\n\n"
+                    L"Choose another one in Voxly Settings or in the settings file:\n") +
                  settingsPath())
                     .c_str(),
                 kAppName, MB_OK | MB_ICONWARNING);
@@ -324,9 +334,11 @@ void App::mikrofonBanneri() {
     if (Engine::findModel(settings_.nutqTili).empty()) {
         if (modelYuklovchi_.ketyaptimi()) return;  // matnni yuklash yangilaydi
         modelBanneri_ = true;
-        asosiy_.banner(L"Nutq modeli (" + std::to_wstring(modelHajmiMb(modelUchun(settings_.nutqTili))) +
-                           L" MB) yuklanmagan — diktovka ishlamaydi.",
-                       L"Yuklab olish", [this] { modelniYukla(); });
+        const std::wstring mb = std::to_wstring(modelHajmiMb(modelUchun(settings_.nutqTili)));
+        asosiy_.banner(
+            tr(L"Модель распознавания (" + mb + L" МБ) не скачана — диктовка не работает.",
+               L"The speech model (" + mb + L" MB) isn't downloaded — dictation won't work."),
+            tr(L"Скачать", L"Download"), [this] { modelniYukla(); });
         return;
     }
     if (settings_.micDeviceId.empty()) {
@@ -338,16 +350,19 @@ void App::mikrofonBanneri() {
         // (`settings_window.cpp` → `updateMicWarning`).
         const auto royxat = listMicrophones();
         if (royxat.empty()) {
-            asosiy_.banner(L"Mikrofon topilmadi — diktovka ishlamaydi.", L"Sozlamalar", [this] {
-                settingsWindow_.show(instance_, settings_, asosiy_.deskriptor());
-            });
+            asosiy_.banner(tr(L"Микрофон не найден — диктовка не работает.",
+                              L"No microphone found — dictation won't work."),
+                           tr(L"Настройки", L"Settings"), [this] {
+                               settingsWindow_.show(instance_, settings_, asosiy_.deskriptor());
+                           });
             return;
         }
         for (const auto& m : royxat) {
             if (!m.isDefault || m.kind == MicKind::Normal) continue;
-            asosiy_.banner(
-                L"Tizim standarti: " + m.name + L" — " + m.warning(), L"Tanlash",
-                [this] { settingsWindow_.show(instance_, settings_, asosiy_.deskriptor()); });
+            asosiy_.banner(tr(L"Системный: ", L"System default: ") + m.name + L" — " + m.warning(),
+                           tr(L"Выбрать", L"Choose"), [this] {
+                               settingsWindow_.show(instance_, settings_, asosiy_.deskriptor());
+                           });
             return;
         }
         asosiy_.banner(L"");
@@ -357,7 +372,7 @@ void App::mikrofonBanneri() {
         if (m.id != settings_.micDeviceId) continue;
         const std::wstring ogoh = m.warning();
         if (!ogoh.empty()) {
-            asosiy_.banner(ogoh, L"Almashtirish", [this] {
+            asosiy_.banner(ogoh, tr(L"Сменить", L"Change"), [this] {
                 settingsWindow_.show(instance_, settings_, asosiy_.deskriptor());
             });
         } else {
@@ -366,7 +381,8 @@ void App::mikrofonBanneri() {
         return;
     }
     // Saqlangan qurilma endi yoʻq (chiqarib olindi yoki oʻchirildi).
-    asosiy_.banner(L"Tanlangan mikrofon topilmadi.", L"Tanlash",
+    asosiy_.banner(tr(L"Выбранный микрофон не найден.", L"The selected microphone wasn't found."),
+                   tr(L"Выбрать", L"Choose"),
                    [this] { settingsWindow_.show(instance_, settings_, asosiy_.deskriptor()); });
 }
 
@@ -381,7 +397,8 @@ void App::modelniYukla() {
         return;
     }
     oxirgiModelMb_ = -1;
-    asosiy_.banner(L"Model yuklanmoqda…", L"Bekor qilish", [this] { modelYuklovchi_.bekorQil(); });
+    asosiy_.banner(tr(L"Скачиваю модель…", L"Downloading the model…"), tr(L"Отмена", L"Cancel"),
+                   [this] { modelYuklovchi_.bekorQil(); });
 
     HWND oyna = hwnd_;
     // Model — joriy nutq tiliniki. Yuklash oʻrtasida til oʻzgarsa ham shu
@@ -437,6 +454,29 @@ void App::applySettings(const Settings& s) {
     mikrofonBanneri();
 }
 
+void App::qaytaIshgaTushir() {
+    wchar_t yol[MAX_PATH * 2] = {};
+    const DWORD n = GetModuleFileNameW(nullptr, yol, MAX_PATH * 2);
+    std::wstring buyruq = L"\"" + std::wstring(yol) + L"\" " + kQaytaBayroq;
+    STARTUPINFOW si{};
+    si.cb = sizeof(si);
+    PROCESS_INFORMATION pi{};
+    if (n == 0 || !CreateProcessW(yol, buyruq.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr,
+                                  &si, &pi)) {
+        logWrite(L"XATO: qayta ishga tushirib boʻlmadi, kod " + std::to_wstring(GetLastError()));
+        MessageBoxW(nullptr,
+                    tr(L"Не удалось перезапустить Voxly. Закройте его и откройте снова.",
+                       L"Couldn't restart Voxly. Quit it and open it again."),
+                    kAppName, MB_OK | MB_ICONWARNING);
+        return;
+    }
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    logWrite(L"interfeys tili oʻzgardi — qayta ishga tushirilmoqda");
+    // Yangi nusxa mutex boʻshashini kutadi (`wWinMain`).
+    PostMessageW(hwnd_, WM_COMMAND, kMenuQuit, 0);
+}
+
 // ------------------------------------------------------------------- init
 
 bool App::init(HINSTANCE instance) {
@@ -471,6 +511,7 @@ bool App::init(HINSTANCE instance) {
     registerHotkey();
 
     settingsWindow_.setOnSaved([this](const Settings& s) { applySettings(s); });
+    settingsWindow_.setOnQaytaIshga([this] { qaytaIshgaTushir(); });
 
     // Asosiy oyna. Ilova tray'da yashaydi va oyna faqat soʻralganda
     // koʻrinadi — macOS'dagi LSUIElement xatti-harakatining ekvivalenti.
@@ -509,10 +550,13 @@ bool App::init(HINSTANCE instance) {
             Settings s = loadSettings();
             s.useGpu = false;
             saveSettings(s);
-            notify(L"Voxly — protsessor rejimi",
-                   L"Oldingi safar videokarta drayveri Voxly'ni yopib yubordi.\n"
-                   L"Ovoz tanish endi protsessorda ishlaydi. Sozlamalarda\n"
-                   L"«Videokartadan foydalanish» ni qayta yoqish mumkin.",
+            notify(tr(L"Voxly — режим процессора", L"Voxly — CPU mode"),
+                   tr(L"В прошлый раз драйвер видеокарты закрыл Voxly.\n"
+                      L"Распознавание теперь работает на процессоре. В Настройках\n"
+                      L"можно снова включить «Использовать видеокарту».",
+                      L"Last time the graphics driver closed Voxly.\n"
+                      L"Speech recognition now runs on the CPU. You can turn\n"
+                      L"“Use the graphics card” back on in Settings."),
                    NIIF_WARNING);
         }
     }
@@ -582,15 +626,35 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
     // kutadi. "Allaqachon ishlayapti" degan xabar boshi berk koʻcha —
     // buning oʻrniga ishlab turgan nusxaning Sozlamalar oynasini ochamiz.
     HANDLE mutex = CreateMutexW(nullptr, TRUE, kMutexName);
-    if (mutex && GetLastError() == ERROR_ALREADY_EXISTS) {
+    bool bandmi = mutex && GetLastError() == ERROR_ALREADY_EXISTS;
+
+    // Qayta ishga tushirish (interfeys tili oʻzgardi): eski nusxa hozir
+    // yopilyapti — u mutex'ni boʻshatguncha kutamiz (15 s gacha).
+    if (bandmi) {
+        int argc = 0;
+        LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+        bool qayta = false;
+        for (int i = 1; argv && i < argc; ++i) {
+            if (wcscmp(argv[i], kQaytaBayroq) == 0) qayta = true;
+        }
+        if (argv) LocalFree(argv);
+        if (qayta) {
+            const DWORD w = WaitForSingleObject(mutex, 15000);
+            if (w == WAIT_OBJECT_0 || w == WAIT_ABANDONED) bandmi = false;
+        }
+    }
+
+    if (bandmi) {
         HWND existing = FindWindowW(kWindowClass, nullptr);
         if (existing) {
             PostMessageW(existing, g_showSettings, 0, 0);
         } else {
             // Oyna topilmadi (ilova yopilish jarayonida boʻlishi mumkin).
             MessageBoxW(nullptr,
-                        L"Voxly allaqachon ishlayapti.\n"
-                        L"Sozlamalar uchun vazifalar panelidagi 🎙 ikonkasini bosing.",
+                        tr(L"Voxly уже запущен.\n"
+                           L"Нажмите значок 🎙 на панели задач, чтобы открыть окно.",
+                           L"Voxly is already running.\n"
+                           L"Click the 🎙 icon in the taskbar to open its window."),
                         kAppName, MB_OK | MB_ICONINFORMATION);
         }
         CloseHandle(mutex);
@@ -602,13 +666,19 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
 
     App app;
     if (!app.init(instance)) {
-        MessageBoxW(nullptr, L"Ilova ishga tushmadi. Log faylini tekshiring.", kAppName,
-                    MB_OK | MB_ICONERROR);
+        MessageBoxW(nullptr,
+                    tr(L"Не удалось запустить Voxly. Проверьте лог-файл.",
+                       L"Voxly couldn't start. Check the log file."),
+                    kAppName, MB_OK | MB_ICONERROR);
         return 1;
     }
     app.run();
     app.shutdown();
 
-    if (mutex) CloseHandle(mutex);
+    if (mutex) {
+        // Qayta ishga tushayotgan nusxa kutib turgan boʻlishi mumkin.
+        ReleaseMutex(mutex);
+        CloseHandle(mutex);
+    }
     return 0;
 }

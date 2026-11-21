@@ -12,6 +12,7 @@
 
 #include "config.h"
 #include "json.h"
+#include "ui_tili.h"
 #include "util.h"
 
 #include <windows.h>
@@ -168,28 +169,31 @@ bool urlniAjrat(const std::wstring& url, std::wstring& host, std::wstring& yol, 
 std::wstring modellarniOl(const Provayder& p, const std::wstring& baseURL,
                           const std::wstring& kalit, std::vector<std::wstring>& chiqish) {
     chiqish.clear();
-    if (kalit.empty()) return L"API kalit kiritilmagan. Sozlamalar → LLM boʻlimiga oʻting.";
+    if (kalit.empty())
+        return tr(L"Ключ API не указан. Откройте Настройки → Дополнительно.",
+                  L"No API key. Open Settings → Advanced.");
 
     std::wstring baza = baseURL.empty() ? p.baseURL : baseURL;
-    if (baza.empty()) return L"Server manzili koʻrsatilmagan.";
+    if (baza.empty()) return tr(L"Не указан адрес сервера.", L"No server address.");
     while (!baza.empty() && baza.back() == L'/') baza.pop_back();
 
     std::wstring host, yol;
     INTERNET_PORT port = 0;
     bool xavfsiz = true;
     if (!urlniAjrat(baza + L"/models", host, yol, port, xavfsiz)) {
-        return L"Server manzili notoʻgʻri.";
+        return tr(L"Неверный адрес сервера.", L"Invalid server address.");
     }
 
     HINTERNET sessiya = WinHttpOpen(L"Voxly", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
                                     WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-    if (!sessiya) return L"Tarmoq ochilmadi.";
+    if (!sessiya) return tr(L"Не удалось открыть сеть.", L"Couldn't open the network.");
     WinHttpSetTimeouts(sessiya, 10000, 15000, 20000, 20000);
 
     HINTERNET ulanish = WinHttpConnect(sessiya, host.c_str(), port, 0);
     if (!ulanish) {
         WinHttpCloseHandle(sessiya);
-        return L"Internetga ulanish yoʻq. Matn xom holda qoldi.";
+        return tr(L"Нет подключения к интернету. Текст остался без изменений.",
+                  L"No internet connection. The text was left unchanged.");
     }
 
     HINTERNET sorov =
@@ -198,7 +202,7 @@ std::wstring modellarniOl(const Provayder& p, const std::wstring& baseURL,
     if (!sorov) {
         WinHttpCloseHandle(ulanish);
         WinHttpCloseHandle(sessiya);
-        return L"Soʻrov yaratilmadi.";
+        return tr(L"Не удалось создать запрос.", L"Couldn't create the request.");
     }
 
     std::wstring sarlavhalar;
@@ -212,20 +216,23 @@ std::wstring modellarniOl(const Provayder& p, const std::wstring& baseURL,
     if (!WinHttpSendRequest(sorov, sarlavhalar.c_str(), static_cast<DWORD>(sarlavhalar.size()),
                             WINHTTP_NO_REQUEST_DATA, 0, 0, 0) ||
         !WinHttpReceiveResponse(sorov, nullptr)) {
-        xato = L"Internetga ulanish yoʻq. Matn xom holda qoldi.";
+        xato = tr(L"Нет подключения к интернету. Текст остался без изменений.",
+                  L"No internet connection. The text was left unchanged.");
     } else {
         DWORD holat = 0, hajm = sizeof(holat);
         WinHttpQueryHeaders(sorov, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
                             WINHTTP_HEADER_NAME_BY_INDEX, &holat, &hajm, WINHTTP_NO_HEADER_INDEX);
 
         if (holat == 401 || holat == 403) {
-            xato = L"API kalit notoʻgʻri yoki muddati tugagan.";
+            xato = tr(L"Ключ API неверный или истёк.", L"The API key is invalid or expired.");
         } else if (holat == 404) {
             // Provayderda `/models` yoʻq — bu xato emas.
         } else if (holat == 429) {
-            xato = L"Provayder limiti tugadi. Biroz kutib qayta urinib koʻring.";
+            xato = tr(L"Лимит провайдера исчерпан. Подождите и попробуйте снова.",
+                      L"The provider's rate limit was hit. Wait a bit and try again.");
         } else if (holat >= 400) {
-            xato = L"Provayder xatosi (" + std::to_wstring(holat) + L"). Keyinroq urinib koʻring.";
+            xato = tr(L"Ошибка провайдера (" + std::to_wstring(holat) + L"). Попробуйте позже.",
+                      L"Provider error (" + std::to_wstring(holat) + L"). Try again later.");
         } else {
             std::string tana;
             for (;;) {
@@ -251,10 +258,12 @@ std::wstring modellarniOl(const Provayder& p, const std::wstring& baseURL,
 
 std::wstring llmOqim(const LLMSorov& s, const std::function<void(const std::wstring&)>& bolak,
                      const std::function<bool()>& bekor) {
-    if (s.kalit.empty()) return L"API kalit kiritilmagan. Sozlamalar → LLM boʻlimiga oʻting.";
+    if (s.kalit.empty())
+        return tr(L"Ключ API не указан. Откройте Настройки → Дополнительно.",
+                  L"No API key. Open Settings → Advanced.");
 
     std::wstring baza = s.baseURL.empty() ? s.provayder.baseURL : s.baseURL;
-    if (baza.empty()) return L"Server manzili koʻrsatilmagan.";
+    if (baza.empty()) return tr(L"Не указан адрес сервера.", L"No server address.");
     while (!baza.empty() && baza.back() == L'/') baza.pop_back();
 
     const std::wstring toliq =
@@ -263,11 +272,12 @@ std::wstring llmOqim(const LLMSorov& s, const std::function<void(const std::wstr
     std::wstring host, yol;
     INTERNET_PORT port = 0;
     bool xavfsiz = true;
-    if (!urlniAjrat(toliq, host, yol, port, xavfsiz)) return L"Server manzili notoʻgʻri.";
+    if (!urlniAjrat(toliq, host, yol, port, xavfsiz))
+        return tr(L"Неверный адрес сервера.", L"Invalid server address.");
 
     HINTERNET sessiya = WinHttpOpen(L"Voxly", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
                                     WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-    if (!sessiya) return L"Tarmoq ochilmadi.";
+    if (!sessiya) return tr(L"Не удалось открыть сеть.", L"Couldn't open the network.");
     // LLM javobi uzoq davom etadi — oʻqish chegarasi katta boʻlsin.
     WinHttpSetTimeouts(sessiya, 10000, 15000, 30000, 120000);
 
@@ -275,7 +285,8 @@ std::wstring llmOqim(const LLMSorov& s, const std::function<void(const std::wstr
     HINTERNET ulanish = WinHttpConnect(sessiya, host.c_str(), port, 0);
     if (!ulanish) {
         WinHttpCloseHandle(sessiya);
-        return L"Internetga ulanish yoʻq. Matn xom holda qoldi.";
+        return tr(L"Нет подключения к интернету. Текст остался без изменений.",
+                  L"No internet connection. The text was left unchanged.");
     }
 
     HINTERNET sorov =
@@ -285,7 +296,7 @@ std::wstring llmOqim(const LLMSorov& s, const std::function<void(const std::wstr
     if (!sorov) {
         WinHttpCloseHandle(ulanish);
         WinHttpCloseHandle(sessiya);
-        return L"Soʻrov yaratilmadi.";
+        return tr(L"Не удалось создать запрос.", L"Couldn't create the request.");
     }
 
     std::wstring sarlavhalar = L"Content-Type: application/json\r\n";
@@ -302,20 +313,24 @@ std::wstring llmOqim(const LLMSorov& s, const std::function<void(const std::wstr
                             const_cast<char*>(tana.data()), static_cast<DWORD>(tana.size()),
                             static_cast<DWORD>(tana.size()), 0) ||
         !WinHttpReceiveResponse(sorov, nullptr)) {
-        xato = L"Internetga ulanish yoʻq. Matn xom holda qoldi.";
+        xato = tr(L"Нет подключения к интернету. Текст остался без изменений.",
+                  L"No internet connection. The text was left unchanged.");
     } else {
         DWORD holat = 0, hajm = sizeof(holat);
         WinHttpQueryHeaders(sorov, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
                             WINHTTP_HEADER_NAME_BY_INDEX, &holat, &hajm, WINHTTP_NO_HEADER_INDEX);
 
         if (holat == 401 || holat == 403) {
-            xato = L"API kalit notoʻgʻri yoki muddati tugagan.";
+            xato = tr(L"Ключ API неверный или истёк.", L"The API key is invalid or expired.");
         } else if (holat == 404) {
-            xato = L"Model topilmadi: «" + s.model + L"». Sozlamalarda model nomini tekshiring.";
+            xato = tr(L"Модель «" + s.model + L"» не найдена. Проверьте её название в настройках.",
+                      L"Model “" + s.model + L"” not found. Check the model name in Settings.");
         } else if (holat == 429) {
-            xato = L"Provayder limiti tugadi. Biroz kutib qayta urinib koʻring.";
+            xato = tr(L"Лимит провайдера исчерпан. Подождите и попробуйте снова.",
+                      L"The provider's rate limit was hit. Wait a bit and try again.");
         } else if (holat >= 400) {
-            xato = L"Provayder xatosi (" + std::to_wstring(holat) + L"). Keyinroq urinib koʻring.";
+            xato = tr(L"Ошибка провайдера (" + std::to_wstring(holat) + L"). Попробуйте позже.",
+                      L"Provider error (" + std::to_wstring(holat) + L"). Try again later.");
         } else {
             // SSE oqimi: satrlarni ajratib boramiz.
             std::string qoldiq;

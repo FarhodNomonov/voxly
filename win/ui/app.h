@@ -40,6 +40,9 @@ namespace rubai {
 constexpr wchar_t kWindowClass[] = L"VoxlyHiddenWindow";
 constexpr wchar_t kMutexName[] = L"Global\\VoxlySingleInstance";
 constexpr wchar_t kAppName[] = L"Voxly";
+// Qayta ishga tushirishda yangi nusxaga beriladi: u eski nusxa yopilishini
+// (mutex boʻshashini) kutadi, «allaqachon ishlayapti» deb chiqib ketmaydi.
+constexpr wchar_t kQaytaBayroq[] = L"--qayta";
 
 constexpr UINT WM_RUBAI_TRAY = WM_APP + 1;
 constexpr UINT WM_RUBAI_RESULT = WM_APP + 2;
@@ -126,6 +129,10 @@ private:
     bool trayAdded_ = false;
 
     void applySettings(const Settings& s);
+    // Interfeys tili oʻzgarganda (Sozlamalar): yangi nusxani `--qayta`
+    // bilan ishga tushirib, oʻzi yopiladi. Til jarayonda bir marta
+    // aniqlanadi (`ui_tili.h`) — macOS'dagi `uiTilOzgardi` bilan bir xil.
+    void qaytaIshgaTushir();
     void oynaniOch();
     void mikrofonBanneri();
     void modelniYukla();

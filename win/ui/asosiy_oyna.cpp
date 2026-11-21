@@ -468,8 +468,8 @@ bool AsosiyOyna::qur(HINSTANCE instance) {
     }
 
     // Toolbar
-    ichki_->segment =
-        std::make_shared<Tanlagich>(std::vector<std::wstring>{L"Yozish", L"Fayl"});
+    ichki_->segment = std::make_shared<Tanlagich>(
+        std::vector<std::wstring>{tr(L"Диктовка", L"Dictate"), tr(L"Файлы", L"Files")});
     ichki_->segment->ozgarganda = [this](int i) { ichki_->tabniOzgartir(i); };
     ichki_->toolbar.qosh(ichki_->segment);
 

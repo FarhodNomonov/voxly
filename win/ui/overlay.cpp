@@ -19,7 +19,7 @@ namespace {
 constexpr wchar_t kClassName[] = L"VoxlyOverlay";
 constexpr UINT kTimerHide = 1;
 
-constexpr int kBaseWidth = 340;
+constexpr int kBaseWidth = 380;  // rus matni uzunroq — 2 qatorga sigʻsin
 constexpr int kBaseHeight = 64;
 constexpr int kCorner = 14;
 constexpr int kMarginX = 18;

@@ -4,6 +4,7 @@
 #include "amallar.h"
 
 #include "llm.h"
+#include "ui_tili.h"
 #include "util.h"
 
 #include <atomic>
@@ -15,17 +16,20 @@ namespace rubai {
 namespace {
 
 // Har bir prompt'ga qoʻshiladigan umumiy qoidalar. macOS'dagi `umumiyQoida`
-// bilan BELGIMA-BELGI bir xil.
+// (`src/amallar.swift`) bilan BELGIMA-BELGI bir xil. Prompt'lar inglizcha —
+// modellar ularni eng aniq bajaradi; javob tili esa matnning oʻz tili.
 const wchar_t* kUmumiyQoida =
-    L"Sen oʻzbek tilidagi nutq transkripti ustida ishlaysan.\n"
+    L"You work on a speech-to-text transcript.\n"
     L"\n"
-    L"Qatʼiy qoidalar:\n"
-    L"- Javobni FAQAT oʻzbek lotin alifbosida yoz. Rus, turk yoki ingliz tiliga oʻtma.\n"
-    L"- «oʻ» va «gʻ» harflarini toʻgʻri yoz.\n"
-    L"- Maʼnoni OʻZGARTIRMA. Matnda boʻlmagan maʼlumotni QOʻSHMA.\n"
-    L"- Faqat natijani qaytar. «Mana natija», «Albatta» kabi muqaddima yozma.";
+    L"Strict rules:\n"
+    L"- Reply in the SAME language and script as the transcript (Russian stays in\n"
+    L"  Cyrillic, Uzbek stays in Latin, English stays English). Do not translate.\n"
+    L"- Do NOT change the meaning. Do NOT add facts that are not in the text.\n"
+    L"- Return only the result. No preamble like \"Here is the result\" or \"Sure\".";
 
-std::wstring qoida(const wchar_t* vazifa) { return std::wstring(kUmumiyQoida) + L"\n\n" + vazifa; }
+std::wstring qoida(const std::wstring& vazifa) {
+    return std::wstring(kUmumiyQoida) + L"\n\nYour task: " + vazifa;
+}
 
 // Bitta boʻlakka beriladigan maksimal soʻz soni — macOS bilan bir xil.
 constexpr size_t kBolakSozLimiti = 3000;
@@ -33,42 +37,42 @@ constexpr size_t kBolakSozLimiti = 3000;
 }  // namespace
 
 const std::vector<Amal>& amallar() {
+    // Nomlar — interfeys tilida (`tr`); til jarayonda oʻzgarmaydi, shuning
+    // uchun statik roʻyxat xavfsiz.
     static const std::vector<Amal> royxat = {
-        {"tozalash", L"Tozalash", false,
-         qoida(L"Vazifang: transkriptni oʻqishga qulay holga keltirish.\n"
-               L"- Tinish belgilarini toʻgʻri qoʻy.\n"
-               L"- Maʼnoli paragraflarga boʻl.\n"
-               L"- Ogʻzaki axlatni olib tashla: «e-e», «ha shunday», «anavi», «yaʼni»,\n"
-               L"  takrorlangan soʻzlar, toʻxtab qolishlar.\n"
-               L"- Yarim aytilgan jumlalarni toʻliq jumlaga aylantir.\n"
-               L"- Raqamlarni raqam bilan yoz: «yigirma besh» → «25».")},
+        {"tozalash", tr(L"Почистить текст", L"Clean up"), false,
+         qoida(L"make the transcript easy to read.\n"
+               L"- Fix punctuation.\n"
+               L"- Split into meaningful paragraphs.\n"
+               L"- Remove filler words, false starts and repeated words.\n"
+               L"- Turn half-finished sentences into complete ones.\n"
+               L"- Write numbers as digits (\"twenty five\" \u2192 \"25\").")},
 
-        {"xulosa", L"Qisqacha xulosa", true,
-         qoida(L"Vazifang: matnning 3–5 jumlalik xulosasini yoz.")},
+        {"xulosa", tr(L"Краткое содержание", L"Summary"), true,
+         qoida(L"write a 3\u20135 sentence summary of the text.")},
 
-        {"asosiy_fikrlar", L"Asosiy fikrlar", true,
-         qoida(L"Vazifang: asosiy fikrlarni belgili roʻyxat («- » bilan) shaklida yoz.")},
+        {"asosiy_fikrlar", tr(L"Главные мысли", L"Key points"), true,
+         qoida(L"list the key points as a bulleted list (each line starts with \"- \").")},
 
-        {"bayonnoma", L"Bayonnoma", true,
-         qoida(L"Vazifang: yigʻilish bayonnomasini tuz. Uchta boʻlim:\n"
-               L"«Muhokama qilinganlar», «Qarorlar», «Topshiriqlar».\n"
-               L"Matnda boʻlmagan boʻlimni boʻsh qoldir, oʻylab topma.")},
+        {"bayonnoma", tr(L"Протокол встречи", L"Meeting minutes"), true,
+         qoida(L"write meeting minutes with three sections: what was discussed, decisions,\n"
+               L"action items. Use section titles in the transcript's language. Leave a\n"
+               L"section empty if the text has nothing for it \u2014 do not invent.")},
 
-        {"maqola", L"Maqola", false,
-         qoida(L"Vazifang: matnni maqola yoki bloq posti shakliga keltir.\n"
-               L"Sarlavha va kichik sarlavhalar qoʻy, paragraflarga boʻl.")},
+        {"maqola", tr(L"Статья", L"Article"), false,
+         qoida(L"rewrite the text as an article or blog post with a title, subheadings and "
+               L"paragraphs.")},
 
-        {"savol_javob", L"Savol-javob", true,
-         qoida(L"Vazifang: matn asosida savol-javob (FAQ) tuz.\n"
-               L"Har bir savol «**S:** », javob «**J:** » bilan boshlansin.")},
+        {"savol_javob", tr(L"Вопросы и ответы", L"Q&A"), true,
+         qoida(L"write a FAQ based on the text. Start each question with \"**Q:** \" and each "
+               L"answer with \"**A:** \".")},
 
-        {"qisqartirish", L"Qisqartirish", false,
-         qoida(L"Vazifang: matnni taxminan ikki barobar qisqartir.\n"
-               L"Barcha muhim maʼlumot saqlanib qolsin.")},
+        {"qisqartirish", tr(L"Сократить", L"Shorten"), false,
+         qoida(L"shorten the text to about half its length, keeping all important information.")},
 
-        {"uzaytirish", L"Uzaytirish", false,
-         qoida(L"Vazifang: matnni batafsilroq yozib chiq — jumlalarni toʻliqroq,\n"
-               L"fikrlarni ochiqroq qil. Yangi FAKT qoʻshma.")},
+        {"uzaytirish", tr(L"Расширить", L"Expand"), false,
+         qoida(L"write the text out in more detail \u2014 fuller sentences, clearer ideas. Do not "
+               L"add new FACTS.")},
     };
     return royxat;
 }
@@ -81,8 +85,8 @@ const Amal* amalTop(const std::string& id) {
 }
 
 Amal erkinAmal(const std::wstring& korsatma) {
-    return {"erkin", L"Oʻz soʻrovim", false,
-            qoida((L"Foydalanuvchi koʻrsatmasi: " + korsatma).c_str())};
+    return {"erkin", tr(L"Свой запрос", L"Custom request"), false,
+            std::wstring(kUmumiyQoida) + L"\n\nUser instruction: " + korsatma};
 }
 
 // ---- Ish -------------------------------------------------------------------
@@ -146,7 +150,7 @@ std::wstring AmalIshi::Ichki::bitta(const Amal& amal, const std::wstring& matn, 
 
     // Bekor qilish tarmoq xatosi emas — foydalanuvchi oʻzi bosgan tugma
     // uchun «Internetga ulanish yoʻq» deb yozish chalgʻitadi.
-    if (bekor.load()) xato = L"Bekor qilindi.";
+    if (bekor.load()) xato = tr(L"Отменено.", L"Cancelled.");
     return yigilgan;
 }
 
@@ -155,7 +159,7 @@ void AmalIshi::Ichki::ishla(Amal amal, std::wstring matn) {
 
     if (bolaklar.empty()) {
         tugat();
-        xatoBer(L"Matn boʻsh.");
+        xatoBer(tr(L"Текст пустой.", L"The text is empty."));
         return;
     }
 
@@ -167,8 +171,8 @@ void AmalIshi::Ichki::ishla(Amal amal, std::wstring matn) {
     } else if (amal.yiguvchi) {
         // Yigʻuvchi amallar: har bir boʻlak qisqartiriladi, soʻng yakuniy soʻrov.
         const Amal oraliqAmal{"oraliq", L"", false,
-                              qoida(L"Vazifang: matnning asosiy mazmunini qisqacha yozib ber.\n"
-                                    L"Bu keyingi bosqichda boshqa qismlar bilan birlashtiriladi.")};
+                              qoida(L"briefly write down the main content of this part. "
+                                    L"It will be merged with other parts in the next step.")};
 
         std::wstring oraliq;
         for (const auto& b : bolaklar) {
@@ -214,13 +218,16 @@ bool AmalIshi::bajar(const Amal& amal, const std::wstring& matn,
                      std::function<void(const std::wstring&)> onTayyor,
                      std::function<void(const std::wstring&)> onXato) {
     if (ichki_->ketyapti.load()) {
-        if (onXato) onXato(L"Amal allaqachon ketmoqda.");
+        if (onXato) onXato(tr(L"Действие уже выполняется.", L"An action is already running."));
         return false;
     }
 
     const Provayder* p = LLMSozlama::tanlangan();
     if (!p || !LLMSozlama::sozlanganmi()) {
-        if (onXato) onXato(L"API kalit kiritilmagan. Sozlamalar → LLM boʻlimiga oʻting.");
+        if (onXato) {
+            onXato(tr(L"Ключ API не указан. Откройте Настройки → Дополнительно.",
+                      L"No API key. Open Settings → Advanced."));
+        }
         return false;
     }
 

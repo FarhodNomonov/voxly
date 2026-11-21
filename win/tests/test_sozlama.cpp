@@ -3,6 +3,7 @@
 #include "../core/config.h"
 #include "../core/matn_format.h"
 #include "../core/model_tanlov.h"
+#include "../core/ui_tili.h"
 
 #include <string>
 
@@ -66,6 +67,39 @@ void nutqTiliTestlari() {
             matnniTayyorla(L"o'zbek", apostrofUslubi(s)) == L"oʻzbek");
 }
 
+// Interfeys tili (`ui_tili.h`) — macOS'dagi `UITili.tizimdan` testlari
+// (`tests/test_model_tanlov.swift`) bilan bir xil holatlar va yana Windows
+// tilidagi koʻrinishlar.
+void uiTiliTestlari() {
+    tekshir(L"ui tili: rus", uiTiliTizimdan({L"ru-RU"}) == UITili::Rus);
+    tekshir(L"ui tili: oʻzbek → rus", uiTiliTizimdan({L"uz-Latn-UZ", L"en-US"}) == UITili::Rus);
+    tekshir(L"ui tili: ingliz", uiTiliTizimdan({L"en-US", L"ru-RU"}) == UITili::Ingliz);
+    tekshir(L"ui tili: nemis → ingliz", uiTiliTizimdan({L"de-DE"}) == UITili::Ingliz);
+    tekshir(L"ui tili: nemis, keyin rus → rus", uiTiliTizimdan({L"de-DE", L"ru"}) == UITili::Rus);
+    tekshir(L"ui tili: boʻsh → ingliz", uiTiliTizimdan({}) == UITili::Ingliz);
+    for (const wchar_t* t : {L"uk-UA", L"be-BY", L"kk-KZ", L"ky-KG", L"tg-Cyrl-TJ", L"az-Latn-AZ",
+                             L"hy-AM", L"ka-GE", L"tk-TM", L"uz-Cyrl-UZ"}) {
+        tekshir(std::wstring(L"ui tili: MDH → rus (") + t + L")",
+                uiTiliTizimdan({t}) == UITili::Rus);
+    }
+    tekshir(L"ui tili: katta harf va _", uiTiliTizimdan({L"RU_ru"}) == UITili::Rus);
+    tekshir(L"ui tili: fransuz → ingliz", uiTiliTizimdan({L"fr-FR", L"es-ES"}) == UITili::Ingliz);
+
+    // Sozlamalar faylidagi `ui.tili=` kodi.
+    for (UITili t : {UITili::Tizim, UITili::Rus, UITili::Ingliz}) {
+        tekshir(std::wstring(L"ui tili kodi: ") + uiTiliKodi(t), uiTiliKoddan(uiTiliKodi(t)) == t);
+    }
+    tekshir(L"ui tili kodi: nomaʼlum — tizim",
+            uiTiliKoddan(L"uz") == UITili::Tizim && uiTiliKoddan(L"") == UITili::Tizim);
+    tekshir(L"ui tili: Settings standarti — tizim", Settings{}.uiTili == UITili::Tizim);
+
+    // `tr` — qoʻyilgan tilga qarab.
+    joriyUITiliniQoy(UITili::Ingliz);
+    tekshir(L"tr: ingliz", std::wstring(tr(L"Настройки", L"Settings")) == L"Settings");
+    joriyUITiliniQoy(UITili::Rus);
+    tekshir(L"tr: rus", std::wstring(tr(L"Настройки", L"Settings")) == L"Настройки");
+}
+
 }  // namespace
 
 void sozlamaTestlari() {
@@ -86,6 +120,7 @@ void sozlamaTestlari() {
     oyna.llmModel = L"m";
     oyna.diagnostikaTugash = 1791086400;
     oyna.nutqTili = NutqTili::Ingliz;
+    oyna.uiTili = UITili::Ingliz;
 
     Settings fayl;  // diskdagi, boshqa modullar yozgan
     fayl.didOnboard = true;
@@ -96,6 +131,7 @@ void sozlamaTestlari() {
     tekshir(L"sozlama: boʻsh turish vaqti saqlanadi", r.idleUnloadSeconds == 60);
     tekshir(L"sozlama: diagnostika oynadan", r.diagnostikaTugash == 1791086400);
     tekshir(L"sozlama: nutq tili oynadan", r.nutqTili == NutqTili::Ingliz);
+    tekshir(L"sozlama: interfeys tili oynadan", r.uiTili == UITili::Ingliz);
 
     // Diagnostika muddati (macOS'dagi log siyosati testlari bilan bir xil holatlar).
     const long long h = 1791000000;
@@ -113,4 +149,5 @@ void sozlamaTestlari() {
                 r.llmProvayder == "openai" && r.llmBaseURL == L"https://x" && r.llmModel == L"m");
 
     nutqTiliTestlari();
+    uiTiliTestlari();
 }

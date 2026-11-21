@@ -5,6 +5,7 @@
 
 #include "soragich.h"
 #include "uslub.h"
+#include "../core/ui_tili.h"
 #include "../core/util.h"
 #include "../core/vaqt_format.h"
 
@@ -150,9 +151,12 @@ void YozishKartasi::chiz(Chizgich& c) {
     // Matnlar
     const float matnX = cx + kDoiraRadius + 20;
     // Matnlar macOS'dagi bilan AYNAN bir xil (`diktovka_view.swift`).
-    const std::wstring sarlavha = yozilyapti ? L"Eshityapman… gapiring" : L"Bosing va gapiring";
+    const std::wstring sarlavha = yozilyapti ? tr(L"Слушаю… говорите", L"Listening… speak")
+                                             : tr(L"Нажмите и говорите", L"Press and speak");
     const std::wstring izoh =
-        yozilyapti ? L"Tugatgach yana bosing" : L"Matn siz turgan joyga oʻzi yoziladi";
+        yozilyapti
+            ? tr(L"Когда закончите — нажмите ещё раз", L"Press again when you're done")
+            : tr(L"Текст появится там, где стоит курсор", L"Text appears wherever your cursor is");
 
     c.matn(sarlavha, ramkaYasa(matnX, cy - 24, 300, 26), U::matn, 20.0f, Ogirlik::Yarim);
     c.matn(izoh, ramkaYasa(matnX, cy + 3, 320, 20), yozilyapti ? U::yozishMatn2 : U::matn2, 14.0f);
@@ -267,15 +271,16 @@ YozishTab::YozishTab() : ichki_(std::make_unique<Ichki>()) {
         c.toldir(ich, ustida ? U::qatorHover : U::oq, U::radiusQator);
         c.chegara(ich, U::qatorChiziq, U::radiusQator);
 
-        // Nusxa olingan qatorda tugma kengayadi — «Nusxa olindi» sigʻsin.
+        // Nusxa olingan qatorda tugma kengayadi — «Скопировано» sigʻsin.
+        // 100 — «Копировать» (14 px) uchun.
         const bool olindi = (i == ichki_->nusxaQatori);
-        const float tugmaKengligi = olindi ? 118.0f : 80.0f;
+        const float tugmaKengligi = olindi ? 118.0f : 100.0f;
         const D2D1_RECT_F tugma = ramkaYasa(ich.right - 15 - tugmaKengligi,
                                             (ich.top + ich.bottom) / 2 - 15, tugmaKengligi, 30);
         c.toldir(tugma, U::oq, U::radiusTugma);
         c.chegara(tugma, U::tugmaChet, U::radiusTugma);
-        c.matn(olindi ? L"Nusxa olindi" : L"Nusxa", tugma, U::matn, 14.0f, Ogirlik::Oddiy,
-               Hizalash::Markaz, true);
+        c.matn(olindi ? tr(L"Скопировано", L"Copied") : tr(L"Копировать", L"Copy"), tugma, U::matn,
+               14.0f, Ogirlik::Oddiy, Hizalash::Markaz, true);
 
         const float matnKengligi = tugma.left - 14 - (ich.left + 15);
         c.matn(birQator(y.matn), ramkaYasa(ich.left + 15, ich.top + 13, matnKengligi, 22), U::matn,
@@ -296,10 +301,10 @@ YozishTab::YozishTab() : ichki_(std::make_unique<Ichki>()) {
         if (!ichki_->ota) return;
 
         HMENU m = CreatePopupMenu();
-        AppendMenuW(m, MF_STRING, kMenyuNusxa, L"Nusxa olish");
-        AppendMenuW(m, MF_STRING, kMenyuOchir, L"Oʻchirish");
+        AppendMenuW(m, MF_STRING, kMenyuNusxa, tr(L"Копировать", L"Copy"));
+        AppendMenuW(m, MF_STRING, kMenyuOchir, tr(L"Удалить", L"Delete"));
         AppendMenuW(m, MF_SEPARATOR, 0, nullptr);
-        AppendMenuW(m, MF_STRING, kMenyuTozala, L"Tarixni tozalash…");
+        AppendMenuW(m, MF_STRING, kMenyuTozala, tr(L"Очистить историю…", L"Clear history…"));
 
         const float k = static_cast<float>(GetDpiForWindow(ichki_->ota)) / 96.0f;
         POINT ekran{static_cast<LONG>(p.x * k), static_cast<LONG>(p.y * k)};
@@ -321,8 +326,10 @@ YozishTab::YozishTab() : ichki_(std::make_unique<Ichki>()) {
                 break;
             case kMenyuTozala: {
                 const int javob = MessageBoxW(
-                    ichki_->ota, L"Barcha yozuvlar oʻchiriladi. Bu amalni qaytarib boʻlmaydi.",
-                    L"Tarixni tozalash", MB_OKCANCEL | MB_ICONWARNING);
+                    ichki_->ota,
+                    tr(L"Все записи будут удалены. Это нельзя отменить.",
+                       L"All entries will be deleted. This can't be undone."),
+                    tr(L"Очистить историю", L"Clear history"), MB_OKCANCEL | MB_ICONWARNING);
                 if (javob == IDOK && onTozala) onTozala();
                 break;
             }
@@ -373,14 +380,16 @@ void YozishTab::chiz(Chizgich& c) {
 
     // Roʻyxat sarlavhasi
     const float sarlavhaY = ichki_->royxat->ramka.top - 24;
-    c.matn(L"Oxirgi yozuvlar", ramkaYasa(ichki_->hudud.left + kChet, sarlavhaY, 220, 20), U::matn2,
-           12.0f, Ogirlik::Yarim);
+    c.matn(tr(L"Последние записи", L"Recent dictations"),
+           ramkaYasa(ichki_->hudud.left + kChet, sarlavhaY, 220, 20), U::matn2, 12.0f,
+           Ogirlik::Yarim);
 
     // Boʻsh holat
     if (ichki_->yozuvlar.empty()) {
         const auto& r = ichki_->royxat->ramka;
-        c.matn(L"Hali hech narsa yozilmagan", D2D1::RectF(r.left, r.top + 30, r.right, r.top + 60),
-               U::matn3, 15.0f, Ogirlik::Oddiy, Hizalash::Markaz);
+        c.matn(tr(L"Пока ничего не записано", L"Nothing dictated yet"),
+               D2D1::RectF(r.left, r.top + 30, r.right, r.top + 60), U::matn3, 15.0f,
+               Ogirlik::Oddiy, Hizalash::Markaz);
     }
 }
 

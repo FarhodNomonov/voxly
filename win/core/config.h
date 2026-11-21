@@ -8,6 +8,7 @@
 #include <string>
 
 #include "matn_format.h"  // Apostrof
+#include "ui_tili.h"      // UITili
 
 namespace rubai {
 
@@ -76,6 +77,11 @@ struct Settings {
     // yoʻq boʻlsa qiymat `boshlangichNutqTili` dan (`loadSettings`).
     NutqTili nutqTili = NutqTili::Rus;
 
+    // Interfeys tili (macOS'dagi `UITili.tanlangan`, kalit `ui.tili`).
+    // `Tizim` — Windows tilidan (`ui_tili.h`). Ishlab turgan jarayonga
+    // taʼsir qilmaydi: til ishga tushishda bir marta aniqlanadi.
+    UITili uiTili = UITili::Tizim;
+
     // «Diagnostika rejimi» tugash vaqti (unix soniya, 0 — oʻchiq). Yoqiq
     // boʻlsa diktovka matni ham logga yoziladi; 24 soatdan keyin oʻzi oʻchadi —
     // unutilib qolsa ham abadiy yozib turmaydi (barqarorlik G1, macOS'dagi
@@ -113,6 +119,7 @@ inline Settings sozlamaOynasidan(Settings fayl, const Settings& oyna) {
     fayl.useGpu = oyna.useGpu;
     fayl.oddiyApostrof = oyna.oddiyApostrof;
     fayl.nutqTili = oyna.nutqTili;
+    fayl.uiTili = oyna.uiTili;
     fayl.diagnostikaTugash = oyna.diagnostikaTugash;
     fayl.llmProvayder = oyna.llmProvayder;
     fayl.llmBaseURL = oyna.llmBaseURL;

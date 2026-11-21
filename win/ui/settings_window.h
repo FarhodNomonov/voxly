@@ -25,6 +25,10 @@ public:
     // oʻtkazilishi va h.k. uchun).
     void setOnSaved(std::function<void(const Settings&)> cb);
 
+    // Interfeys tili oʻzgarib, foydalanuvchi «qayta ishga tushirish» ni
+    // tanlaganda chaqiriladi (til jarayonda bir marta aniqlanadi).
+    void setOnQaytaIshga(std::function<void()> cb);
+
     // Oynani ochadi (allaqachon ochiq boʻlsa oldinga chiqaradi).
     //
     // `ega` — asosiy oyna. Egasi boʻlgan oyna undan HECH QACHON orqaga

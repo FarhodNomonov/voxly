@@ -4,6 +4,7 @@
 #include "soragich.h"
 
 #include "uslub.h"
+#include "../core/ui_tili.h"
 
 #include <commdlg.h>
 
@@ -119,13 +120,14 @@ std::wstring matnSora(HWND ota, const std::wstring& sarlavha, const std::wstring
         CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", tavsiya.c_str(),
                         WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL, px(16), px(54),
                         kenglik - px(32), px(26), oyna, nullptr, instance, nullptr);
-    HWND ok = CreateWindowExW(0, L"BUTTON", L"Bajarish",
+    HWND ok = CreateWindowExW(0, L"BUTTON", tr(L"Выполнить", L"Run"),
                               WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON,
                               kenglik - px(200), px(94), px(90), px(28), oyna,
                               reinterpret_cast<HMENU>(IDOK), instance, nullptr);
-    HWND bekor = CreateWindowExW(0, L"BUTTON", L"Bekor", WS_CHILD | WS_VISIBLE | WS_TABSTOP,
-                                 kenglik - px(104), px(94), px(90), px(28), oyna,
-                                 reinterpret_cast<HMENU>(IDCANCEL), instance, nullptr);
+    HWND bekor =
+        CreateWindowExW(0, L"BUTTON", tr(L"Отмена", L"Cancel"), WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+                        kenglik - px(104), px(94), px(90), px(28), oyna,
+                        reinterpret_cast<HMENU>(IDCANCEL), instance, nullptr);
 
     for (HWND c : {yozuv, holat.tahrir, ok, bekor}) {
         SendMessageW(c, WM_SETFONT, reinterpret_cast<WPARAM>(shrift), TRUE);
@@ -168,17 +170,20 @@ std::wstring faylSora(HWND ota) {
     // `opus` va `amr` ATAYLAB yoʻq — `media_decode.cpp` ularni ocholmaydi va
     // roʻyxatda turishi foydalanuvchini tanlab, keyin xato koʻrishga
     // majburlardi. «Barcha fayllar» filtri baribir qoldi.
-    static const wchar_t kFiltr[] = L"Ovoz va video\0*.mp3;*.wav;*.m4a;*.aac;*.flac;*.wma;"
-                                    L"*.mp4;*.mov;*.avi;*.m4v;*.wmv;*.3gp\0"
-                                    L"Barcha fayllar\0*.*\0\0";
+    static const wchar_t kFiltrRu[] = L"Аудио и видео\0*.mp3;*.wav;*.m4a;*.aac;*.flac;*.wma;"
+                                      L"*.mp4;*.mov;*.avi;*.m4v;*.wmv;*.3gp\0"
+                                      L"Все файлы\0*.*\0\0";
+    static const wchar_t kFiltrEn[] = L"Audio and video\0*.mp3;*.wav;*.m4a;*.aac;*.flac;*.wma;"
+                                      L"*.mp4;*.mov;*.avi;*.m4v;*.wmv;*.3gp\0"
+                                      L"All files\0*.*\0\0";
 
     OPENFILENAMEW o{};
     o.lStructSize = sizeof(o);
     o.hwndOwner = ota;
-    o.lpstrFilter = kFiltr;
+    o.lpstrFilter = tr(kFiltrRu, kFiltrEn);
     o.lpstrFile = bufer;
     o.nMaxFile = static_cast<DWORD>(std::size(bufer));
-    o.lpstrTitle = L"Ovozli yoki videofayl tanlang";
+    o.lpstrTitle = tr(L"Выберите аудио- или видеофайл", L"Choose an audio or video file");
     o.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER | OFN_NOCHANGEDIR;
 
     return GetOpenFileNameW(&o) ? std::wstring(bufer) : std::wstring();
@@ -188,15 +193,16 @@ std::wstring saqlashSora(HWND ota, const std::wstring& tavsiyaNom) {
     wchar_t bufer[MAX_PATH * 4] = {0};
     wcsncpy_s(bufer, tavsiyaNom.c_str(), _TRUNCATE);
 
-    static const wchar_t kFiltr[] = L"Matn fayli\0*.txt\0Barcha fayllar\0*.*\0\0";
+    static const wchar_t kFiltrRu[] = L"Текстовый файл\0*.txt\0Все файлы\0*.*\0\0";
+    static const wchar_t kFiltrEn[] = L"Text file\0*.txt\0All files\0*.*\0\0";
 
     OPENFILENAMEW o{};
     o.lStructSize = sizeof(o);
     o.hwndOwner = ota;
-    o.lpstrFilter = kFiltr;
+    o.lpstrFilter = tr(kFiltrRu, kFiltrEn);
     o.lpstrFile = bufer;
     o.nMaxFile = static_cast<DWORD>(std::size(bufer));
-    o.lpstrTitle = L"Matnni saqlash";
+    o.lpstrTitle = tr(L"Сохранить текст", L"Save text");
     o.lpstrDefExt = L"txt";
     o.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_EXPLORER | OFN_NOCHANGEDIR;
 
