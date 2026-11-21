@@ -65,7 +65,8 @@ OutputBaseFilename={#AppName}-{#AppVersion}-win-setup
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
-; Sehrgar tili — Windows interfeysi tilidan; mos kelmasa tanlash oynasi.
+; Sehrgar tili — Windows interfeysi tilidan; mos kelmasa tanlash oynasi
+; (unda birinchi til — inglizcha — tanlangan turadi).
 ShowLanguageDialog=auto
 
 ; 64-bitli ilova; 32-bitli Windows'da oʻrnatilmaydi.
@@ -88,19 +89,14 @@ CloseApplications=yes
 RestartApplications=no
 
 [Languages]
-; Oʻzbekcha tarjima Inno Setup bilan kelmaydi — u yonimizda turadi
-; (`Uzbek.isl`, UTF-8 + BOM). Ruscha va inglizcha — Inno'ning oʻzidan.
-Name: "uz"; MessagesFile: "Uzbek.isl"
-Name: "ru"; MessagesFile: "compiler:Languages\Russian.isl"
+; Faqat ilovaning oʻz interfeys tillari — rus va ingliz (`win/core/ui_tili.h`).
+; Oʻzbekcha sehrgar (Kotib'dan qolgan `Uzbek.isl`) olib tashlandi: Voxly
+; interfeysi oʻzbekcha emas, oʻzbekcha Windows'da esa ilova ruscha ochiladi —
+; oʻrnatuvchi ham shunga mos boʻlsin. Ikkalasi ham Inno'ning oʻzidan.
 Name: "en"; MessagesFile: "compiler:Default.isl"
+Name: "ru"; MessagesFile: "compiler:Languages\Russian.isl"
 
 [CustomMessages]
-uz.ExtraTasks=Qoʻshimcha:
-uz.UninstallModelsSavol=Nutq modellari saqlab qolinsinmi?
-uz.UninstallModels=Voxly yuklagan nutq modellari 550 MB – 1,4 GB joy egallaydi. Saqlab qolsangiz, Voxly'ni qayta oʻrnatganda ularni qayta yuklash shart boʻlmaydi.
-uz.UninstallModelsHa=Ha, saqlansin
-uz.UninstallModelsYoq=Yoʻq, oʻchirilsin
-
 ru.ExtraTasks=Дополнительно:
 ru.UninstallModelsSavol=Сохранить модели распознавания речи?
 ru.UninstallModels=Скачанные Voxly модели занимают от 550 МБ до 1,4 ГБ. Если сохранить, при повторной установке Voxly их не придётся скачивать заново.

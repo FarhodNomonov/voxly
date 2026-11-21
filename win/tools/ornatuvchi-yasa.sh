@@ -53,7 +53,7 @@ fi
 
 qadam "Manbalar VM'ga koʻchirilmoqda"
 "$WIN" "rmdir /s /q $MEHMON 2>nul & mkdir $MEHMON\\win\\installer & mkdir $MEHMON\\dist" >/dev/null 2>&1 || true
-kochir "$ROOT/win/installer/rubai.iss" "$ROOT/win/installer/Uzbek.isl" kotib@127.0.0.1:C:/kotib-orn/win/installer/
+kochir "$ROOT/win/installer/rubai.iss" kotib@127.0.0.1:C:/kotib-orn/win/installer/
 kochir "$ROOT/LICENSE" kotib@127.0.0.1:C:/kotib-orn/LICENSE
 
 # Har arxitektura uchun FAQAT tarqatiladigan fayllar. Sinov binarlarini

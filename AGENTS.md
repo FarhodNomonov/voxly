@@ -29,8 +29,8 @@ needed, copies the sources over SSH and brings back **one** universal
 `dist/Kotib-<v>-win-setup.exe`: it carries both the x64 and the ARM64 binaries
 (`Check: IsArm64` picks at install time) plus the speech model, mirroring the
 macOS `.pkg`. The translation model stays out — the app downloads it on demand.
-The wizard is Uzbek (`win/installer/Uzbek.isl` — Inno ships no Uzbek
-translation). Every run also produces `dist/Kotib-<v>-win-yangilash.exe` (`/DYangilash`,
+The wizard is English or Russian (Inno's own message files; the old Uzbek
+`Uzbek.isl` was dropped in Voxly, whose UI is Russian/English). Every run also produces `dist/Kotib-<v>-win-yangilash.exe` (`/DYangilash`,
 no model, ~21 MB) — the auto-update package `reliz.sh win` signs.
 
 **Per-user since 1.2 (S7).** `PrivilegesRequired=lowest`: the app lives in
@@ -383,8 +383,8 @@ does not fix it — the VM has to be stopped and started**, so that a new QEMU
 process comes up.
 
 `.cmd` files are stored **CRLF** (`.gitattributes`): with LF only, cmd.exe cuts the
-script mid-line (`jfk.wav` becomes `k.wav`). `installer/rubai.iss` and `Uzbek.isl`
-need a **UTF-8 BOM** — without it Inno reads them in the system ANSI code page and
+script mid-line (`jfk.wav` becomes `k.wav`). `installer/rubai.iss`
+needs a **UTF-8 BOM** — without it Inno reads them in the system ANSI code page and
 `ʻ` degrades to a plain `'`. When editing any `eol=crlf` file (`.iss`, `.rc`, `.ps1`,
 `.cmd`, `.manifest`) with a script, preserve the endings — Python's `read_text`/
 `write_text` silently turn CRLF into LF (use `newline=""`). Git still commits it
