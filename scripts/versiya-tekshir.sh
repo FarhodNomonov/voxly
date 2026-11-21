@@ -87,7 +87,7 @@ qatiy_raqam_yoq scripts/make_pkg.sh '^[[:space:]]*VERSION=["'"'"']?[0-9]' "VERSI
 qatiy_raqam_yoq win/res/app.rc '^[[:space:]]*(FILE|PRODUCT)VERSION[[:space:]]+[0-9]' "FILEVERSION"
 qatiy_raqam_yoq win/res/app.rc '"(File|Product)Version",[[:space:]]*"[0-9]' "VALUE"
 qatiy_raqam_yoq win/installer/rubai.iss '^[[:space:]]*#define[[:space:]]+AppVersion[[:space:]]' "#define AppVersion"
-qatiy_raqam_yoq win/tools/zip-yasa.sh 'Kotib-[0-9]+\.[0-9]+' "fayl nomi"
+qatiy_raqam_yoq win/tools/zip-yasa.sh 'Voxly-[0-9]+\.[0-9]+' "fayl nomi"
 
 # --- 2. Eʼlon qilingan versiyalar
 #

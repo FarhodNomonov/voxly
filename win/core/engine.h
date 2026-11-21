@@ -28,7 +28,7 @@ public:
     // Model faylini qidiradi. Tartib:
     //   1) <exe papkasi>\models\ggml-rubaistt.bin   (oʻrnatilgan holat)
     //   2) <exe papkasi>\ggml-rubaistt.bin          (portable holat)
-    //   3) %LOCALAPPDATA%\Kotib\models\...       (qoʻlda qoʻyilgan)
+    //   3) %LOCALAPPDATA%\Voxly\models\...       (qoʻlda qoʻyilgan)
     // Topilmasa boʻsh satr.
     static std::wstring findModel();
 
@@ -92,7 +92,7 @@ public:
     std::wstring backendName() const;
 
     // Xavfsiz rejim (barqarorlik E6). GPU'da yuklash va isitish oldidan
-    // `%LOCALAPPDATA%\Kotib\gpu-ochilmoqda` belgisi yoziladi va undan
+    // `%LOCALAPPDATA%\Voxly\gpu-ochilmoqda` belgisi yoziladi va undan
     // keyin oʻchiriladi. Drayver jarayonni yiqitsa belgi qoladi: keyingi
     // ishga tushish uni koʻrib CPU'ga oʻtadi — aks holda login'dagi
     // avtostart har safar yiqilaverardi.

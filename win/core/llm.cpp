@@ -28,7 +28,24 @@ namespace {
 // Kalit Credential Manager'da shu nom ostida turadi. macOS'dagi
 // `com.rubaistt.dictation.llm` xizmat nomining ekvivalenti.
 std::wstring kalitNomi(const std::string& provayderId) {
+    return L"Voxly.llm." + toWide(provayderId);
+}
+
+// Kotib (Voxly shundan fork qilingan) kalitni shu nom ostida saqlagan.
+// `oqi` yangi nom ostida topmasa eskisidan oʻqiydi va yangisiga nusxalaydi —
+// foydalanuvchi API kalitini qayta kiritishga majbur boʻlmaydi. Eski yozuv
+// koʻchirishda OʻCHIRILMAYDI; faqat foydalanuvchi kalitni oʻchirganda (`ochir`).
+std::wstring eskiKalitNomi(const std::string& provayderId) {
     return L"Kotib.llm." + toWide(provayderId);
+}
+
+std::wstring credOqi(const std::wstring& nom) {
+    PCREDENTIALW c = nullptr;
+    if (!CredReadW(nom.c_str(), CRED_TYPE_GENERIC, 0, &c)) return {};
+
+    std::string utf8(reinterpret_cast<const char*>(c->CredentialBlob), c->CredentialBlobSize);
+    CredFree(c);
+    return toWide(utf8);
 }
 
 }  // namespace
@@ -57,15 +74,17 @@ bool saqla(const std::string& provayderId, const std::wstring& kalit) {
 }
 
 std::wstring oqi(const std::string& provayderId) {
-    PCREDENTIALW c = nullptr;
-    if (!CredReadW(kalitNomi(provayderId).c_str(), CRED_TYPE_GENERIC, 0, &c)) return {};
-
-    std::string utf8(reinterpret_cast<const char*>(c->CredentialBlob), c->CredentialBlobSize);
-    CredFree(c);
-    return toWide(utf8);
+    std::wstring kalit = credOqi(kalitNomi(provayderId));
+    if (!kalit.empty()) return kalit;
+    kalit = credOqi(eskiKalitNomi(provayderId));
+    if (!kalit.empty()) saqla(provayderId, kalit);  // bir martalik koʻchirish
+    return kalit;
 }
 
 bool ochir(const std::string& provayderId) {
+    // Foydalanuvchi kalitni OʻZI oʻchiryapti — eski Kotib nusxasi ham ketadi,
+    // aks holda `oqi` uni keyingi safar qayta koʻchirib olardi.
+    CredDeleteW(eskiKalitNomi(provayderId).c_str(), CRED_TYPE_GENERIC, 0);
     return CredDeleteW(kalitNomi(provayderId).c_str(), CRED_TYPE_GENERIC, 0) != FALSE;
 }
 
@@ -162,7 +181,7 @@ std::wstring modellarniOl(const Provayder& p, const std::wstring& baseURL,
         return L"Server manzili notoʻgʻri.";
     }
 
-    HINTERNET sessiya = WinHttpOpen(L"Kotib", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
+    HINTERNET sessiya = WinHttpOpen(L"Voxly", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
                                     WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     if (!sessiya) return L"Tarmoq ochilmadi.";
     WinHttpSetTimeouts(sessiya, 10000, 15000, 20000, 20000);
@@ -246,7 +265,7 @@ std::wstring llmOqim(const LLMSorov& s, const std::function<void(const std::wstr
     bool xavfsiz = true;
     if (!urlniAjrat(toliq, host, yol, port, xavfsiz)) return L"Server manzili notoʻgʻri.";
 
-    HINTERNET sessiya = WinHttpOpen(L"Kotib", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
+    HINTERNET sessiya = WinHttpOpen(L"Voxly", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
                                     WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     if (!sessiya) return L"Tarmoq ochilmadi.";
     // LLM javobi uzoq davom etadi — oʻqish chegarasi katta boʻlsin.

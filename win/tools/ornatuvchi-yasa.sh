@@ -4,17 +4,13 @@
 #
 #   ./win/tools/ornatuvchi-yasa.sh [--model <yoʻl>]
 #
-# Natija: `dist/Kotib-<versiya>-win-setup.exe` — YAGONA fayl:
+# Natija: `dist/Voxly-<versiya>-win-setup.exe` — YAGONA fayl:
 #   • x64 va ARM64 binarlari ikkalasi ham ichida, oʻrnatish paytida mosi
 #     tanlanadi (`IsArm64`);
-#   • nutq modeli ham ichida (`--model` bilan) — macOS'dagi `.pkg` kabi;
-#   • tarjima modeli ICHKARIDA EMAS, u ilova ichida yuklab olinadi.
+#   • nutq modeli ham ichida (`--model` bilan) — macOS'dagi `.pkg` kabi.
 #
 # `--model` berilmasa modelsiz variant chiqadi (`…-win-onlayn-setup.exe`) —
 # u faqat ishlab chiqish uchun, tarqatiladigani har doim modelli.
-#
-# Har safar yonida avto-yangilanish paketi ham chiqadi —
-# `Kotib-<versiya>-win-yangilash.exe` (modelsiz, `/DYangilash`, S7).
 #
 # NEGA VM: `iscc.exe` faqat Windows'da ishlaydi va macOS'da Wine talab
 # qiladi. Windows 11 ARM VM'ida esa u emulyatsiya orqali muammosiz ishlaydi,
@@ -63,20 +59,20 @@ fi
 
 qadam "Manbalar VM'ga koʻchirilmoqda"
 "$WIN" "rmdir /s /q $MEHMON 2>nul & mkdir $MEHMON\\win\\installer & mkdir $MEHMON\\dist" >/dev/null 2>&1 || true
-kochir "$ROOT/win/installer/rubai.iss" "$ROOT/win/installer/Uzbek.isl" "$ROOT/win/installer/shartlar.txt" kotib@127.0.0.1:C:/kotib-orn/win/installer/
+kochir "$ROOT/win/installer/rubai.iss" "$ROOT/win/installer/Uzbek.isl" kotib@127.0.0.1:C:/kotib-orn/win/installer/
 kochir "$ROOT/LICENSE" kotib@127.0.0.1:C:/kotib-orn/LICENSE
 
 # Har arxitektura uchun FAQAT tarqatiladigan fayllar. Sinov binarlarini
-# (`kotib-testlar.exe`, `rubai-cli.exe`, `ui-demo.exe`) yuborishning
+# (`voxly-testlar.exe`, `rubai-cli.exe`, `ui-demo.exe`) yuborishning
 # keragi yoʻq va ular oʻrnatuvchiga ham tushmasligi kerak.
 for arch in x64 arm64; do
     qurilgan="$ROOT/win/build-$arch"
-    [ -f "$qurilgan/Kotib.exe" ] || {
-        echo "topilmadi: $qurilgan/Kotib.exe (avval ./win/build-mac.sh hammasi)" >&2
+    [ -f "$qurilgan/Voxly.exe" ] || {
+        echo "topilmadi: $qurilgan/Voxly.exe (avval ./win/build-mac.sh hammasi)" >&2
         exit 1
     }
     "$WIN" "mkdir $MEHMON\\$arch" >/dev/null 2>&1 || true
-    kochir "$qurilgan/Kotib.exe" "$qurilgan"/*.dll "$qurilgan/Litsenziyalar.txt" \
+    kochir "$qurilgan/Voxly.exe" "$qurilgan"/*.dll "$qurilgan/Litsenziyalar.txt" \
         "$qurilgan/ggml-silero-v6.2.0.bin" \
         "kotib@127.0.0.1:C:/kotib-orn/$arch/"
 done
@@ -86,15 +82,10 @@ if [ -n "$MODEL" ]; then
     kochir "$MODEL" 'kotib@127.0.0.1:C:/kotib-orn/ggml-rubaistt.bin'
 fi
 
-qadam "Oʻrnatuvchi yigʻilmoqda (Kotib $KOTIB_VERSIYA)"
+qadam "Oʻrnatuvchi yigʻilmoqda (Voxly $KOTIB_VERSIYA)"
 bayroq="/DAppVersion=$KOTIB_VERSIYA /DSrcX64=$MEHMON\\x64 /DSrcArm64=$MEHMON\\arm64"
 [ -n "$MODEL" ] && bayroq="$bayroq /DBundleModel=$MEHMON\\ggml-rubaistt.bin"
 "$WIN" "\"$ISCC\" $bayroq $MEHMON\\win\\installer\\rubai.iss"
-
-# Avto-yangilanish paketi — modelsiz (`Kotib-<v>-win-yangilash.exe`, S7).
-# `reliz.sh win` aynan shu faylni imzolaydi.
-qadam "Yangilanish paketi yigʻilmoqda (modelsiz)"
-"$WIN" "\"$ISCC\" /DAppVersion=$KOTIB_VERSIYA /DSrcX64=$MEHMON\\x64 /DSrcArm64=$MEHMON\\arm64 /DYangilash $MEHMON\\win\\installer\\rubai.iss"
 
 qadam "Natijani olib kelamiz"
 mkdir -p "$ROOT/dist"

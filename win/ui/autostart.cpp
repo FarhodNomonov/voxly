@@ -14,7 +14,9 @@ namespace rubai {
 namespace {
 
 constexpr wchar_t kRunKey[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-constexpr wchar_t kValueName[] = L"Kotib";
+constexpr wchar_t kValueName[] = L"Voxly";
+// Kotib'ning "Kotib" nomli yozuviga ATAYLAB tegilmaydi: Kotib — alohida
+// ilova va u hali oʻrnatilgan boʻlishi mumkin.
 // 1.1.0 gacha ilova shu nom bilan roʻyxatdan oʻtgan edi. Yozuv eski .exe ga
 // koʻrsatadi va u oʻrnatuvchi tomonidan oʻchirilgan boʻladi — yaʼni har bir
 // kirishda Windows mavjud boʻlmagan faylni ishga tushirishga urinadi.

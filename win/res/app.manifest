@@ -4,7 +4,7 @@
        uni .exe uchun ishlatmaydi. Shuning uchun ataylab 1.0.0.0 da qotirilgan
        va VERSION ga ergashmaydi. Ilova versiyasi app.rc dagi VERSIONINFO da
        (VERSION faylidan CMake orqali keladi). -->
-  <assemblyIdentity type="win32" name="Kotib" version="1.0.0.0"
+  <assemblyIdentity type="win32" name="Voxly" version="1.0.0.0"
                     processorArchitecture="amd64"/>
 
   <!-- Zamonaviy boshqaruv elementlari (Common Controls 6). Busiz tugmalar

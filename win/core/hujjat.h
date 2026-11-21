@@ -3,7 +3,7 @@
 // macOS'dagi `src/hujjat.swift` (`HujjatOmbori`) ning ekvivalenti. Papka
 // tuzilishi va fayl nomlari ATAYLAB bir xil:
 //
-//   %APPDATA%\Kotib\hujjatlar\<uuid>\
+//   %APPDATA%\Voxly\hujjatlar\<uuid>\
 //       hujjat.json        — maʼlumot (OXIRIDA yoziladi, «tayyor» belgisi)
 //       segmentlar.json    — xom segmentlar (qayta formatlash, SRT uchun)
 //       matn.txt           — oʻqishga qulay koʻrinish
@@ -33,7 +33,7 @@ enum class MatnTuri { Chiroyli, Xom };
 
 namespace HujjatOmbori {
 
-// %APPDATA%\Kotib\hujjatlar
+// %APPDATA%\Voxly\hujjatlar
 std::wstring ildiz();
 std::wstring papka(const std::wstring& id);
 

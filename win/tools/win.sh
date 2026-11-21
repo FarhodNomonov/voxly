@@ -30,7 +30,7 @@ joyla() {
     [ -d "$qurilgan" ] || { echo "topilmadi: $qurilgan" >&2; exit 1; }
     # Ishlab turgan ilova oʻz .exe va .dll fayllarini qulflaydi — avval
     # yopamiz, aks holda scp «dest open … Failure» beradi.
-    ssh "${BAYROQ[@]}" "$MEZBON" 'taskkill /f /im Kotib.exe' >/dev/null 2>&1 || true
+    ssh "${BAYROQ[@]}" "$MEZBON" 'taskkill /f /im Voxly.exe' >/dev/null 2>&1 || true
     sleep 2
     scp -P "$PORT" -i "$KALIT" -o StrictHostKeyChecking=no \
         -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR \

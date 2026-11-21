@@ -16,7 +16,7 @@ namespace rubai {
 
 namespace {
 
-constexpr wchar_t kClassName[] = L"KotibOverlay";
+constexpr wchar_t kClassName[] = L"VoxlyOverlay";
 constexpr UINT kTimerHide = 1;
 
 constexpr int kBaseWidth = 340;

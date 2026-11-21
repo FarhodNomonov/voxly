@@ -13,7 +13,7 @@ namespace rubai {
 
 namespace {
 
-constexpr wchar_t kSinf[] = L"KotibSoragich";
+constexpr wchar_t kSinf[] = L"VoxlySoragich";
 
 struct Holat {
     HWND tahrir = nullptr;

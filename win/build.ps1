@@ -1,4 +1,4 @@
-﻿# Kotib — Windows uchun to'liq build.
+﻿# Voxly — Windows uchun to'liq build.
 #
 # Bajaradi: whisper.cpp (Vulkan) -> ilova -> o'rnatuvchi.
 #
@@ -76,7 +76,7 @@ New-Item -ItemType Directory -Force $WorkDir | Out-Null
 $Pins = Get-Content -Raw (Join-Path $Root 'scripts\bogliqliklar.env') | ConvertFrom-StringData
 $Versiya = (Get-Content -TotalCount 1 (Join-Path $Root 'VERSION')).Trim()
 if ($Versiya -notmatch '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$') { Fail "VERSION noto'g'ri: '$Versiya'" }
-Write-Host "Kotib $Versiya"
+Write-Host "Voxly $Versiya"
 
 # ------------------------------------------------------------- whisper.cpp
 
@@ -136,7 +136,7 @@ $AppOut = Join-Path $AppBld 'Release'
 
 # Kerakli fayllar bor-yo'qligini tekshiramiz — o'rnatuvchi jimgina
 # yarim-ishlaydigan paket yig'ib qo'ymasligi uchun.
-$required = @('Kotib.exe', 'whisper.dll', 'ggml.dll', 'ggml-base.dll', 'ggml-vulkan.dll')
+$required = @('Voxly.exe', 'whisper.dll', 'ggml.dll', 'ggml-base.dll', 'ggml-vulkan.dll')
 foreach ($f in $required) {
     if (-not (Test-Path (Join-Path $AppOut $f))) { Fail "$f topilmadi ($AppOut)" }
 }

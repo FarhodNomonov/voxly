@@ -61,7 +61,7 @@ YuklashNatijasi faylYukla(const std::wstring& url, const std::wstring& qism, lon
     yol.assign(u.lpszUrlPath, u.dwUrlPathLength);
     port = u.nPort;
 
-    HINTERNET sessiya = WinHttpOpen(L"Kotib", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
+    HINTERNET sessiya = WinHttpOpen(L"Voxly", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
                                     WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     if (!sessiya) {
         n.xato = L"Tarmoq ochilmadi.";

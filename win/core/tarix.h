@@ -28,7 +28,7 @@ public:
     // Roʻyxatda saqlanadigan eng koʻp yozuv soni. Undan oshgani tushib ketadi.
     static constexpr size_t kChegara = 200;
 
-    // %APPDATA%\Kotib\diktovka-tarixi.json
+    // %APPDATA%\Voxly\diktovka-tarixi.json
     static DiktovkaTarixi& birgalik();
 
     explicit DiktovkaTarixi(std::wstring fayl);

@@ -4,7 +4,7 @@
 // va «eng yangi 20 ta, 7 kundan eski emas» qoidasi AYNAN bir xil.
 //
 // 1.1.0 gacha transkripsiya yiqilsa (model yuklanmadi, whisper xatosi) yozilgan
-// ovoz tashlanardi. Endi u `%LOCALAPPDATA%\Kotib\saqlanmagan\` ga 16 kHz mono
+// ovoz tashlanardi. Endi u `%LOCALAPPDATA%\Voxly\saqlanmagan\` ga 16 kHz mono
 // 16-bit WAV boʻlib yoziladi, model tayyor boʻlgach qayta oʻgiriladi va
 // muvaffaqiyatda oʻchiriladi.
 //

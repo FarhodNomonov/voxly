@@ -17,10 +17,10 @@ std::wstring toWide(const std::string& s);
 // Ilova .exe joylashgan papka (oxirida \ yoʻq).
 std::wstring exeDir();
 
-// %APPDATA%\Kotib — sozlamalar. Papka yaratiladi.
+// %APPDATA%\Voxly — sozlamalar. Papka yaratiladi.
 std::wstring appDataDir();
 
-// %LOCALAPPDATA%\Kotib — log va vaqtinchalik fayllar. Papka yaratiladi.
+// %LOCALAPPDATA%\Voxly — log va vaqtinchalik fayllar. Papka yaratiladi.
 std::wstring localAppDataDir();
 
 bool fileExists(const std::wstring& path);
@@ -41,7 +41,7 @@ bool ensureDir(const std::wstring& path);
 std::string pathForC(const std::wstring& path);
 
 // ---- Log -----------------------------------------------------------------
-// %LOCALAPPDATA%\Kotib\dictation.log ga yozadi (thread-safe).
+// %LOCALAPPDATA%\Voxly\dictation.log ga yozadi (thread-safe).
 // macOS versiyasidagi RubaiLog bilan bir xil vazifa.
 void logInit();
 void logWrite(const std::wstring& msg);

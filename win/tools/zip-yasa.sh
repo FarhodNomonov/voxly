@@ -4,7 +4,7 @@
 #
 #   ./win/tools/zip-yasa.sh [x64|arm64]
 #
-# Natija: `dist/Kotib-<versiya>-win-<arch>-portable.zip`
+# Natija: `dist/Voxly-<versiya>-win-<arch>-portable.zip`
 #
 # Nega bu mumkin boʻldi: nutq modeli endi ilova ichida yuklab olinadi
 # (`core/model_yuklovchi.cpp`). Ilgari model faqat oʻrnatuvchi bilan
@@ -13,7 +13,7 @@
 # Nega ZIP kerak: Inno Setup oʻrnatuvchisi faqat Windows'da yigʻiladi
 # (`iscc.exe`), macOS'da esa Wine talab qiladi. ZIP esa shu yerda yigʻiladi
 # va SmartScreen ogohlantirishisiz ishlaydi — oʻrnatuvchi kerak emas,
-# papkani ochib `Kotib.exe` ni bosish kifoya.
+# papkani ochib `Voxly.exe` ni bosish kifoya.
 #
 # Cheklov: avtostart va Start menyusidagi yorliq YOʻQ (ularni oʻrnatuvchi
 # qiladi). Avtostartni ilovaning oʻzi Sozlamalardan yoqadi.
@@ -24,8 +24,8 @@ ARCH="${1:-x64}"
 BUILD="$ROOT/win/build-$ARCH"
 DIST="$ROOT/dist"
 
-[ -f "$BUILD/Kotib.exe" ] || {
-    echo "Kotib.exe topilmadi: $BUILD" >&2
+[ -f "$BUILD/Voxly.exe" ] || {
+    echo "Voxly.exe topilmadi: $BUILD" >&2
     echo "Avval: ./win/build-mac.sh $ARCH" >&2
     exit 1
 }
@@ -35,21 +35,21 @@ DIST="$ROOT/dist"
 source "$ROOT/scripts/versiya.sh"
 VERSIYA="$KOTIB_VERSIYA"
 
-NOM="Kotib-$VERSIYA-win-$ARCH-portable"
+NOM="Voxly-$VERSIYA-win-$ARCH-portable"
 ISH="${TMPDIR:-/tmp}/$NOM"
 rm -rf "$ISH"
 mkdir -p "$ISH" "$DIST"
 
-cp "$BUILD/Kotib.exe" "$ISH/"
+cp "$BUILD/Voxly.exe" "$ISH/"
 cp "$BUILD"/*.dll "$ISH/" 2>/dev/null || true
 cp "$ROOT/LICENSE" "$ISH/LICENSE.txt"
 
 cat > "$ISH/OQING.txt" <<'TXT'
-Kotib — oʻzbekcha ovozli yozuv (portativ nusxa)
+Voxly — ovozli yozuv (portativ nusxa)
 ================================================
 
 ISHGA TUSHIRISH
-  Kotib.exe ni ikki marta bosing. Ilova vazifalar panelining oʻng chetida
+  Voxly.exe ni ikki marta bosing. Ilova vazifalar panelining oʻng chetida
   (soat yonida) 🎙 ikonkasi boʻlib turadi.
 
 BIRINCHI QADAM — MODEL

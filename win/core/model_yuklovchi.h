@@ -6,7 +6,7 @@
 // ilova boshi berk koʻchada qolardi — «Model topilmadi» deb aytardi, lekin
 // nima qilishni koʻrsatmasdi.
 //
-// Model `%LOCALAPPDATA%\Kotib\models\` ga tushadi. `Engine::findModel`
+// Model `%LOCALAPPDATA%\Voxly\models\` ga tushadi. `Engine::findModel`
 // uchinchi navbatda aynan shu joyga qaraydi, shuning uchun oʻrnatuvchi
 // qoʻygan nusxa (Program Files ichida) ustunligicha qoladi.
 #pragma once

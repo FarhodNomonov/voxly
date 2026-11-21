@@ -1,6 +1,6 @@
 ﻿; *** Inno Setup 6.5.0+ — oʻzbekcha xabarlar ***
 ;
-; Kotib uchun tarjima qilingan (uzb.mirqobilov.com). Inno Setup rasmiy
+; Asl tarjima — Kotib loyihasi (Muhammad Mirqobilov, MIT). Inno Setup rasmiy
 ; oʻzbekcha tarjima bilan kelmaydi, shuning uchun u shu yerda turadi.
 ;
 ; DIQQAT: fayl UTF-8 + BOM bilan saqlanishi SHART. BOM boʻlmasa Inno uni

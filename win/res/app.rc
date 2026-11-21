@@ -27,18 +27,18 @@ BEGIN
         // kombinatsiyani standart sifatida kutadi.
         BLOCK "040904B0"
         BEGIN
-            VALUE "CompanyName",      "Muhammad Mirkabilov"
+            VALUE "CompanyName",      "Farkhod Nomonov"
             // FileDescription — Windows'ning bildirishnomalarida ILOVA
             // NOMI sifatida chiqadi (Shell_NotifyIcon → toast) va Vazifalar
             // dispetcherida ham shu koʻrinadi. Shuning uchun bu yerda tavsif
             // emas, aynan nom turishi kerak: ilgari «Oʻzbekcha ovozli yozuv»
             // edi va bildirishnoma eski nom bilan chiqardi.
-            VALUE "FileDescription",  "Kotib"
+            VALUE "FileDescription",  "Voxly"
             VALUE "FileVersion",      KOTIB_VER_FAYL_STR
-            VALUE "InternalName",     "Kotib"
-            VALUE "LegalCopyright",   "MIT litsenziyasi"
-            VALUE "OriginalFilename", "Kotib.exe"
-            VALUE "ProductName",      "Kotib"
+            VALUE "InternalName",     "Voxly"
+            VALUE "LegalCopyright",   L"\x00A9 2026 Farkhod Nomonov"
+            VALUE "OriginalFilename", "Voxly.exe"
+            VALUE "ProductName",      "Voxly"
             VALUE "ProductVersion",   KOTIB_VER_STR
         END
     END

@@ -56,14 +56,20 @@ static std::wstring knownFolder(REFKNOWNFOLDERID id) {
     return s;
 }
 
-// Ilova nomi 1.1.0 da «Audio-Matnga» dan «Kotib» ga oʻzgardi. Eski
-// foydalanuvchining sozlamalari va logi eski papkada qolgan — ularni bir marta
-// koʻchiramiz, aks holda u yangilanishdan keyin mikrofon tanlovini va
-// tugmasini qaytadan sozlashga majbur boʻladi.
+// Voxly — Kotib fork'i, Kotib esa 1.1.0 gacha «Audio-Matnga» edi. Eski
+// nomdagi papkada foydalanuvchining sozlamalari, modeli (823 MB), tarixi va
+// saqlanmagan ovozi turadi — ularni bir marta yangi papkaga koʻchiramiz, aks
+// holda u modelni qayta yuklashga va hamma narsani qaytadan sozlashga majbur
+// boʻladi.
 //
-// macOS tomonida ayni shu ish `src/yollar.swift` da bajariladi. Qoida bir xil:
-// koʻchirish FAQAT yangi papka hali yoʻq boʻlsa ishlaydi, shuning uchun uni
-// takroran chaqirish xavfsiz va u hech qachon yangi maʼlumot ustiga yozmaydi.
+// macOS tomonida ayni shu ish `src/yollar.swift` (`Yollar.kochir`) da. Qoida
+// bir xil: koʻchirish FAQAT yangi papka hali yoʻq boʻlsa ishlaydi, shuning
+// uchun uni takroran chaqirish xavfsiz va u hech qachon yangi maʼlumot ustiga
+// yozmaydi. Hech narsa OʻCHIRILMAYDI: papka faqat qayta nomlanadi.
+//
+// TODO(voxly): Kotib'ning oflayn tarjimon modeli (`tarjima-model*`, 1–3 GB)
+// koʻchirilgan papkada qoladi — macOS uni oʻchiradi, bu yerda ataylab
+// tegilmagan (foydalanuvchi maʼlumoti oʻchirilmaydi).
 static void eskiPapkadanKochir(const std::wstring& eski, const std::wstring& yangi) {
     const DWORD eskiHolat = GetFileAttributesW(eski.c_str());
     if (eskiHolat == INVALID_FILE_ATTRIBUTES) return;                          // eski yoʻq
@@ -78,7 +84,10 @@ static void eskiPapkadanKochir(const std::wstring& eski, const std::wstring& yan
 static std::wstring subDir(REFKNOWNFOLDERID id) {
     std::wstring base = knownFolder(id);
     if (base.empty()) return {};
-    const std::wstring dir = base + L"\\Kotib";
+    const std::wstring dir = base + L"\\Voxly";
+    // Oldingi nomlar, yangisidan eskisiga: birinchi topilgani koʻchiriladi
+    // (ikkinchi chaqiruv yangi papka paydo boʻlgani uchun hech narsa qilmaydi).
+    eskiPapkadanKochir(base + L"\\Kotib", dir);
     eskiPapkadanKochir(base + L"\\Audio-Matnga", dir);
     ensureDir(dir);
     return dir;

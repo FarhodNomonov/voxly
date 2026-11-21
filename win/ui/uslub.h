@@ -1,4 +1,4 @@
-// Kotib — dizayn tokenlari va Direct2D chizish yordamchilari.
+// Voxly — dizayn tokenlari va Direct2D chizish yordamchilari.
 //
 // Bu fayl macOS tomonidagi `src/kotib_uslub.swift` ning aynan ekvivalenti.
 // Ikkalasining manbai bitta: Claude Design loyihasidagi "Kotib - yangi.dc.html".
